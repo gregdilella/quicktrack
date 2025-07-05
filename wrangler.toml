@@ -1,0 +1,21 @@
+# Wrangler Configuration for Cloudflare Workers
+name = "quicktrack"
+main = "build/index.js"
+compatibility_date = "2024-12-26"
+
+# Uncomment and configure when ready to deploy
+# account_id = "your-account-id"
+
+# Environment Variables (optional)
+# [vars]
+# SOME_VAR = "some_value"
+
+# KV Namespaces (optional)
+# [[kv_namespaces]]
+# binding = "MY_KV"
+# id = "your-kv-namespace-id"
+
+# Durable Objects (optional)
+# [[durable_objects.bindings]]
+# name = "MY_DURABLE_OBJECT"
+# class_name = "MyDurableObject" 
