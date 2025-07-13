@@ -1,7 +1,8 @@
 <!-- Terminal Interface Recreation -->
 <script lang="ts">
 	import { onMount } from 'svelte'
-	import { signUp, signIn, signOut, getCurrentUser, getCurrentSession } from '$lib/auth'
+	import { goto } from '$app/navigation'
+	import { signupOrLogin, getCurrentUser, getCurrentSession, getUserDashboardRoute } from '$lib/auth'
 	import { getCurrentUserProfile } from '$lib/userService'
 	import type { User, Session } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
@@ -13,8 +14,10 @@
 	let password = ''
 	let loading = false
 	let message = ''
+	let showUserInfo = false
+	let loginSuccess = false
 
-	// Test authentication on component mount
+	// Check authentication on component mount
 	onMount(async () => {
 		await checkAuth()
 	})
@@ -31,68 +34,80 @@
 		}
 	}
 
-	async function handleSignUp() {
+	async function handleSignupOrLogin() {
 		loading = true
 		message = ''
 		
-		const { user: newUser, error } = await signUp(email, password)
+		const { user: newUser, error } = await signupOrLogin(email, password)
 		
 		if (error) {
-			message = `Sign up error: ${error.message}`
+			console.log('Login error details:', error)
+			console.log('Error message:', error.message)
+			if (error.message.includes('Invalid email or password')) {
+				message = 'Invalid email or password. Please check your credentials and try again.'
+			} else if (error.message.includes('Invalid login credentials')) {
+				message = 'Invalid email or password. Please try again.'
+			} else if (error.message.includes('Email not confirmed')) {
+				message = 'Please check your email and confirm your account before logging in.'
+			} else if (error.message.includes('User already registered')) {
+				message = 'This account already exists. Please check your password and try again.'
+			} else {
+				message = `Error: ${error.message}`
+			}
 		} else {
-			message = 'Sign up successful! Check your email for verification.'
-			await checkAuth()
+			if (newUser) {
+				// Get user profile information
+				try {
+					user = newUser
+					userProfile = await getCurrentUserProfile()
+					showUserInfo = true
+					loginSuccess = true
+					message = 'Login successful! Loading user information...'
+					
+					// Clear form
+					email = ''
+					password = ''
+					
+					// Show user info for 3 seconds, then redirect
+					setTimeout(async () => {
+						const dashboardRoute = await getUserDashboardRoute()
+						goto(dashboardRoute)
+					}, 3000)
+				} catch (error) {
+					console.error('Error loading user profile:', error)
+					message = 'Login successful! Redirecting...'
+					// Fallback redirect if profile loading fails
+					setTimeout(async () => {
+						const dashboardRoute = await getUserDashboardRoute()
+						goto(dashboardRoute)
+					}, 1500)
+				}
+			}
 		}
 		
 		loading = false
 	}
 
-	async function handleSignIn() {
-		loading = true
-		message = ''
-		
-		const { user: newUser, error } = await signIn(email, password)
-		
-		if (error) {
-			message = `Sign in error: ${error.message}`
-		} else {
-			message = 'Sign in successful!'
-			await checkAuth()
+	// Handle Enter key press for form submission
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' && email && password) {
+			handleSignupOrLogin()
 		}
-		
-		loading = false
-	}
-
-	async function handleSignOut() {
-		loading = true
-		message = ''
-		
-		const { error } = await signOut()
-		
-		if (error) {
-			message = `Sign out error: ${error.message}`
-		} else {
-			message = 'Signed out successfully!'
-			user = null
-			userProfile = null
-			session = null
-		}
-		
-		loading = false
 	}
 </script>
 
 <div class="terminal-container">
 	<div class="main-content">
-		<!-- ASCII Art Header -->
+				<!-- ASCII Art Header -->
 		<div class="ascii-header">
-			<pre class="red-text">QQQQQ            ii          k
-QQ    QQ              k
-QQ    QQ uu   uu iii   cc     kk  kk
-QQ    QQ uu   uu  ii  cc      kk kk
-QQ QQ QQ uu   uu  ii  cc      kkk
-QQQQ  QQ uu   uu  ii  cc      kk kk
-  QQQQQ    uuuu   iiii   cccc kk  kk
+			<pre class="red-text">
+QQQQQQ                               
+QQ    QQ          ii        k      k       
+QQ    QQ uu   uu iii   cccc kk   kk
+QQ    QQ uu   uu  ii  cc    kk kk
+QQ QQ QQ uu   uu  ii  cc    kkk
+QQQQ  QQ uu   uu  ii  cc    kk kk
+  QQQQQQ    uuuu  iiii  cccc kk   kk
 QQ</pre>
 		</div>
 
@@ -101,63 +116,102 @@ QQ</pre>
 			<span class="red-text">INTERNATIONAL COURIER</span>
 		</div>
 
-		<!-- Date and Time -->
-		<div class="datetime-section">
-			<p class="blue-text">Date : 28 JUN 2025   Time: 19:03</p>
-		</div>
 
-		<!-- User Information -->
-		<div class="user-info">
-			<p class="blue-text">Port : 153</p>
-			<p class="blue-text">Name : Greg Dilella</p>
-			<p class="blue-text">Dept : Corporate Solutions Team Qa - Contracto</p>
-			<p class="blue-text">Email: GREG_DILELLA@QINTL.COM</p>
-		</div>
 
-		<!-- Authentication Test Section -->
-		<div class="auth-section">
-			<h3 class="blue-text">--- AUTHENTICATION TEST ---</h3>
-			
-			{#if user}
-				<div class="auth-info">
-					<p class="blue-text">✅ Logged in as: {user.email}</p>
-					<p class="blue-text">User ID: {user.id}</p>
-					{#if userProfile}
-						<p class="blue-text">Role: {userProfile.role}</p>
-						<p class="blue-text">Profile Created: {new Date(userProfile.created_at).toLocaleDateString()}</p>
-					{/if}
-					<button on:click={handleSignOut} disabled={loading} class="auth-button">
-						{loading ? 'Signing out...' : 'Sign Out'}
-					</button>
-				</div>
-			{:else}
-				<div class="auth-form">
-					<p class="blue-text">Test your authentication:</p>
-					<input 
-						type="email" 
-						bind:value={email} 
-						placeholder="Email"
-						class="auth-input"
-					/>
-					<input 
-						type="password" 
-						bind:value={password} 
-						placeholder="Password"
-						class="auth-input"
-					/>
-					<div class="auth-buttons">
-						<button on:click={handleSignIn} disabled={loading} class="auth-button">
-							{loading ? 'Signing in...' : 'Sign In'}
-						</button>
-						<button on:click={handleSignUp} disabled={loading} class="auth-button">
-							{loading ? 'Signing up...' : 'Sign Up'}
+		<!-- Login Section -->
+		<div class="login-section">
+			{#if !showUserInfo}
+				<h3 class="blue-text">--- SYSTEM LOGIN ---</h3>
+				
+				<div class="login-form">
+					<p class="blue-text">Enter your credentials to access the system:</p>
+					
+					<div class="input-group">
+						<label class="blue-text" for="email">Email:</label>
+						<input 
+							id="email"
+							type="email" 
+							bind:value={email} 
+							placeholder="Enter your email"
+							class="login-input"
+							on:keydown={handleKeydown}
+							disabled={loading}
+						/>
+					</div>
+					
+					<div class="input-group">
+						<label class="blue-text" for="password">Password:</label>
+						<input 
+							id="password"
+							type="password" 
+							bind:value={password} 
+							placeholder="Enter your password"
+							class="login-input"
+							on:keydown={handleKeydown}
+							disabled={loading}
+						/>
+					</div>
+					
+					<div class="login-buttons">
+						<button 
+							on:click={handleSignupOrLogin} 
+							disabled={loading || !email || !password} 
+							class="login-button"
+						>
+							{loading ? 'PROCESSING...' : 'SIGNUP/LOGIN'}
 						</button>
 					</div>
+					
+					<div class="login-hint">
+						<p class="blue-text">Press ENTER or click SIGNUP/LOGIN to continue</p>
+						<p class="blue-text">New users will be automatically registered</p>
+					</div>
+				</div>
+			{:else}
+				<h3 class="blue-text">--- AUTHENTICATION SUCCESSFUL ---</h3>
+				
+				<div class="user-display">
+					<p class="blue-text">Welcome to QuickTrack International Courier System</p>
+					
+					{#if user && userProfile}
+						<div class="user-details">
+							<div class="detail-row">
+								<span class="blue-text">Email:</span>
+								<span class="green-text">{user.email?.toUpperCase()}</span>
+							</div>
+							<div class="detail-row">
+								<span class="blue-text">Role:</span>
+								<span class="green-text">{userProfile.role}</span>
+							</div>
+							<div class="detail-row">
+								<span class="blue-text">Access Level:</span>
+								<span class="green-text">
+									{userProfile.role === 'Admin' ? 'FULL SYSTEM ACCESS' : 
+									 userProfile.role === 'Management' ? 'EXECUTIVE ACCESS' :
+									 userProfile.role === 'Operations' ? 'OPERATIONAL ACCESS' :
+									 userProfile.role === 'LSP' ? 'PROVIDER ACCESS' : 'CUSTOMER ACCESS'}
+								</span>
+							</div>
+							<div class="detail-row">
+								<span class="blue-text">Status:</span>
+								<span class="green-text">AUTHENTICATED</span>
+							</div>
+						</div>
+						
+						<div class="redirect-info">
+							<p class="blue-text">Redirecting to {userProfile.role} dashboard...</p>
+							<div class="loading-bar">
+								<div class="loading-progress"></div>
+							</div>
+						</div>
+					{/if}
 				</div>
 			{/if}
 			
-			{#if message}
-				<p class="auth-message">{message}</p>
+			{#if message && !loginSuccess}
+				<div class="login-message" class:success={message.includes('Success')} class:error={message.includes('Error') || message.includes('Invalid')}>
+					{message}
+				</div>
 			{/if}
 		</div>
 
@@ -172,25 +226,6 @@ QQ</pre>
 			<span class="red-text">([RETURN] or &lt;FILE&gt;)Execute, &lt;EXIT&gt;Abort</span>
 		</div>
 	</div>
-
-	<!-- Sidebar -->
-	<div class="sidebar">
-		<div class="accounts-header">
-			<h3>Available User Accounts</h3>
-		</div>
-		<div class="accounts-list">
-			<div class="account-item development">Development - QICDEV1.0</div>
-			<div class="account-item">QICAP - Accounts Payable</div>
-			<div class="account-item">QICJFK - New York</div>
-			<div class="account-item">QICSJO - Cost Rica</div>
-			<div class="account-item">QICSEAT - Seat</div>
-			<div class="account-item">QICSTATUK - Stat UK</div>
-			<div class="account-item">QICUK - United Kingdom</div>
-			<div class="account-item">Sterling</div>
-			<div class="account-item">TCL</div>
-			<div class="account-item">Logout</div>
-		</div>
-	</div>
 </div>
 
 <style>
@@ -201,16 +236,16 @@ QQ</pre>
 		font-size: 14px;
 		line-height: 1.2;
 		padding: 20px;
-		display: flex;
-		gap: 20px;
 		min-height: 100vh;
 		box-sizing: border-box;
+		display: flex;
+		justify-content: center;
 	}
 
 	/* Main Content Area */
 	.main-content {
-		flex: 2;
-		max-width: 700px;
+		max-width: 800px;
+		width: 100%;
 	}
 
 	/* ASCII Art Header */
@@ -241,56 +276,68 @@ QQ</pre>
 		text-align: left;
 	}
 
-	/* Date/Time Section */
-	.datetime-section {
-		margin: 20px 0;
-	}
-
-	/* User Information */
-	.user-info {
-		margin: 20px 0;
-	}
-
-	.user-info p,
-	.datetime-section p,
+	/* Support Message */
 	.support-message p {
 		margin: 5px 0;
 	}
 
-	/* Authentication Section */
-	.auth-section {
+	/* Login Section */
+	.login-section {
 		margin: 30px 0;
-		padding: 15px;
+		padding: 20px;
 		border: 2px solid #0066cc;
 		background-color: #f8f9fa;
 	}
 
-	.auth-section h3 {
-		margin: 0 0 15px 0;
+	.login-section h3 {
+		margin: 0 0 20px 0;
 		text-align: center;
 	}
 
-	.auth-form {
+	.login-form {
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 15px;
 	}
 
-	.auth-input {
-		padding: 8px;
+	.input-group {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	.input-group label {
+		font-size: 12px;
+	}
+
+	.login-input {
+		padding: 8px 12px;
 		font-family: 'Courier New', monospace;
 		font-size: 14px;
-		border: 1px solid #ccc;
+		border: 2px solid #ccc;
 		background-color: white;
+		color: black;
 	}
 
-	.auth-buttons {
+	.login-input:focus {
+		outline: none;
+		border-color: #0066cc;
+		background-color: #ffffcc;
+	}
+
+	.login-input:disabled {
+		background-color: #f0f0f0;
+		color: #666;
+	}
+
+	.login-buttons {
 		display: flex;
-		gap: 10px;
+		justify-content: center;
+		margin-top: 10px;
 	}
 
-	.auth-button {
-		padding: 8px 16px;
+	.login-button {
+		padding: 10px 30px;
 		font-family: 'Courier New', monospace;
 		font-size: 12px;
 		background-color: #0066cc;
@@ -298,30 +345,102 @@ QQ</pre>
 		border: none;
 		cursor: pointer;
 		font-weight: bold;
+		min-width: 120px;
 	}
 
-	.auth-button:hover {
+	.login-button:hover:not(:disabled) {
 		background-color: #0052a3;
 	}
 
-	.auth-button:disabled {
+	.login-button:disabled {
 		background-color: #cccccc;
 		cursor: not-allowed;
 	}
 
-	.auth-info {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
+	.login-hint {
+		text-align: center;
+		margin-top: 10px;
 	}
 
-	.auth-message {
-		margin-top: 10px;
-		padding: 5px;
-		background-color: #ffffcc;
-		border: 1px solid #ffcc00;
+	.login-hint p {
+		font-size: 12px;
+		margin: 0;
+	}
+
+	.login-message {
+		margin-top: 15px;
+		padding: 10px;
+		border: 1px solid #ccc;
 		font-size: 12px;
 		color: #333;
+		text-align: center;
+	}
+
+	.login-message.success {
+		background-color: #d4edda;
+		border-color: #c3e6cb;
+		color: #155724;
+	}
+
+	.login-message.error {
+		background-color: #f8d7da;
+		border-color: #f5c6cb;
+		color: #721c24;
+	}
+
+	/* User Display Styles */
+	.user-display {
+		text-align: center;
+	}
+
+	.user-details {
+		margin: 20px 0;
+		padding: 15px;
+		background-color: white;
+		border: 1px solid #0066cc;
+	}
+
+	.detail-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin: 8px 0;
+		padding: 4px 0;
+		border-bottom: 1px dotted #ccc;
+	}
+
+	.detail-row:last-child {
+		border-bottom: none;
+	}
+
+	.green-text {
+		color: green;
+		font-weight: bold;
+	}
+
+	.redirect-info {
+		margin-top: 20px;
+		text-align: center;
+	}
+
+	.loading-bar {
+		width: 100%;
+		height: 4px;
+		background-color: #e0e0e0;
+		margin-top: 10px;
+		overflow: hidden;
+	}
+
+	.loading-progress {
+		width: 0%;
+		height: 100%;
+		background-color: #0066cc;
+		animation: loading 3s ease-in-out forwards;
+	}
+
+	@keyframes loading {
+		0% { width: 0%; }
+		100% { width: 100%; }
 	}
 
 	/* Support Message */
@@ -336,57 +455,6 @@ QQ</pre>
 		color: white;
 		padding: 5px 10px;
 		font-weight: bold;
-	}
-
-	/* Sidebar */
-	.sidebar {
-		flex: 1;
-		max-width: 300px;
-		border: 2px solid #ccc;
-		background-color: #f5f5f5;
-	}
-
-	.accounts-header {
-		background-color: #ddd;
-		padding: 10px;
-		margin: 0;
-		text-align: center;
-		border-bottom: 2px solid #ccc;
-	}
-
-	.accounts-header h3 {
-		margin: 0;
-		font-size: 14px;
-		font-weight: bold;
-		color: black;
-	}
-
-	/* Accounts List */
-	.accounts-list {
-		padding: 5px;
-	}
-
-	.account-item {
-		padding: 3px 5px;
-		font-size: 12px;
-		color: black;
-		cursor: pointer;
-		border-bottom: 1px solid #eee;
-	}
-
-	.account-item:hover {
-		background-color: #e0e0e0;
-	}
-
-	/* Special styling for Development item */
-	.account-item.development {
-		background-color: #800000;
-		color: yellow;
-		font-weight: bold;
-	}
-
-	.account-item.development:hover {
-		background-color: #600000;
 	}
 
 	/* Global Styles */
