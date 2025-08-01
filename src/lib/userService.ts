@@ -84,6 +84,47 @@ export async function updateUserProfile(updates: UpdateUserProfile): Promise<Use
 }
 
 /**
+ * Update a specific user's profile by their user_id (Admin only)
+ */
+export async function updateUserProfileById(userId: string, updates: UpdateUserProfile): Promise<UserProfile | null> {
+    const { data, error } = await supabase
+        .from('user_table')
+        .update(updates)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+    if (error) {
+        console.error('Error updating user profile by ID:', error)
+        return null
+    }
+
+    return data
+}
+
+/**
+ * Update a user's role (Admin only)
+ */
+export async function updateUserRole(userId: string, newRole: string): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from('user_table')
+            .update({ role: newRole })
+            .eq('user_id', userId)
+
+        if (error) {
+            console.error('Error updating user role:', error)
+            return false
+        }
+
+        return true
+    } catch (error) {
+        console.error('Error updating user role:', error)
+        return false
+    }
+}
+
+/**
  * Get all user profiles (only works for Admins due to RLS)
  */
 export async function getAllUserProfiles(): Promise<UserProfile[]> {
@@ -113,7 +154,6 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
  */
 export async function checkUserExistsByEmail(email: string): Promise<boolean> {
     try {
-        console.log('🔍 Checking if user exists for email:', email.toLowerCase())
         const { data, error } = await supabase
             .from('user_table')
             .select('email')
@@ -121,16 +161,14 @@ export async function checkUserExistsByEmail(email: string): Promise<boolean> {
             .maybeSingle()
 
         if (error) {
-            console.error('❌ Error checking if user exists:', error)
+            console.error('Error checking if user exists:', error)
             // If there's an error checking, assume user doesn't exist to allow signup attempt
             return false
         }
 
-        console.log('📊 User check result - data:', data)
-        console.log('📊 User exists:', data !== null)
         return data !== null
     } catch (error) {
-        console.error('❌ Unexpected error checking user existence:', error)
+        console.error('Unexpected error checking user existence:', error)
         return false
     }
 }
@@ -139,17 +177,11 @@ export async function checkUserExistsByEmail(email: string): Promise<boolean> {
  * Debug function to check user status across auth and database
  */
 export async function debugUserStatus(email: string) {
-    console.log('🔍 === DEBUGGING USER STATUS ===')
-    console.log('📧 Email:', email)
-    
     // Check if user exists in database
     const userInDatabase = await checkUserExistsByEmail(email)
-    console.log('📊 User in database:', userInDatabase)
     
     // Try to get current auth user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    console.log('🔐 Current auth user:', user?.email || 'None')
-    console.log('🔐 Auth error:', authError?.message || 'None')
     
     return {
         userInDatabase,
@@ -172,12 +204,9 @@ export async function createMissingUserProfile(): Promise<UserProfile | null> {
             return null
         }
 
-        console.log('👤 Creating missing profile for user:', user.email)
-
         // Check if profile already exists
         const existingProfile = await getCurrentUserProfile()
         if (existingProfile) {
-            console.log('✅ Profile already exists, no need to create')
             return existingProfile
         }
 
@@ -185,15 +214,13 @@ export async function createMissingUserProfile(): Promise<UserProfile | null> {
         const newProfile: CreateUserProfile = {
             user_id: user.id,
             email: user.email || '',
-            role: 'Customer'
+            role: 'Not-Assigned'
         }
 
         const createdProfile = await createUserProfile(newProfile)
         
-        if (createdProfile) {
-            console.log('✅ Successfully created missing user profile')
-        } else {
-            console.error('❌ Failed to create user profile')
+        if (!createdProfile) {
+            console.error('Failed to create user profile')
         }
 
         return createdProfile

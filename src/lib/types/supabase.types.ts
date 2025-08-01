@@ -72,28 +72,31 @@ export type Database = {
           cost: number | null
           created_at: string | null
           destination: string | null
+          flight_no: string | null
           id: number
           jobnumber: string | null
           mawb: string | null
-          org: string | null
+          origin: string | null
         }
         Insert: {
           cost?: number | null
           created_at?: string | null
           destination?: string | null
+          flight_no?: string | null
           id?: number
           jobnumber?: string | null
           mawb?: string | null
-          org?: string | null
+          origin?: string | null
         }
         Update: {
           cost?: number | null
           created_at?: string | null
           destination?: string | null
+          flight_no?: string | null
           id?: number
           jobnumber?: string | null
           mawb?: string | null
-          org?: string | null
+          origin?: string | null
         }
         Relationships: [
           {
@@ -107,28 +110,121 @@ export type Database = {
       }
       jobsfile: {
         Row: {
+          account_number: string | null
+          bol_number: string | null
+          commodity: string | null
+          consignee_address1: string | null
+          consignee_address2: string | null
+          consignee_city: string | null
+          consignee_contact: string | null
+          consignee_name: string | null
+          consignee_phone: string | null
+          consignee_state: string | null
+          consignee_zip: string | null
           created_at: string | null
+          created_by: string | null
           customer_id: string | null
           customer_name: string | null
           id: number
+          job_number: string | null
+          job_type: string | null
+          jobno: string | null
           jobnumber: string
+          pieces: number | null
+          po_number: string | null
+          ready_date: string | null
+          ready_time: string | null
+          service_type: string | null
+          shipper_address1: string | null
+          shipper_address2: string | null
+          shipper_city: string | null
+          shipper_contact: string | null
+          shipper_name: string | null
+          shipper_phone: string | null
+          shipper_state: string | null
+          shipper_zip: string | null
+          status: string | null
+          updated_at: string | null
           vendorcode: string | null
+          weight: number | null
         }
         Insert: {
+          account_number?: string | null
+          bol_number?: string | null
+          commodity?: string | null
+          consignee_address1?: string | null
+          consignee_address2?: string | null
+          consignee_city?: string | null
+          consignee_contact?: string | null
+          consignee_name?: string | null
+          consignee_phone?: string | null
+          consignee_state?: string | null
+          consignee_zip?: string | null
           created_at?: string | null
+          created_by?: string | null
           customer_id?: string | null
           customer_name?: string | null
           id?: number
+          job_number?: string | null
+          job_type?: string | null
+          jobno?: string | null
           jobnumber: string
+          pieces?: number | null
+          po_number?: string | null
+          ready_date?: string | null
+          ready_time?: string | null
+          service_type?: string | null
+          shipper_address1?: string | null
+          shipper_address2?: string | null
+          shipper_city?: string | null
+          shipper_contact?: string | null
+          shipper_name?: string | null
+          shipper_phone?: string | null
+          shipper_state?: string | null
+          shipper_zip?: string | null
+          status?: string | null
+          updated_at?: string | null
           vendorcode?: string | null
+          weight?: number | null
         }
         Update: {
+          account_number?: string | null
+          bol_number?: string | null
+          commodity?: string | null
+          consignee_address1?: string | null
+          consignee_address2?: string | null
+          consignee_city?: string | null
+          consignee_contact?: string | null
+          consignee_name?: string | null
+          consignee_phone?: string | null
+          consignee_state?: string | null
+          consignee_zip?: string | null
           created_at?: string | null
+          created_by?: string | null
           customer_id?: string | null
           customer_name?: string | null
           id?: number
+          job_number?: string | null
+          job_type?: string | null
+          jobno?: string | null
           jobnumber?: string
+          pieces?: number | null
+          po_number?: string | null
+          ready_date?: string | null
+          ready_time?: string | null
+          service_type?: string | null
+          shipper_address1?: string | null
+          shipper_address2?: string | null
+          shipper_city?: string | null
+          shipper_contact?: string | null
+          shipper_name?: string | null
+          shipper_phone?: string | null
+          shipper_state?: string | null
+          shipper_zip?: string | null
+          status?: string | null
+          updated_at?: string | null
           vendorcode?: string | null
+          weight?: number | null
         }
         Relationships: [
           {
@@ -155,6 +251,7 @@ export type Database = {
           id: string
           jobnumber: string | null
           ledgercode: string
+          lsp_level_id: string | null
           vendorcode: string
         }
         Insert: {
@@ -164,6 +261,7 @@ export type Database = {
           id?: string
           jobnumber?: string | null
           ledgercode: string
+          lsp_level_id?: string | null
           vendorcode: string
         }
         Update: {
@@ -173,6 +271,7 @@ export type Database = {
           id?: string
           jobnumber?: string | null
           ledgercode?: string
+          lsp_level_id?: string | null
           vendorcode?: string
         }
         Relationships: [
@@ -184,7 +283,78 @@ export type Database = {
             referencedColumns: ["jobnumber"]
           },
           {
+            foreignKeyName: "lsp_costs_lsp_level_id_fkey"
+            columns: ["lsp_level_id"]
+            isOneToOne: false
+            referencedRelation: "lsp_level"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lsp_costs_vendorcode_fkey"
+            columns: ["vendorcode"]
+            isOneToOne: false
+            referencedRelation: "lsps"
+            referencedColumns: ["vendorcode"]
+          },
+        ]
+      }
+      lsp_level: {
+        Row: {
+          assigned_date: string | null
+          created_at: string | null
+          function: string | null
+          id: string
+          jobnumber: string | null
+          lsp_id: string | null
+          status: string | null
+          updated_at: string | null
+          vehicle_type: string | null
+          vendorcode: string | null
+          waiting_time: number | null
+        }
+        Insert: {
+          assigned_date?: string | null
+          created_at?: string | null
+          function?: string | null
+          id?: string
+          jobnumber?: string | null
+          lsp_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vehicle_type?: string | null
+          vendorcode?: string | null
+          waiting_time?: number | null
+        }
+        Update: {
+          assigned_date?: string | null
+          created_at?: string | null
+          function?: string | null
+          id?: string
+          jobnumber?: string | null
+          lsp_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          vehicle_type?: string | null
+          vendorcode?: string | null
+          waiting_time?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lsp_level_jobnumber_fkey"
+            columns: ["jobnumber"]
+            isOneToOne: false
+            referencedRelation: "jobsfile"
+            referencedColumns: ["jobnumber"]
+          },
+          {
+            foreignKeyName: "lsp_level_lsp_id_fkey"
+            columns: ["lsp_id"]
+            isOneToOne: false
+            referencedRelation: "lsps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lsp_level_vendorcode_fkey"
             columns: ["vendorcode"]
             isOneToOne: false
             referencedRelation: "lsps"
@@ -338,6 +508,10 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: Database["public"]["Enums"]["user_role"]
+      }
+      get_user_role_secure: {
+        Args: { user_uuid: string }
+        Returns: string
       }
     }
     Enums: {

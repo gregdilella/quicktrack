@@ -1,466 +1,364 @@
-<!-- Terminal Interface Recreation -->
+<!-- Landing Page -->
 <script lang="ts">
-	import { onMount } from 'svelte'
-	import { goto } from '$app/navigation'
-	import { signupOrLogin, getCurrentUser, getCurrentSession, getUserDashboardRoute } from '$lib/auth'
-	import { getCurrentUserProfile } from '$lib/userService'
-	import type { User, Session } from '@supabase/supabase-js'
-	import type { UserProfile } from '$lib/types'
-	
-	let user: User | null = null
-	let userProfile: UserProfile | null = null
-	let session: Session | null = null
-	let email = ''
-	let password = ''
-	let loading = false
-	let message = ''
-	let showUserInfo = false
-	let loginSuccess = false
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 
-	// Check authentication on component mount
-	onMount(async () => {
-		await checkAuth()
-	})
+	let videoElement: HTMLVideoElement;
+	let isVideoLoaded = false;
 
-	async function checkAuth() {
-		try {
-			user = await getCurrentUser()
-			session = await getCurrentSession()
-			if (user) {
-				userProfile = await getCurrentUserProfile()
-			}
-		} catch (error) {
-			console.error('Auth check error:', error)
+	onMount(() => {
+		// Auto-play video when component mounts
+		if (videoElement) {
+			videoElement.play().catch(error => {
+				console.log('Video autoplay failed:', error);
+			});
 		}
+	});
+
+	function handleVideoLoad() {
+		isVideoLoaded = true;
 	}
 
-	async function handleSignupOrLogin() {
-		loading = true
-		message = ''
-		
-		const { user: newUser, error } = await signupOrLogin(email, password)
-		
-		if (error) {
-			console.log('Login error details:', error)
-			console.log('Error message:', error.message)
-			if (error.message.includes('Invalid email or password')) {
-				message = 'Invalid email or password. Please check your credentials and try again.'
-			} else if (error.message.includes('Invalid login credentials')) {
-				message = 'Invalid email or password. Please try again.'
-			} else if (error.message.includes('Email not confirmed')) {
-				message = 'Please check your email and confirm your account before logging in.'
-			} else if (error.message.includes('User already registered')) {
-				message = 'This account already exists. Please check your password and try again.'
-			} else {
-				message = `Error: ${error.message}`
-			}
-		} else {
-			if (newUser) {
-				// Get user profile information
-				try {
-					user = newUser
-					userProfile = await getCurrentUserProfile()
-					showUserInfo = true
-					loginSuccess = true
-					message = 'Login successful! Loading user information...'
-					
-					// Clear form
-					email = ''
-					password = ''
-					
-					// Show user info for 3 seconds, then redirect
-					setTimeout(async () => {
-						const dashboardRoute = await getUserDashboardRoute()
-						goto(dashboardRoute)
-					}, 3000)
-				} catch (error) {
-					console.error('Error loading user profile:', error)
-					message = 'Login successful! Redirecting...'
-					// Fallback redirect if profile loading fails
-					setTimeout(async () => {
-						const dashboardRoute = await getUserDashboardRoute()
-						goto(dashboardRoute)
-					}, 1500)
-				}
-			}
-		}
-		
-		loading = false
-	}
-
-	// Handle Enter key press for form submission
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter' && email && password) {
-			handleSignupOrLogin()
-		}
+	function navigateToSignIn() {
+		goto('/signin');
 	}
 </script>
 
-<div class="terminal-container">
-	<div class="main-content">
-				<!-- ASCII Art Header -->
-		<div class="ascii-header">
-			<pre class="red-text">
-QQQQQQ                               
-QQ    QQ          ii        k      k       
-QQ    QQ uu   uu iii   cccc kk   kk
-QQ    QQ uu   uu  ii  cc    kk kk
-QQ QQ QQ uu   uu  ii  cc    kkk
-QQQQ  QQ uu   uu  ii  cc    kk kk
-  QQQQQQ    uuuu  iiii  cccc kk   kk
-QQ</pre>
+<div class="landing-container">
+	<!-- Video Background -->
+	<div class="video-background">
+		<video
+			bind:this={videoElement}
+			class="background-video"
+			autoplay
+			muted
+			loop
+			playsinline
+			on:loadeddata={handleVideoLoad}
+		>
+			<source src="/856190-hd_1920_1080_30fps.mp4" type="video/mp4">
+			Your browser does not support the video tag.
+		</video>
+		
+		<!-- Dark overlay for better text readability -->
+		<div class="video-overlay"></div>
+	</div>
+
+	<!-- Content -->
+	<div class="landing-content">
+		<!-- Header -->
+		<div class="header-section">
+			<h1 class="main-title">Certus Freight</h1>
+			<p class="subtitle">Fast, reliable, and secure courier services worldwide</p>
 		</div>
 
-		<!-- System Title -->
-		<div class="system-title">
-			<span class="red-text">INTERNATIONAL COURIER</span>
+		<!-- Call to Action -->
+		<div class="cta-section">
+			<button 
+				class="signin-btn" 
+				on:click={navigateToSignIn}
+			>
+				Get Started
+			</button>
+			<p class="cta-text">Join thousands of satisfied customers worldwide</p>
 		</div>
 
-
-
-		<!-- Login Section -->
-		<div class="login-section">
-			{#if !showUserInfo}
-				<h3 class="blue-text">--- SYSTEM LOGIN ---</h3>
-				
-				<div class="login-form">
-					<p class="blue-text">Enter your credentials to access the system:</p>
-					
-					<div class="input-group">
-						<label class="blue-text" for="email">Email:</label>
-						<input 
-							id="email"
-							type="email" 
-							bind:value={email} 
-							placeholder="Enter your email"
-							class="login-input"
-							on:keydown={handleKeydown}
-							disabled={loading}
-						/>
-					</div>
-					
-					<div class="input-group">
-						<label class="blue-text" for="password">Password:</label>
-						<input 
-							id="password"
-							type="password" 
-							bind:value={password} 
-							placeholder="Enter your password"
-							class="login-input"
-							on:keydown={handleKeydown}
-							disabled={loading}
-						/>
-					</div>
-					
-					<div class="login-buttons">
-						<button 
-							on:click={handleSignupOrLogin} 
-							disabled={loading || !email || !password} 
-							class="login-button"
-						>
-							{loading ? 'PROCESSING...' : 'SIGNUP/LOGIN'}
-						</button>
-					</div>
-					
-					<div class="login-hint">
-						<p class="blue-text">Press ENTER or click SIGNUP/LOGIN to continue</p>
-						<p class="blue-text">New users will be automatically registered</p>
-					</div>
+		<!-- Features Grid -->
+		<div class="features-grid">
+			<div class="feature-card">
+				<div class="feature-icon">
+					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+					</svg>
 				</div>
-			{:else}
-				<h3 class="blue-text">--- AUTHENTICATION SUCCESSFUL ---</h3>
-				
-				<div class="user-display">
-					<p class="blue-text">Welcome to QuickTrack International Courier System</p>
-					
-					{#if user && userProfile}
-						<div class="user-details">
-							<div class="detail-row">
-								<span class="blue-text">Email:</span>
-								<span class="green-text">{user.email?.toUpperCase()}</span>
-							</div>
-							<div class="detail-row">
-								<span class="blue-text">Role:</span>
-								<span class="green-text">{userProfile.role}</span>
-							</div>
-							<div class="detail-row">
-								<span class="blue-text">Access Level:</span>
-								<span class="green-text">
-									{userProfile.role === 'Admin' ? 'FULL SYSTEM ACCESS' : 
-									 userProfile.role === 'Management' ? 'EXECUTIVE ACCESS' :
-									 userProfile.role === 'Operations' ? 'OPERATIONAL ACCESS' :
-									 userProfile.role === 'LSP' ? 'PROVIDER ACCESS' : 'CUSTOMER ACCESS'}
-								</span>
-							</div>
-							<div class="detail-row">
-								<span class="blue-text">Status:</span>
-								<span class="green-text">AUTHENTICATED</span>
-							</div>
-						</div>
-						
-						<div class="redirect-info">
-							<p class="blue-text">Redirecting to {userProfile.role} dashboard...</p>
-							<div class="loading-bar">
-								<div class="loading-progress"></div>
-							</div>
-						</div>
-					{/if}
-				</div>
-			{/if}
+				<h3>Fast Delivery</h3>
+				<p>Express shipping to 200+ countries</p>
+			</div>
 			
-			{#if message && !loginSuccess}
-				<div class="login-message" class:success={message.includes('Success')} class:error={message.includes('Error') || message.includes('Invalid')}>
-					{message}
+			<div class="feature-card">
+				<div class="feature-icon">
+					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+					</svg>
 				</div>
-			{/if}
-		</div>
-
-		<!-- Support Message -->
-		<div class="support-message">
-			<p class="blue-text">Please report ALL IT</p>
-			<p class="blue-text">issues via Jira and TOPdesk</p>
-		</div>
-
-		<!-- Command Prompt -->
-		<div class="command-prompt">
-			<span class="red-text">([RETURN] or &lt;FILE&gt;)Execute, &lt;EXIT&gt;Abort</span>
+				<h3>Secure Tracking</h3>
+				<p>Real-time package monitoring</p>
+			</div>
+			
+			<div class="feature-card">
+				<div class="feature-icon">
+					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+					</svg>
+				</div>
+				<h3>24/7 Support</h3>
+				<p>Expert customer service</p>
+			</div>
 		</div>
 	</div>
+
+	<!-- Loading indicator while video loads -->
+	{#if !isVideoLoaded}
+		<div class="loading-indicator">
+			<div class="spinner"></div>
+			<p>Loading...</p>
+		</div>
+	{/if}
 </div>
 
 <style>
-	/* Terminal Container */
-	.terminal-container {
-		background-color: white;
-		font-family: 'Courier New', monospace;
-		font-size: 14px;
-		line-height: 1.2;
-		padding: 20px;
-		min-height: 100vh;
-		box-sizing: border-box;
-		display: flex;
-		justify-content: center;
-	}
-
-	/* Main Content Area */
-	.main-content {
-		max-width: 800px;
+	.landing-container {
+		position: relative;
 		width: 100%;
+		height: 100vh;
+		overflow: hidden;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 	}
 
-	/* ASCII Art Header */
-	.ascii-header {
-		margin-bottom: 20px;
+	/* Video Background */
+	.video-background {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 1;
 	}
 
-	.ascii-header pre {
-		margin: 0;
-		font-size: 12px;
-		line-height: 1;
+	.background-video {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
 	}
 
-	/* Color Classes */
-	.red-text {
-		color: red;
-		font-weight: bold;
+	.video-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: linear-gradient(
+			135deg,
+			rgba(220, 38, 38, 0.8) 0%,
+			rgba(220, 38, 38, 0.6) 50%,
+			rgba(0, 0, 0, 0.4) 100%
+		);
+		z-index: 2;
 	}
 
-	.blue-text {
-		color: blue;
-		font-weight: bold;
-	}
-
-	/* System Title */
-	.system-title {
-		margin: 20px 0;
-		text-align: left;
-	}
-
-	/* Support Message */
-	.support-message p {
-		margin: 5px 0;
-	}
-
-	/* Login Section */
-	.login-section {
-		margin: 30px 0;
-		padding: 20px;
-		border: 2px solid #0066cc;
-		background-color: #f8f9fa;
-	}
-
-	.login-section h3 {
-		margin: 0 0 20px 0;
-		text-align: center;
-	}
-
-	.login-form {
+	/* Content */
+	.landing-content {
+		position: relative;
+		z-index: 3;
+		height: 100%;
 		display: flex;
 		flex-direction: column;
-		gap: 15px;
-	}
-
-	.input-group {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
-	}
-
-	.input-group label {
-		font-size: 12px;
-	}
-
-	.login-input {
-		padding: 8px 12px;
-		font-family: 'Courier New', monospace;
-		font-size: 14px;
-		border: 2px solid #ccc;
-		background-color: white;
-		color: black;
-	}
-
-	.login-input:focus {
-		outline: none;
-		border-color: #0066cc;
-		background-color: #ffffcc;
-	}
-
-	.login-input:disabled {
-		background-color: #f0f0f0;
-		color: #666;
-	}
-
-	.login-buttons {
-		display: flex;
 		justify-content: center;
-		margin-top: 10px;
+		align-items: center;
+		text-align: center;
+		padding: 2rem;
+		color: white;
 	}
 
-	.login-button {
-		padding: 10px 30px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #0066cc;
+	/* Header Section */
+	.header-section {
+		margin-bottom: 3rem;
+	}
+
+	.main-title {
+		font-size: 4rem;
+		font-weight: 700;
+		margin: 0 0 1rem 0;
+		text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+		background: linear-gradient(45deg, #ffffff, #fecaca);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+		line-height: 1.2;
+	}
+
+	.subtitle {
+		font-size: 1.5rem;
+		margin: 0;
+		opacity: 0.9;
+		font-weight: 300;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+	}
+
+	/* Call to Action */
+	.cta-section {
+		margin-bottom: 4rem;
+	}
+
+	.signin-btn {
+		background: #dc2626;
 		color: white;
 		border: none;
+		border-radius: 50px;
+		padding: 1.25rem 3rem;
+		font-size: 1.2rem;
+		font-weight: 600;
 		cursor: pointer;
-		font-weight: bold;
-		min-width: 120px;
+		transition: all 0.3s ease;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+		margin-bottom: 1rem;
+		display: inline-block;
 	}
 
-	.login-button:hover:not(:disabled) {
-		background-color: #0052a3;
+	.signin-btn:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 30px rgba(220, 38, 38, 0.6);
+		background: #b91c1c;
 	}
 
-	.login-button:disabled {
-		background-color: #cccccc;
-		cursor: not-allowed;
+	.signin-btn:active {
+		transform: translateY(-1px);
 	}
 
-	.login-hint {
-		text-align: center;
-		margin-top: 10px;
-	}
-
-	.login-hint p {
-		font-size: 12px;
+	.cta-text {
+		font-size: 1rem;
+		opacity: 0.8;
 		margin: 0;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 	}
 
-	.login-message {
-		margin-top: 15px;
-		padding: 10px;
-		border: 1px solid #ccc;
-		font-size: 12px;
-		color: #333;
-		text-align: center;
-	}
-
-	.login-message.success {
-		background-color: #d4edda;
-		border-color: #c3e6cb;
-		color: #155724;
-	}
-
-	.login-message.error {
-		background-color: #f8d7da;
-		border-color: #f5c6cb;
-		color: #721c24;
-	}
-
-	/* User Display Styles */
-	.user-display {
-		text-align: center;
-	}
-
-	.user-details {
-		margin: 20px 0;
-		padding: 15px;
-		background-color: white;
-		border: 1px solid #0066cc;
-	}
-
-	.detail-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin: 8px 0;
-		padding: 4px 0;
-		border-bottom: 1px dotted #ccc;
-	}
-
-	.detail-row:last-child {
-		border-bottom: none;
-	}
-
-	.green-text {
-		color: green;
-		font-weight: bold;
-	}
-
-	.redirect-info {
-		margin-top: 20px;
-		text-align: center;
-	}
-
-	.loading-bar {
+	/* Features Grid */
+	.features-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 2rem;
+		max-width: 900px;
 		width: 100%;
-		height: 4px;
-		background-color: #e0e0e0;
-		margin-top: 10px;
-		overflow: hidden;
 	}
 
-	.loading-progress {
-		width: 0%;
-		height: 100%;
-		background-color: #0066cc;
-		animation: loading 3s ease-in-out forwards;
+	.feature-card {
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 20px;
+		padding: 2rem;
+		transition: all 0.3s ease;
 	}
 
-	@keyframes loading {
-		0% { width: 0%; }
-		100% { width: 100%; }
+	.feature-card:hover {
+		transform: translateY(-5px);
+		background: rgba(255, 255, 255, 0.15);
+		border-color: rgba(255, 255, 255, 0.3);
 	}
 
-	/* Support Message */
-	.support-message {
-		margin: 20px 0;
+	.feature-icon {
+		display: flex;
+		justify-content: center;
+		margin-bottom: 1rem;
 	}
 
-	/* Command Prompt */
-	.command-prompt {
-		margin-top: 30px;
-		background-color: red;
+	.feature-icon svg {
+		width: 48px;
+		height: 48px;
+		color: #fecaca;
+	}
+
+	.feature-card h3 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin: 0 0 0.5rem 0;
 		color: white;
-		padding: 5px 10px;
-		font-weight: bold;
+	}
+
+	.feature-card p {
+		font-size: 1rem;
+		opacity: 0.8;
+		margin: 0;
+		line-height: 1.6;
+	}
+
+	/* Loading Indicator */
+	.loading-indicator {
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 10;
+		text-align: center;
+		color: white;
+		background: rgba(0, 0, 0, 0.8);
+		padding: 2rem;
+		border-radius: 12px;
+		backdrop-filter: blur(10px);
+	}
+
+	.spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid rgba(255, 255, 255, 0.3);
+		border-top: 4px solid #dc2626;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin: 0 auto 1rem;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.landing-content {
+			padding: 1rem;
+		}
+
+		.main-title {
+			font-size: 2.5rem;
+		}
+
+		.subtitle {
+			font-size: 1.2rem;
+		}
+
+		.signin-btn {
+			padding: 1rem 2rem;
+			font-size: 1rem;
+		}
+
+		.features-grid {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+
+		.feature-card {
+			padding: 1.5rem;
+		}
+
+		.header-section {
+			margin-bottom: 2rem;
+		}
+
+		.cta-section {
+			margin-bottom: 2rem;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.main-title {
+			font-size: 2rem;
+		}
+
+		.subtitle {
+			font-size: 1rem;
+		}
+
+		.feature-card {
+			padding: 1rem;
+		}
 	}
 
 	/* Global Styles */
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		background-color: white;
+		background-color: #000;
 	}
 </style>

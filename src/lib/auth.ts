@@ -12,9 +12,11 @@ function storeAuthTokens(accessToken: string | null, refreshToken: string | null
     if (!browser) return
     
     if (accessToken && refreshToken) {
-        // Store tokens in cookies with proper settings
-        document.cookie = `sb-access-token=${accessToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
-        document.cookie = `sb-refresh-token=${refreshToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
+        // Store tokens in cookies with proper settings for server-side access
+        const cookieOptions = `path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax; secure=${window.location.protocol === 'https:'}`
+        
+        document.cookie = `sb-access-token=${accessToken}; ${cookieOptions}`
+        document.cookie = `sb-refresh-token=${refreshToken}; ${cookieOptions}`
     } else {
         // Clear tokens
         document.cookie = 'sb-access-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
@@ -70,7 +72,6 @@ export async function signIn(email: string, password: string) {
         try {
             const profile = await getCurrentUserProfile()
             if (!profile) {
-                console.log('⚠️ User authenticated but no database profile found, creating one...')
                 await createMissingUserProfile()
             }
         } catch (error) {
@@ -139,38 +140,28 @@ export async function getCurrentSession() {
 export async function signupOrLogin(email: string, password: string) {
     try {
         // First, always try to sign in (most common case)
-        console.log('🔐 Attempting to sign in user...')
         const signInResult = await signIn(email, password)
         
         if (signInResult.user) {
-            // Sign in successful
-            console.log('✅ Sign in successful!')
             return signInResult
         }
         
         // If sign in failed, check the error
         if (signInResult.error) {
-            console.log('❌ Sign in failed with error:', signInResult.error.message)
-            
             // If the error is "Invalid login credentials", it could mean:
             // 1. Wrong password for existing user, OR
             // 2. User doesn't exist in auth yet
             if (signInResult.error.message.includes('Invalid login credentials')) {
-                console.log('🔍 Invalid credentials - checking if this is a new user...')
-                
                 // Try to sign up - if user exists in auth, this will fail appropriately
                 // If user doesn't exist in auth, this will create them
-                console.log('👤 Attempting to create new account...')
                 const signUpResult = await signUp(email, password)
                 
                 if (signUpResult.user) {
-                    console.log('✅ New account created successfully!')
                     return signUpResult
                 } else if (signUpResult.error) {
                     // Check if the signup failed because user already exists
                     if (signUpResult.error.message.includes('User already registered') || 
                         signUpResult.error.message.includes('already been registered')) {
-                        console.log('🔄 User exists in auth but sign-in failed - likely wrong password')
                         return {
                             user: null,
                             error: {
@@ -178,13 +169,11 @@ export async function signupOrLogin(email: string, password: string) {
                             }
                         }
                     } else {
-                        console.log('❌ Signup failed:', signUpResult.error.message)
                         return signUpResult
                     }
                 }
             } else {
                 // Other sign in errors (email not confirmed, etc.)
-                console.log('❌ Sign in failed with specific error:', signInResult.error.message)
                 return signInResult
             }
         }
@@ -209,7 +198,7 @@ export async function getUserDashboardRoute(): Promise<string> {
         
         if (!userProfile || !userProfile.role) {
             // Default to customer dashboard if no role found
-            return '/dashboard'
+            return '/dashboard/customer'
         }
 
         // Route based on user role
@@ -223,11 +212,42 @@ export async function getUserDashboardRoute(): Promise<string> {
             case 'LSP':
                 return '/dashboard/lsp'
             case 'Customer':
+                return '/dashboard/customer'
+            case 'Not-Assigned':
+                return '/waiting-for-assignment'
             default:
                 return '/dashboard/customer'
         }
     } catch (error) {
         console.error('Error getting user role:', error)
-        return '/dashboard' // Default fallback
+        return '/dashboard/customer' // Default fallback
     }
-} 
+}
+
+/**
+ * Check if user is authenticated (utility function)
+ */
+export async function isAuthenticated(): Promise<boolean> {
+	try {
+		const user = await getCurrentUser()
+		const session = await getCurrentSession()
+		return !!(user && session)
+	} catch (error) {
+		console.error('Authentication check error:', error)
+		return false
+	}
+}
+
+/**
+ * Ensure user is authenticated, redirect to login if not
+ */
+export async function requireAuth(): Promise<boolean> {
+	const authenticated = await isAuthenticated()
+	if (!authenticated) {
+		if (browser) {
+			window.location.href = '/'
+		}
+		return false
+	}
+	return true
+}

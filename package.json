@@ -1,5 +1,5 @@
 {
-	"name": "quicktrack",
+	"name": "certrack",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -46,6 +46,7 @@
 		"wrangler": "^4.23.0"
 	},
 	"dependencies": {
-		"@supabase/supabase-js": "^2.50.3"
+		"@supabase/supabase-js": "^2.50.3",
+		"zod": "^4.0.5"
 	}
 }

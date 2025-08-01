@@ -25,6 +25,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 			auth: {
 				autoRefreshToken: false,
 				persistSession: false
+			},
+			db: {
+				schema: 'public'
 			}
 		}
 	)
@@ -34,14 +37,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const accessToken = event.cookies.get('sb-access-token')
 		const refreshToken = event.cookies.get('sb-refresh-token')
 
-		console.log('Checking session cookies:', {
-			hasAccessToken: !!accessToken,
-			hasRefreshToken: !!refreshToken,
-			path: event.url.pathname
-		})
-
 		if (!accessToken || !refreshToken) {
-			console.log('No auth tokens found in cookies')
 			return null
 		}
 
@@ -52,18 +48,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 			})
 
 			if (error) {
-				console.error('Session restoration error:', error)
+				// Handle invalid JWT tokens by clearing them
+				if (error.message.includes('Invalid JWT') || error.code === 'invalid_jwt') {
+					console.log('🧹 Clearing invalid JWT tokens from cookies')
+					event.cookies.delete('sb-access-token', { path: '/' })
+					event.cookies.delete('sb-refresh-token', { path: '/' })
+				}
 				return null
 			}
 
-			console.log('Session restored successfully:', {
-				userId: session?.user?.id,
-				email: session?.user?.email
-			})
-
 			return session
 		} catch (error) {
-			console.error('Error setting session:', error)
+			console.error('Session restoration error:', error)
 			return null
 		}
 	}
@@ -72,7 +68,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const session = await event.locals.getSession()
 
 	// Define protected routes (routes that require authentication)
-	const protectedRoutes = ['/dashboard']
+	const protectedRoutes = ['/dashboard', '/waiting-for-assignment']
 	
 	// Check if the current route is protected
 	const isProtectedRoute = protectedRoutes.some(route => 
@@ -81,50 +77,38 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// AUTH GUARD: If trying to access a protected route without authentication, redirect to login
 	if (isProtectedRoute && !session) {
-		console.log('Auth Guard: Redirecting unauthenticated user to login', {
-			path: event.url.pathname,
-			hasSession: !!session
-		})
 		throw redirect(302, '/')
 	}
 
 	// ROLE-BASED ACCESS CONTROL: Handle authenticated users accessing dashboard routes
 	if (session && event.url.pathname.startsWith('/dashboard')) {
-		console.log('Processing dashboard access for user:', session.user.id)
-		
 		// Get user role from database
 		const { data: userProfile, error: dbError } = await event.locals.supabase
 			.from('user_table')
 			.select('role')
 			.eq('user_id', session.user.id)
-			.single()
+			.maybeSingle()
 
 		if (dbError) {
 			console.error('Database error fetching user profile:', dbError)
 			throw redirect(302, '/dashboard/customer')
 		}
 
-		const userRole = userProfile?.role || 'Customer'
-		console.log('User role determined:', {
-			userId: session.user.id,
-			role: userRole,
-			requestedPath: event.url.pathname
-		})
+		const userRole = userProfile?.role || 'Not-Assigned'
 
-		// Admin access: Admins can access any dashboard
-		if (userRole === 'Admin') {
-			console.log('✅ Admin access granted to:', event.url.pathname)
-			// Admins can access any dashboard - no redirect needed
-		} else {
-			// Non-admin access: Check if they're accessing the correct dashboard
+		// Not-Assigned users: Redirect to waiting page
+		if (userRole === 'Not-Assigned') {
+			throw redirect(302, '/waiting-for-assignment')
+		}
+
+		// Admin users can access any dashboard - no redirection needed
+		if (userRole !== 'Admin') {
+			// Non-admin users: Check if they're accessing their correct dashboard
 			const correctDashboard = getRoleDashboard(userRole)
 			
 			// If they're not on their correct dashboard, redirect them
 			if (event.url.pathname !== correctDashboard) {
-				console.log(`🔄 Redirecting ${userRole} from ${event.url.pathname} to ${correctDashboard}`)
 				throw redirect(302, correctDashboard)
-			} else {
-				console.log(`✅ Correct dashboard access for ${userRole}:`, event.url.pathname)
 			}
 		}
 	}
@@ -132,20 +116,26 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// If already authenticated and trying to access login page, redirect to appropriate dashboard
 	if (session && event.url.pathname === '/') {
 		try {
-			const { data: userProfile } = await event.locals.supabase
+			const { data: userProfile, error: loginDbError } = await event.locals.supabase
 				.from('user_table')
 				.select('role')
 				.eq('user_id', session.user.id)
-				.single()
+				.maybeSingle()
 
-			const userRole = userProfile?.role || 'Customer'
-			const dashboardRoute = getRoleDashboard(userRole)
+			if (loginDbError) {
+				throw redirect(302, '/dashboard/customer')
+			}
+
+			const userRole = userProfile?.role || 'Not-Assigned'
 			
-			console.log(`Redirecting authenticated ${userRole} to ${dashboardRoute}`)
+			if (userRole === 'Not-Assigned') {
+				throw redirect(302, '/waiting-for-assignment')
+			}
+			
+			const dashboardRoute = getRoleDashboard(userRole)
 			throw redirect(302, dashboardRoute)
 		} catch (error) {
-			console.error('Error getting user role for redirect:', error)
-			throw redirect(302, '/dashboard')
+			throw redirect(302, '/dashboard/customer')
 		}
 	}
 

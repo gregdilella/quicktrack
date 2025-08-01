@@ -5,14 +5,7 @@ import { browser } from '$app/environment'
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY
 
-// Debug logging (only in development and browser)
-if (import.meta.env.DEV && browser) {
-	console.log('Supabase Environment check:', {
-		url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'Missing',
-		key: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'Missing',
-		browser: browser
-	})
-}
+
 
 // Validate required environment variables
 if (!supabaseUrl) {
