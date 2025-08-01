@@ -9,15 +9,16 @@ compatibility_flags = ["nodejs_compat"]
 
 # Build configuration
 [build]
-command = "npm run build"
+command = "bun run build"
 cwd = "."
 watch_dir = "src"
 
 # Environment Variables
 [vars]
 # Add your environment variables here
-# SUPABASE_URL = "your-supabase-url"
-# SUPABASE_ANON_KEY = "your-supabase-anon-key"
+PUBLIC_SUPABASE_URL=https://lcmdqkodmwbygnplmhlg.supabase.co
+
+PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjbWRxa29kbXdieWducGxtaGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzMDE4OTAsImV4cCI6MjA2Njg3Nzg5MH0.LsgGcz5snAQjJi-8df7B7bze_W8TF8znokN4bf7idPo
 
 # Development environment
 [env.development.vars]
