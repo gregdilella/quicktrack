@@ -1,8 +1,13 @@
 # Wrangler Configuration for Cloudflare Pages/Workers
 name = "certrack"
-main = "build/index.js"
+main = ".svelte-kit/output/server/index.js"
 compatibility_date = "2024-12-26"
 compatibility_flags = ["nodejs_compat"]
+
+# Static Assets Configuration  
+[assets]
+directory = ".svelte-kit/output/client"
+binding = "ASSETS"
 
 # Uncomment and configure when ready to deploy
 # account_id = "your-account-id"
@@ -12,7 +17,6 @@ compatibility_flags = ["nodejs_compat"]
 command = "bun run build"
 cwd = "."
 watch_dir = "src"
-node_version = "22"
 
 # Environment Variables
 [vars]
