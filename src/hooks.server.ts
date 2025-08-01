@@ -1,10 +1,24 @@
 import { redirect } from '@sveltejs/kit'
 import type { Handle } from '@sveltejs/kit'
 import { createClient } from '@supabase/supabase-js'
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public'
-import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private'
+import { env } from '$env/dynamic/public'
+import { env as privateEnv } from '$env/dynamic/private'
+
+// Get environment variables with fallbacks
+const PUBLIC_SUPABASE_URL = env.PUBLIC_SUPABASE_URL || ''
+const PUBLIC_SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY || ''
+const SUPABASE_SERVICE_ROLE_KEY = privateEnv.SUPABASE_SERVICE_ROLE_KEY || ''
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Check if Supabase credentials are available
+	if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
+		console.warn('⚠️ Supabase environment variables not configured. Authentication will be disabled.')
+		// Create a mock locals object for development/deployment without Supabase
+		event.locals.supabase = null as any
+		event.locals.getSession = async () => null
+		return resolve(event)
+	}
+
 	// Create Supabase client for session management (using anon key)
 	const supabaseAuth = createClient(
 		PUBLIC_SUPABASE_URL,
