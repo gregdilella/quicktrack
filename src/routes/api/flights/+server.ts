@@ -5,7 +5,12 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ url, fetch }) => {
   try {
     // AviationStack API key
-    const apiKey = env.AVIATIONSTACK_API_KEY || '1caae288d9c0e6598ecd439afecf8119';
+    const apiKey = env.AVIATIONSTACK_API_KEY;
+    
+    if (!apiKey) {
+      console.error('AVIATIONSTACK_API_KEY not configured');
+      throw error(500, 'Flight API not configured');
+    }
     
     // Get query parameters
     const airport = url.searchParams.get('airport') || 'YUL';

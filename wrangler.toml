@@ -21,8 +21,9 @@ watch_dir = "src"
 # Environment Variables
 [vars]
 # Add your environment variables here
-PUBLIC_SUPABASE_URL = "https://lcmdqkodmwbygnplmhlg.supabase.co"
-PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjbWRxa29kbXdieWducGxtaGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzMDE4OTAsImV4cCI6MjA2Njg3Nzg5MH0.LsgGcz5snAQjJi-8df7B7bze_W8TF8znokN4bf7idPo"
+# NOTE: These should be set via Cloudflare dashboard or wrangler secrets
+# PUBLIC_SUPABASE_URL = "your-supabase-url"
+# PUBLIC_SUPABASE_ANON_KEY = "your-anon-key"
 
 # Development environment
 [env.development.vars]
