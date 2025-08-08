@@ -23,7 +23,7 @@
 	})
 </script>
 
-<div class="terminal-container">
+<div class="management-container">
 	<div class="main-content">
 		<!-- Page Title -->
 		<div class="page-header">
@@ -104,149 +104,192 @@
 </div>
 
 <style>
-	.terminal-container {
-		background-color: white;
-		font-family: 'Courier New', monospace;
-		font-size: 14px;
-		line-height: 1.2;
-		padding: 20px;
+	.management-container {
 		min-height: 100vh;
-		box-sizing: border-box;
+		background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		padding: 2rem;
 	}
 
-	.main-content {
-		max-width: 1000px;
-		margin: 0 auto;
+    .main-content {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+	/* Page Header */
+	.page-header {
+		margin-bottom: 2rem;
+		text-align: center;
 	}
 
-	.ascii-header {
-		margin-bottom: 20px;
-	}
-
-	.ascii-header pre {
-		margin: 0;
-		font-size: 12px;
-		line-height: 1;
-	}
-
-	.red-text {
-		color: red;
-		font-weight: bold;
-	}
-
-	.blue-text {
-		color: blue;
-		font-weight: bold;
-	}
-
-	.purple-text {
-		color: purple;
-		font-weight: bold;
+	.page-title {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: #1f2937;
+		margin: 0 0 1rem 0;
+		background: linear-gradient(45deg, #7c3aed, #6d28d9);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
 	}
 
 	.system-title {
-		margin: 20px 0;
-		text-align: left;
+		margin: 2rem 0;
+		text-align: center;
+	}
+
+	.system-title span {
+		font-size: 1.2rem;
+		color: #7c3aed;
+		font-weight: 600;
+	}
+
+	.red-text {
+		color: #dc2626;
+		font-weight: 600;
+	}
+
+	.blue-text {
+		color: #2563eb;
+		font-weight: 600;
+	}
+
+	.purple-text {
+		color: #7c3aed;
+		font-weight: 600;
 	}
 
 	.user-info {
-		margin: 20px 0;
+		margin: 2rem 0;
+		background: white;
+		padding: 1.5rem;
+		border-radius: 15px;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.user-info p,
 	.support-message p {
-		margin: 5px 0;
+		margin: 0.5rem 0;
+		font-size: 1rem;
 	}
 
 	.dashboard-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #8800cc;
-		background-color: #f8f0ff;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.dashboard-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.dashboard-menu {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 1rem;
 	}
 
 	.menu-item {
 		display: block;
-		padding: 8px 12px;
-		background-color: white;
-		border: 1px solid #ccc;
+		padding: 1rem 1.5rem;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
 		cursor: pointer;
-		color: blue;
-		font-weight: bold;
-		font-family: 'Courier New', monospace;
+		color: #1f2937;
+		font-weight: 500;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		text-decoration: none;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 	}
 
 	.menu-item:hover {
-		background-color: #e0e0e0;
-		color: red;
+		background: #f9fafb;
+		color: #7c3aed;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		border-color: #7c3aed;
 	}
 
 	.mgmt-item {
-		border-left: 4px solid purple;
+		border-left: 4px solid #7c3aed;
 	}
 
 	.kpi-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #0066cc;
-		background-color: #f8f9fa;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.kpi-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.kpi-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-		gap: 15px;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 1.5rem;
 	}
 
 	.kpi-card {
-		background-color: white;
-		border: 1px solid #ddd;
-		padding: 15px;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 15px;
+		padding: 1.5rem;
 		text-align: center;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	}
+
+	.kpi-card:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		border-color: #7c3aed;
 	}
 
 	.kpi-title {
-		font-size: 10px;
-		color: blue;
-		font-weight: bold;
-		margin-bottom: 8px;
+		font-size: 0.875rem;
+		color: #6b7280;
+		font-weight: 500;
+		margin-bottom: 1rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 	}
 
 	.kpi-value {
-		font-size: 20px;
-		font-weight: bold;
-		color: purple;
-		margin-bottom: 5px;
+		font-size: 2rem;
+		font-weight: 700;
+		color: #7c3aed;
+		margin-bottom: 0.5rem;
 	}
 
 	.kpi-trend {
-		font-size: 12px;
-		font-weight: bold;
+		font-size: 0.875rem;
+		font-weight: 600;
 	}
 
 	.kpi-trend.positive {
-		color: green;
+		color: #10b981;
 	}
 
 	.kpi-trend.negative {
-		color: red;
+		color: #ef4444;
 	}
 
 	.admin-nav {
@@ -256,59 +299,68 @@
 
 	.admin-link {
 		display: inline-block;
-		padding: 6px 12px;
-		background-color: #cc0000;
+		padding: 0.75rem 1.5rem;
+		background: #dc2626;
 		color: white;
 		text-decoration: none;
-		font-size: 10px;
-		font-weight: bold;
-		border: 1px solid #990000;
+		font-size: 0.875rem;
+		font-weight: 500;
+		border: 1px solid #dc2626;
+		border-radius: 12px;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
 	}
 
 	.admin-link:hover {
-		background-color: #990000;
+		background: #b91c1c;
+		border-color: #b91c1c;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
 	}
 
 	.support-message {
-		margin: 20px 0;
-	}
-
-	.command-prompt {
-		margin-top: 30px;
-		background-color: red;
-		color: white;
-		padding: 5px 10px;
-		font-weight: bold;
-	}
-
-	.logout-section {
-		margin-top: 20px;
+		margin: 2rem 0;
+		background: white;
+		padding: 1.5rem;
+		border-radius: 15px;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 		text-align: center;
 	}
 
-	.logout-button {
-		padding: 10px 20px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #cc0000;
+	.command-prompt {
+		margin-top: 2rem;
+		background: linear-gradient(45deg, #7c3aed, #6d28d9);
 		color: white;
-		border: none;
-		cursor: pointer;
-		font-weight: bold;
+		padding: 1rem 1.5rem;
+		border-radius: 12px;
+		font-weight: 600;
+		text-align: center;
+		box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
 	}
 
-	.logout-button:hover {
-		background-color: #990000;
-	}
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.management-container {
+			padding: 1rem;
+		}
 
-	.logout-button:disabled {
-		background-color: #cccccc;
-		cursor: not-allowed;
+		.main-content {
+			max-width: 100%;
+		}
+
+		.kpi-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.page-title {
+			font-size: 2rem;
+		}
 	}
 
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		background-color: white;
+		background-color: #f8fafc;
 	}
 </style> 

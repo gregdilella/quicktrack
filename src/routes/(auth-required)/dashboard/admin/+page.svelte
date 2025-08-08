@@ -46,7 +46,7 @@
 	}
 </script>
 
-<div class="terminal-container">
+<div class="admin-container">
 	<div class="main-content">
 		<!-- ASCII Art Header -->
 		<div class="ascii-header">
@@ -156,20 +156,17 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 </div>
 
 <style>
-	/* Terminal Container */
-	.terminal-container {
-		background-color: white;
-		font-family: 'Courier New', monospace;
-		font-size: 14px;
-		line-height: 1.2;
-		padding: 20px;
+	/* Admin Container */
+	.admin-container {
 		min-height: 100vh;
-		box-sizing: border-box;
+		background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		padding: 2rem;
 	}
 
 	/* Main Content Area */
 	.main-content {
-		max-width: 1000px;
+		max-width: 1200px;
 		margin: 0 auto;
 	}
 
@@ -218,79 +215,99 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 
 	/* Dashboard Section */
 	.dashboard-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #cc0000;
-		background-color: #fff5f5;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.dashboard-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.dashboard-menu {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 1rem;
 	}
 
 	.menu-item {
-		padding: 8px 12px;
-		background-color: white;
-		border: 1px solid #ccc;
+		padding: 1rem 1.5rem;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
 		cursor: pointer;
-		color: blue;
-		font-weight: bold;
-		font-family: 'Courier New', monospace;
+		color: #1f2937;
+		font-weight: 500;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 	}
 
 	.menu-item:hover {
-		background-color: #e0e0e0;
-		color: red;
+		background: #fef2f2;
+		color: #dc2626;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		border-color: #dc2626;
 	}
 
 	.admin-item {
-		border-left: 4px solid red;
+		border-left: 4px solid #dc2626;
 	}
 
 	/* Dashboard Access Section */
 	.dashboard-access-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #cc6600;
-		background-color: #fff8f0;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.dashboard-access-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.dashboard-links {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 15px;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 1.5rem;
 	}
 
 	.dashboard-link {
 		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 12px 15px;
-		background-color: white;
-		border: 2px solid #ddd;
+		gap: 1rem;
+		padding: 1.5rem;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 15px;
 		text-decoration: none;
-		color: blue;
-		font-weight: bold;
-		font-family: 'Courier New', monospace;
-		transition: all 0.2s ease;
+		color: #1f2937;
+		font-weight: 500;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 	}
 
 	.dashboard-link:hover {
-		background-color: #f0f0f0;
-		border-color: #999;
-		color: red;
+		background: #fef2f2;
+		border-color: #dc2626;
+		color: #dc2626;
+		transform: translateY(-3px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 	}
 
 	.link-icon {
@@ -323,15 +340,20 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 
 	/* User Management Section */
 	.user-management-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #0066cc;
-		background-color: #f8f9fa;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.user-management-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.user-table {
@@ -343,25 +365,35 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 	.table-header {
 		display: grid;
 		grid-template-columns: 2fr 1fr 1fr 1fr;
-		gap: 10px;
-		padding: 8px 12px;
-		background-color: #0066cc;
+		gap: 1rem;
+		padding: 1rem 1.5rem;
+		background: #dc2626;
 		color: white;
-		font-weight: bold;
+		font-weight: 600;
+		border-radius: 12px 12px 0 0;
 	}
 
 	.table-row {
 		display: grid;
 		grid-template-columns: 2fr 1fr 1fr 1fr;
-		gap: 10px;
-		padding: 6px 12px;
-		background-color: white;
-		border: 1px solid #ddd;
-		font-size: 12px;
+		gap: 1rem;
+		padding: 1rem 1.5rem;
+		background: white;
+		border-bottom: 1px solid #f3f4f6;
+		font-size: 0.875rem;
+		transition: all 0.2s ease;
 	}
 
 	.table-row:nth-child(even) {
-		background-color: #f9f9f9;
+		background: #f9fafb;
+	}
+
+	.table-row:hover {
+		background: #fef2f2;
+	}
+
+	.table-row:last-child {
+		border-radius: 0 0 12px 12px;
 	}
 
 	.user-role {
@@ -395,29 +427,55 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 	}
 
 	.logout-button {
-		padding: 10px 20px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #cc0000;
+		padding: 0.875rem 2rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-size: 1rem;
+		background: #dc2626;
 		color: white;
 		border: none;
+		border-radius: 12px;
 		cursor: pointer;
-		font-weight: bold;
+		font-weight: 500;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
 	}
 
-	.logout-button:hover {
-		background-color: #990000;
+	.logout-button:hover:not(:disabled) {
+		background: #b91c1c;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
 	}
 
 	.logout-button:disabled {
-		background-color: #cccccc;
+		background: #9ca3af;
 		cursor: not-allowed;
+		transform: none;
+		box-shadow: none;
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.admin-container {
+			padding: 1rem;
+		}
+
+		.main-content {
+			max-width: 100%;
+		}
+
+		.dashboard-links {
+			grid-template-columns: 1fr;
+		}
+
+		.ascii-header pre {
+			font-size: 10px;
+		}
 	}
 
 	/* Global Styles */
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		background-color: white;
+		background-color: #f8fafc;
 	}
 </style> 

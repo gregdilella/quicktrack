@@ -1,3 +1,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities; 
+
+@layer base {
+  :root {
+    --brand: theme(colors.brand.600);
+    --brand-700: theme(colors.brand.700);
+    --radius: 16px;
+  }
+
+  html, body {
+    @apply bg-gradient-to-b from-white to-rose-50 text-gray-800 antialiased;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-medium transition-all duration-200 shadow-soft;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 hover:bg-brand-700 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/30;
+  }
+  .btn-ghost {
+    @apply btn bg-white border border-gray-200 hover:border-brand-600 hover:text-brand-700;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100 shadow-card; 
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-600 focus:ring-4 focus:ring-brand-600/15 outline-none transition;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full bg-rose-100 text-brand-700 px-2.5 py-1 text-xs font-medium;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/60 backdrop-blur-md border border-white/40 shadow-soft;
+  }
+}

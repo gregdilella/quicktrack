@@ -270,7 +270,7 @@
 			
 			// Navigate to the job detail page after a brief delay
 			setTimeout(() => {
-				goto(`/jobs/${jobData.jobno}`)
+				goto(`/dashboard/operations/jobs/${jobData.jobno}`)
 			}, 1500)
 			
 		} catch (error) {

@@ -274,7 +274,7 @@
 			{#if jobs.length > 0}
 				<div class="jobs-grid">
 					{#each jobs as job}
-						<div class="job-card" on:click={() => goto(`/jobs/${job.jobno}`)}>
+						<div class="job-card" on:click={() => goto(`/dashboard/operations/jobs/${job.jobno}`)}>
 							<div class="job-card-header">
 								<div class="job-number">{job.jobno}</div>
 								<div class="job-date">{formatDate(job.created_at)}</div>

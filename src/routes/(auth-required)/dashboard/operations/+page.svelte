@@ -34,7 +34,7 @@
 	}
 </script>
 
-<div class="terminal-container">
+<div class="operations-container">
 	<div class="main-content">
 		<!-- ASCII Art Header -->
 		<div class="ascii-header">
@@ -45,7 +45,7 @@ CC     EEEE    RRRRRR    TT    UU   UU  SSSSS
 CC     EEEE    RR RR     TT    UU   UU      SS
 CC     EE      RR  RR    TT    UU   UU      SS
 CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
-CC</pre>
+</pre>
 		</div>
 
 		<!-- System Title -->
@@ -121,18 +121,15 @@ CC</pre>
 </div>
 
 <style>
-	.terminal-container {
-		background-color: white;
-		font-family: 'Courier New', monospace;
-		font-size: 14px;
-		line-height: 1.2;
-		padding: 20px;
+	.operations-container {
 		min-height: 100vh;
-		box-sizing: border-box;
+		background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		padding: 2rem;
 	}
 
 	.main-content {
-		max-width: 1000px;
+		max-width: 1200px;
 		margin: 0 auto;
 	}
 
@@ -176,80 +173,105 @@ CC</pre>
 	}
 
 	.dashboard-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #ff8800;
-		background-color: #fff8f0;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.dashboard-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.dashboard-menu {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
+		gap: 1rem;
 	}
 
 	.menu-item {
 		display: block;
-		padding: 8px 12px;
-		background-color: white;
-		border: 1px solid #ccc;
+		padding: 1rem 1.5rem;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
 		cursor: pointer;
-		color: blue;
-		font-weight: bold;
-		font-family: 'Courier New', monospace;
+		color: #1f2937;
+		font-weight: 500;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		text-decoration: none;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 	}
 
 	.menu-item:hover {
-		background-color: #e0e0e0;
-		color: red;
+		background: #fff7ed;
+		color: #ea580c;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		border-color: #ea580c;
 	}
 
 	.ops-item {
-		border-left: 4px solid orange;
+		border-left: 4px solid #ea580c;
 	}
 
 	.stats-section {
-		margin: 30px 0;
-		padding: 15px;
-		border: 2px solid #0066cc;
-		background-color: #f8f9fa;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: white;
+		border-radius: 20px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.stats-section h3 {
-		margin: 0 0 15px 0;
+		margin: 0 0 1.5rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
 	}
 
 	.stats-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 15px;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 1.5rem;
 	}
 
 	.stat-box {
-		background-color: white;
-		border: 1px solid #ddd;
-		padding: 15px;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 15px;
+		padding: 1.5rem;
 		text-align: center;
+		transition: all 0.3s ease;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	}
+
+	.stat-box:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		border-color: #ea580c;
 	}
 
 	.stat-value {
-		font-size: 24px;
-		font-weight: bold;
-		color: orange;
-		margin-bottom: 5px;
+		font-size: 2rem;
+		font-weight: 700;
+		color: #ea580c;
+		margin-bottom: 0.5rem;
 	}
 
 	.stat-label {
-		font-size: 10px;
-		color: blue;
-		font-weight: bold;
+		font-size: 0.875rem;
+		color: #6b7280;
+		font-weight: 500;
 	}
 
 	.admin-nav {
@@ -259,17 +281,23 @@ CC</pre>
 
 	.admin-link {
 		display: inline-block;
-		padding: 6px 12px;
-		background-color: #cc0000;
+		padding: 0.75rem 1.5rem;
+		background: #dc2626;
 		color: white;
 		text-decoration: none;
-		font-size: 10px;
-		font-weight: bold;
-		border: 1px solid #990000;
+		font-size: 0.875rem;
+		font-weight: 500;
+		border: 1px solid #dc2626;
+		border-radius: 12px;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
 	}
 
 	.admin-link:hover {
-		background-color: #990000;
+		background: #b91c1c;
+		border-color: #b91c1c;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
 	}
 
 	.support-message {
@@ -290,28 +318,54 @@ CC</pre>
 	}
 
 	.logout-button {
-		padding: 10px 20px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #cc0000;
+		padding: 0.875rem 2rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-size: 1rem;
+		background: #ea580c;
 		color: white;
 		border: none;
+		border-radius: 12px;
 		cursor: pointer;
-		font-weight: bold;
+		font-weight: 500;
+		transition: all 0.2s ease;
+		box-shadow: 0 2px 10px rgba(234, 88, 12, 0.3);
 	}
 
-	.logout-button:hover {
-		background-color: #990000;
+	.logout-button:hover:not(:disabled) {
+		background: #dc2626;
+		transform: translateY(-2px);
+		box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
 	}
 
 	.logout-button:disabled {
-		background-color: #cccccc;
+		background: #9ca3af;
 		cursor: not-allowed;
+		transform: none;
+		box-shadow: none;
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.operations-container {
+			padding: 1rem;
+		}
+
+		.main-content {
+			max-width: 100%;
+		}
+
+		.stats-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.ascii-header pre {
+			font-size: 10px;
+		}
 	}
 
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		background-color: white;
+		background-color: #f8fafc;
 	}
 </style> 

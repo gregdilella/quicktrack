@@ -280,10 +280,10 @@ CC</pre>
 		box-sizing: border-box;
 	}
 
-	.main-content {
-		max-width: 1400px;
-		margin: 0 auto;
-	}
+    .main-content {
+        max-width: 1400px;
+        margin: 0; /* left aligned to match global layout */
+    }
 
 	.ascii-header {
 		margin-bottom: 20px;

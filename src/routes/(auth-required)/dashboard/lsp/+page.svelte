@@ -260,12 +260,12 @@
 </div>
 
 <style>
-	.lsp-container {
-		min-height: 100vh;
-		background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		padding: 2rem;
-	}
+    .lsp-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        padding: 0; /* layout controls padding */
+    }
 
 	/* Header Section */
 	.header-section {
