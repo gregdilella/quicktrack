@@ -36,7 +36,7 @@
 			playsinline
 			on:loadeddata={handleVideoLoad}
 		>
-			<source src="/856190-hd_1920_1080_30fps.mp4" type="video/mp4">
+			<source src="/5696874-hd_1920_1080_30fps.mp4" type="video/mp4">
 			Your browser does not support the video tag.
 		</video>
 		
@@ -139,9 +139,9 @@
 		height: 100%;
 		background: linear-gradient(
 			135deg,
-			rgba(220, 38, 38, 0.8) 0%,
-			rgba(220, 38, 38, 0.6) 50%,
-			rgba(0, 0, 0, 0.4) 100%
+			rgba(220, 38, 38, 0.4) 0%,
+			rgba(220, 38, 38, 0.3) 50%,
+			rgba(0, 0, 0, 0.3) 100%
 		);
 		z-index: 2;
 	}
@@ -166,11 +166,11 @@
 	}
 
 	.main-title {
-		font-size: 4rem;
-		font-weight: 700;
+		font-size: 5rem;
+		font-weight: 800;
 		margin: 0 0 1rem 0;
-		text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-		background: linear-gradient(45deg, #ffffff, #fecaca);
+		text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+		background: linear-gradient(45deg, #ffffff, #d1d5db);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
@@ -311,7 +311,7 @@
 		}
 
 		.main-title {
-			font-size: 2.5rem;
+			font-size: 3rem;
 		}
 
 		.subtitle {
@@ -343,7 +343,7 @@
 
 	@media (max-width: 480px) {
 		.main-title {
-			font-size: 2rem;
+			font-size: 2.5rem;
 		}
 
 		.subtitle {
