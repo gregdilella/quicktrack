@@ -18,6 +18,9 @@ command = "bun run build"
 cwd = "."
 watch_dir = "src"
 
+# Required for Cloudflare Pages
+pages_build_output_dir = ".svelte-kit/output/client"
+
 # Environment Variables
 [vars]
 # Add your environment variables here
