@@ -1,0 +1,12 @@
+# Cloudflare Pages ignore file
+# Exclude large video files that exceed 25MB limit
+static/5722114-uhd_4096_2160_25fps.mp4
+static/6169116-uhd_3840_2160_25fps.mp4  
+static/6170064-uhd_3840_2160_25fps.mp4
+
+# Exclude development files
+node_modules/
+.git/
+.env
+.env.local
+.DS_Store
