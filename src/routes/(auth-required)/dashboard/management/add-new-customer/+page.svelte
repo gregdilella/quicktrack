@@ -4,28 +4,31 @@
 	import { goto } from '$app/navigation'
 	import { getCurrentUser, signOut } from '$lib/auth'
 	import { getCurrentUserProfile } from '$lib/userService'
-	import { customerSchema, validateForm } from '$lib/validation/schemas'
+	import { supabase } from '$lib/supabase'
 	import type { User } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
 	
 	let user: User | null = null
 	let userProfile: UserProfile | null = null
 	let loading = false
+	let saving = false
 	let message = ''
 	let validationErrors: Record<string, string> = {}
 
-	// Customer form data
+	// Customer form data - matching the customers table structure
 	let customerData = {
 		name: '',
+		account_number: '',
 		contact_email: '',
-		contact_phone: '',
+		phone: '',
 		address1: '',
 		address2: '',
 		city: '',
 		state: '',
 		zip: '',
 		billing_contact: '',
-		payment_terms: 'NET_30' as const
+		payment_terms: 'NET_30' as const,
+		notes: ''
 	}
 
 	onMount(async () => {
@@ -50,40 +53,72 @@
 		loading = false
 	}
 
-	function handleSubmit() {
-		// Validate form data using Zod
-		const validation = validateForm(customerSchema, customerData)
-		if (!validation.success) {
-			validationErrors = validation.errors || {}
+	async function handleSubmit() {
+		// Basic validation
+		validationErrors = {}
+		
+		if (!customerData.name.trim()) {
+			validationErrors.name = 'Company name is required'
+		}
+		
+		if (!customerData.contact_email.trim()) {
+			validationErrors.contact_email = 'Email is required'
+		} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerData.contact_email)) {
+			validationErrors.contact_email = 'Please enter a valid email address'
+		}
+
+		if (Object.keys(validationErrors).length > 0) {
 			message = 'Please fix the validation errors below'
 			return
 		}
 
-		// Clear any previous validation errors
-		validationErrors = {}
-		
-		// TODO: Implement customer creation logic
-		console.log('Creating new customer:', validation.data)
-		message = 'Customer created successfully!'
-		
-		// Reset form after successful creation
-		customerData = {
-			name: '',
-			contact_email: '',
-			contact_phone: '',
-			address1: '',
-			address2: '',
-			city: '',
-			state: '',
-			zip: '',
-			billing_contact: '',
-			payment_terms: 'NET_30' as const
+		try {
+			saving = true
+			message = ''
+			
+			// Insert new customer into the database
+			const { data, error } = await supabase
+				.from('customers')
+				.insert({
+					name: customerData.name.trim(),
+					account_number: customerData.account_number.trim() || null,
+					contact_email: customerData.contact_email.trim(),
+					phone: customerData.phone.trim() || null,
+					address1: customerData.address1.trim() || null,
+					address2: customerData.address2.trim() || null,
+					city: customerData.city.trim() || null,
+					state: customerData.state.trim() || null,
+					zip: customerData.zip.trim() || null,
+					billing_contact: customerData.billing_contact.trim() || null,
+					payment_terms: customerData.payment_terms,
+					notes: customerData.notes.trim() || null
+				})
+				.select()
+				.single()
+			
+			if (error) {
+				console.error('Error creating customer:', error)
+				message = `Error creating customer: ${error.message}`
+				return
+			}
+			
+			message = 'Customer created successfully!'
+			console.log('Created customer:', data)
+			
+			// Redirect to management dashboard after successful creation
+			setTimeout(() => {
+				goto('/dashboard/management')
+			}, 1500)
+			
+		} catch (err) {
+			console.error('Error in handleSubmit:', err)
+			message = 'An unexpected error occurred. Please try again.'
+		} finally {
+			saving = false
 		}
 	}
 
-	function copyContactToBilling() {
-		customerData.billing_contact = customerData.contact_email
-	}
+
 </script>
 
 <div class="terminal-container">
@@ -136,6 +171,13 @@ CC</pre>
 							<span class="error-text">{validationErrors.name}</span>
 						{/if}
 					</div>
+					<div class="form-group">
+						<label class="blue-text">ACCOUNT NUMBER:</label>
+						<input type="text" bind:value={customerData.account_number} class="form-input" class:error={validationErrors.account_number} placeholder="Optional" />
+						{#if validationErrors.account_number}
+							<span class="error-text">{validationErrors.account_number}</span>
+						{/if}
+					</div>
 				</div>
 
 				<!-- Contact Information -->
@@ -153,9 +195,9 @@ CC</pre>
 					</div>
 					<div class="form-group">
 						<label class="blue-text">PHONE:</label>
-						<input type="tel" bind:value={customerData.contact_phone} class="form-input" class:error={validationErrors.contact_phone} />
-						{#if validationErrors.contact_phone}
-							<span class="error-text">{validationErrors.contact_phone}</span>
+						<input type="tel" bind:value={customerData.phone} class="form-input" class:error={validationErrors.phone} />
+						{#if validationErrors.phone}
+							<span class="error-text">{validationErrors.phone}</span>
 						{/if}
 					</div>
 					<div class="form-group">
@@ -218,7 +260,6 @@ CC</pre>
 				<!-- Billing Information -->
 				<div class="form-section-header">
 					<h4 class="purple-text">BILLING INFORMATION</h4>
-					<button type="button" on:click={copyContactToBilling} class="copy-button">COPY FROM CONTACT</button>
 				</div>
 				
 				<div class="form-row">
@@ -240,9 +281,23 @@ CC</pre>
 					</div>
 				</div>
 
+				<!-- Additional Information -->
+				<div class="form-section-header">
+					<h4 class="purple-text">ADDITIONAL INFORMATION</h4>
+				</div>
+				
+				<div class="form-row">
+					<div class="form-group full-width">
+						<label class="blue-text">NOTES:</label>
+						<textarea bind:value={customerData.notes} class="form-input form-textarea" rows="3" placeholder="Any additional notes about this customer..."></textarea>
+					</div>
+				</div>
+
 				<div class="form-actions">
-					<button type="submit" class="submit-button">CREATE CUSTOMER</button>
-					<button type="button" on:click={() => goto('/dashboard/management')} class="cancel-button">CANCEL</button>
+					<button type="submit" class="submit-button" disabled={saving}>
+						{saving ? 'CREATING CUSTOMER...' : 'CREATE CUSTOMER'}
+					</button>
+					<button type="button" on:click={() => goto('/dashboard/management')} class="cancel-button" disabled={saving}>CANCEL</button>
 				</div>
 			</form>
 			
@@ -269,135 +324,154 @@ CC</pre>
 
 <style>
 	.terminal-container {
-		background-color: white;
-		font-family: 'Courier New', monospace;
+		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		font-size: 14px;
-		line-height: 1.2;
-		padding: 20px;
+		line-height: 1.5;
+		padding: 2rem;
 		min-height: 100vh;
 		box-sizing: border-box;
 	}
 
 	.main-content {
-		max-width: 900px;
+		max-width: 1000px;
 		margin: 0 auto;
 	}
 
 	.ascii-header {
-		margin-bottom: 20px;
+		margin-bottom: 2rem;
+		background: white;
+		padding: 1.5rem;
+		border-radius: 16px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.ascii-header pre {
 		margin: 0;
 		font-size: 12px;
 		line-height: 1;
+		font-family: 'Courier New', monospace;
 	}
 
 	.red-text {
-		color: red;
-		font-weight: bold;
+		color: #ea580c;
+		font-weight: 700;
 	}
 
 	.blue-text {
-		color: blue;
-		font-weight: bold;
+		color: #2563eb;
+		font-weight: 600;
 	}
 
 	.purple-text {
-		color: purple;
-		font-weight: bold;
+		color: #7c3aed;
+		font-weight: 600;
 	}
 
 	.system-title {
-		margin: 20px 0;
-		text-align: left;
+		margin: 2rem 0;
+		text-align: center;
+		background: white;
+		padding: 1.5rem;
+		border-radius: 16px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.nav-section {
-		margin: 20px 0;
+		margin: 2rem 0;
+		text-align: center;
 	}
 
 	.nav-link {
 		display: inline-block;
-		padding: 6px 12px;
-		background-color: #8800cc;
+		padding: 0.75rem 1.5rem;
+		background: linear-gradient(135deg, #7c3aed, #6d28d9);
 		color: white;
 		text-decoration: none;
-		font-size: 10px;
-		font-weight: bold;
-		border: 1px solid #6600aa;
+		font-size: 0.875rem;
+		font-weight: 600;
+		border-radius: 12px;
+		transition: all 0.3s ease;
+		box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 	}
 
 	.nav-link:hover {
-		background-color: #6600aa;
+		background: linear-gradient(135deg, #6d28d9, #5b21b6);
+		transform: translateY(-2px);
+		box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
 	}
 
 	.user-info {
-		margin: 20px 0;
+		margin: 2rem 0;
+		background: white;
+		padding: 1.5rem;
+		border-radius: 16px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.user-info p {
-		margin: 5px 0;
+		margin: 0.5rem 0;
+		font-size: 0.95rem;
 	}
 
 	.form-section {
-		margin: 30px 0;
-		padding: 25px;
-		border: 2px solid #8800cc;
-		background-color: #f8f0ff;
+		margin: 2rem 0;
+		padding: 2.5rem;
+		border-radius: 20px;
+		background: white;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
 	}
 
 	.form-section h3 {
-		margin: 0 0 25px 0;
+		margin: 0 0 2rem 0;
 		text-align: center;
+		font-size: 1.5rem;
+		color: #1f2937;
+		text-transform: uppercase;
+		letter-spacing: 1px;
 	}
 
 	.form-section-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin: 25px 0 15px 0;
-		padding-bottom: 10px;
-		border-bottom: 1px solid #8800cc;
+		margin: 2rem 0 1.5rem 0;
+		padding-bottom: 0.75rem;
+		border-bottom: 2px solid #e5e7eb;
 	}
 
 	.form-section-header h4 {
 		margin: 0;
-		font-size: 12px;
+		font-size: 1.1rem;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 	}
 
-	.copy-button {
-		padding: 4px 8px;
-		font-family: 'Courier New', monospace;
-		font-size: 10px;
-		background-color: #0066cc;
-		color: white;
-		border: none;
-		cursor: pointer;
-		font-weight: bold;
-	}
 
-	.copy-button:hover {
-		background-color: #004499;
-	}
 
 	.customer-form {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
+		gap: 2rem;
 	}
 
 	.form-row {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 20px;
+		gap: 1.5rem;
 		align-items: end;
 	}
 
 	.form-group {
 		display: flex;
 		flex-direction: column;
-		gap: 5px;
+		gap: 0.5rem;
 	}
 
 	.form-group.full-width {
@@ -405,127 +479,212 @@ CC</pre>
 	}
 
 	.form-group label {
-		font-size: 12px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #374151;
 	}
 
 	.form-input {
-		padding: 8px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		border: 1px solid #ccc;
+		padding: 0.875rem 1rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-size: 0.95rem;
+		border: 2px solid #e5e7eb;
 		background-color: white;
+		border-radius: 12px;
+		transition: all 0.3s ease;
+		color: #1f2937;
 	}
 
 	.form-textarea {
 		resize: vertical;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		line-height: 1.5;
 	}
 
 	.form-input:focus {
 		outline: none;
-		border-color: #8800cc;
-		background-color: #f8f9fa;
+		border-color: #ea580c;
+		background-color: #fff7ed;
+		box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.1);
+	}
+
+	.form-input::placeholder {
+		color: #9ca3af;
+		font-style: italic;
 	}
 
 	.form-actions {
 		display: flex;
-		gap: 15px;
+		gap: 1.5rem;
 		justify-content: center;
-		margin-top: 30px;
+		margin-top: 2.5rem;
+		padding-top: 2rem;
+		border-top: 1px solid #e5e7eb;
 	}
 
 	.submit-button {
-		padding: 12px 25px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #008800;
+		padding: 1rem 2rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-size: 0.95rem;
+		background: linear-gradient(135deg, #16a34a, #15803d);
 		color: white;
 		border: none;
+		border-radius: 12px;
 		cursor: pointer;
-		font-weight: bold;
+		font-weight: 600;
+		transition: all 0.3s ease;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+		min-width: 180px;
 	}
 
-	.submit-button:hover {
-		background-color: #006600;
+	.submit-button:hover:not(:disabled) {
+		background: linear-gradient(135deg, #15803d, #166534);
+		transform: translateY(-2px);
+		box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+	}
+
+	.submit-button:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+		transform: none;
+		box-shadow: 0 4px 15px rgba(22, 163, 74, 0.2);
 	}
 
 	.cancel-button {
-		padding: 12px 25px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #888888;
+		padding: 1rem 2rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-size: 0.95rem;
+		background: linear-gradient(135deg, #6b7280, #4b5563);
 		color: white;
 		border: none;
+		border-radius: 12px;
 		cursor: pointer;
-		font-weight: bold;
+		font-weight: 600;
+		transition: all 0.3s ease;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+		min-width: 120px;
 	}
 
-	.cancel-button:hover {
-		background-color: #666666;
+	.cancel-button:hover:not(:disabled) {
+		background: linear-gradient(135deg, #4b5563, #374151);
+		transform: translateY(-2px);
+		box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
+	}
+
+	.cancel-button:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+		transform: none;
 	}
 
 	.command-prompt {
-		margin-top: 30px;
-		background-color: red;
+		margin-top: 2rem;
+		background: linear-gradient(135deg, #ea580c, #dc2626);
 		color: white;
-		padding: 5px 10px;
-		font-weight: bold;
+		padding: 1rem 1.5rem;
+		font-weight: 600;
+		border-radius: 12px;
+		box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
+		text-align: center;
 	}
 
 	.logout-section {
-		margin-top: 20px;
+		margin-top: 2rem;
 		text-align: center;
 	}
 
 	.logout-button {
-		padding: 10px 20px;
-		font-family: 'Courier New', monospace;
-		font-size: 12px;
-		background-color: #cc0000;
+		padding: 0.75rem 1.5rem;
+		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+		font-size: 0.875rem;
+		background: linear-gradient(135deg, #dc2626, #b91c1c);
 		color: white;
 		border: none;
+		border-radius: 12px;
 		cursor: pointer;
-		font-weight: bold;
+		font-weight: 600;
+		transition: all 0.3s ease;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
 	}
 
-	.logout-button:hover {
-		background-color: #990000;
+	.logout-button:hover:not(:disabled) {
+		background: linear-gradient(135deg, #b91c1c, #991b1b);
+		transform: translateY(-2px);
+		box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
 	}
 
 	.logout-button:disabled {
-		background-color: #cccccc;
+		opacity: 0.7;
 		cursor: not-allowed;
+		transform: none;
 	}
 
 	/* Error styling for form validation */
 	.form-input.error {
 		border-color: #dc2626;
 		background-color: #fef2f2;
+		box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
 	}
 
 	.error-text {
 		color: #dc2626;
-		font-size: 10px;
-		margin-top: 2px;
+		font-size: 0.75rem;
+		margin-top: 0.25rem;
 		display: block;
+		font-weight: 500;
 	}
 
 	.message {
-		padding: 10px;
-		margin: 10px 0;
-		border-radius: 4px;
+		padding: 1rem 1.5rem;
+		margin: 1.5rem 0;
+		border-radius: 12px;
 		text-align: center;
-		font-weight: bold;
+		font-weight: 600;
+		font-size: 0.95rem;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 	}
 
 	.message.success {
-		background-color: #dcfce7;
+		background: linear-gradient(135deg, #dcfce7, #bbf7d0);
 		color: #166534;
-		border: 1px solid #bbf7d0;
+		border: 2px solid #22c55e;
 	}
 
 	.message.error {
-		background-color: #fef2f2;
+		background: linear-gradient(135deg, #fef2f2, #fecaca);
 		color: #dc2626;
-		border: 1px solid #fecaca;
+		border: 2px solid #ef4444;
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.terminal-container {
+			padding: 1rem;
+		}
+		
+		.form-row {
+			grid-template-columns: 1fr;
+			gap: 1rem;
+		}
+		
+		.form-section {
+			padding: 1.5rem;
+		}
+		
+		.form-actions {
+			flex-direction: column;
+			align-items: center;
+		}
+		
+		.submit-button, .cancel-button {
+			width: 100%;
+			max-width: 300px;
+		}
 	}
 </style> 

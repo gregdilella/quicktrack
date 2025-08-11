@@ -22,6 +22,7 @@
 			{ label: 'Testing', href: '/dashboard/testing' }
 		],
 		management: [
+			{ label: 'Customer Search', href: '/dashboard/management/customer-search' },
 			{ label: 'Add New Customer', href: '/dashboard/management/add-new-customer' },
 			{ label: 'Customer P&L', href: '/dashboard/management/customer-pl' },
 			{ label: 'Users', href: '/dashboard/management/users' },

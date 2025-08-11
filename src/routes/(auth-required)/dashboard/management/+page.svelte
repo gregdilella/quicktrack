@@ -53,10 +53,11 @@
 		<div class="dashboard-section">
 			<h3 class="blue-text">--- MANAGEMENT MENU ---</h3>
 			<div class="dashboard-menu">
-							<a href="/dashboard/management/add-new-customer" class="menu-item mgmt-item">► ADD NEW CUSTOMER</a>
-			<a href="/dashboard/management/customer-pl" class="menu-item mgmt-item">► CUSTOMER P&L</a>
-			<a href="/dashboard/management/users" class="menu-item mgmt-item">► USERS</a>
-			<a href="/dashboard/management/graphs" class="menu-item mgmt-item">► TABLEAU STYLE GRAPHS</a>
+				<a href="/dashboard/management/customer-search" class="menu-item mgmt-item">► CUSTOMER SEARCH</a>
+				<a href="/dashboard/management/add-new-customer" class="menu-item mgmt-item">► ADD NEW CUSTOMER</a>
+				<a href="/dashboard/management/customer-pl" class="menu-item mgmt-item">► CUSTOMER P&L</a>
+				<a href="/dashboard/management/users" class="menu-item mgmt-item">► USERS</a>
+				<a href="/dashboard/management/graphs" class="menu-item mgmt-item">► TABLEAU STYLE GRAPHS</a>
 			</div>
 		</div>
 

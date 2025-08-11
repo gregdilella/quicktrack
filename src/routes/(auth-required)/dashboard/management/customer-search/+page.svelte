@@ -1,4 +1,4 @@
-<!-- Users Management - Management -->
+<!-- Customer Search - Management -->
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
@@ -13,63 +13,61 @@
 	let loading = false
 	let searching = false
 	let searchQuery = ''
-	let roleFilter = ''
-	let users: any[] = []
-	let filteredUsers: any[] = []
-
+	let customers: any[] = []
+	let filteredCustomers: any[] = []
+	
 	onMount(async () => {
 		user = await getCurrentUser()
 		if (user) {
 			try {
 				userProfile = await getCurrentUserProfile()
-				await loadUsers()
+				await loadCustomers()
 			} catch (error) {
 				console.error('Error loading user profile:', error)
 			}
 		}
 	})
 
-	async function loadUsers() {
+	async function loadCustomers() {
 		try {
 			searching = true
 			const { data, error } = await supabase
-				.from('user_table')
+				.from('customers')
 				.select('*')
 				.order('created_at', { ascending: false })
 			
 			if (error) {
-				console.error('Error loading users:', error)
+				console.error('Error loading customers:', error)
 				return
 			}
 			
-			users = data || []
-			filteredUsers = users
+			customers = data || []
+			filteredCustomers = customers
 		} catch (err) {
-			console.error('Error in loadUsers:', err)
+			console.error('Error in loadCustomers:', err)
 		} finally {
 			searching = false
 		}
 	}
 
 	function handleSearch() {
-		if (!searchQuery.trim() && !roleFilter) {
-			filteredUsers = users
+		if (!searchQuery.trim()) {
+			filteredCustomers = customers
 			return
 		}
 		
 		const query = searchQuery.toLowerCase().trim()
-		filteredUsers = users.filter(user => {
-			const matchesSearch = !query || 
-				user.email?.toLowerCase().includes(query) ||
-				user.user_id?.toLowerCase().includes(query)
-			const matchesRole = !roleFilter || user.role === roleFilter
-			
-			return matchesSearch && matchesRole
-		})
+		filteredCustomers = customers.filter(customer => 
+			customer.name?.toLowerCase().includes(query) ||
+			customer.contact_email?.toLowerCase().includes(query) ||
+			customer.account_number?.toLowerCase().includes(query) ||
+			customer.city?.toLowerCase().includes(query) ||
+			customer.state?.toLowerCase().includes(query)
+		)
 	}
 
-	function handleUserClick(userId: string) {
-		goto(`/dashboard/management/users/${userId}`)
+	function handleCustomerClick(customerId: string) {
+		goto(`/dashboard/management/customers/${customerId}`)
 	}
 
 	async function handleSignOut() {
@@ -83,57 +81,46 @@
 		loading = false
 	}
 
-	function formatDate(dateString: string | null): string {
-		if (!dateString) return 'Never'
+	function formatDate(dateString: string) {
 		return new Date(dateString).toLocaleDateString()
 	}
 
-	function getRoleColor(role: string): string {
-		switch (role) {
-			case 'Admin': return '#ef4444'
-			case 'Management': return '#7c3aed'
-			case 'Operations': return '#ea580c'
-			case 'LSP': return '#2563eb'
-			case 'Customer': return '#16a34a'
-			default: return '#6b7280'
-		}
-	}
-
 	// Reactive search
-	$: if (searchQuery !== undefined || roleFilter !== undefined) {
+	$: if (searchQuery !== undefined) {
 		handleSearch()
 	}
 </script>
 
-<div class="users-container">
+<div class="search-container">
 	<div class="main-content">
 		<!-- Header -->
 		<div class="header-section">
 			<div class="header-content">
-				<h1 class="page-title">User Management</h1>
-				<p class="page-subtitle">Search and manage system users</p>
+				<h1 class="page-title">Customer Search</h1>
+				<p class="page-subtitle">Find and manage customer information</p>
 			</div>
 		</div>
 
 		<!-- Navigation -->
 		<div class="nav-section">
 			<a href="/dashboard/management" class="nav-link">⬅ Back to Management</a>
+			<a href="/dashboard/management/add-new-customer" class="nav-link add-customer">+ Add New Customer</a>
 		</div>
 
 		<!-- User Information -->
 		{#if user && userProfile}
 			<div class="user-info">
 				<p class="status-text">Status: <span class="highlight">Management Access</span></p>
-				<p class="function-text">Function: User Administration</p>
+				<p class="function-text">Function: Customer Search & Management</p>
 			</div>
 		{/if}
 
 		<!-- Search Section -->
 		<div class="search-section">
 			<div class="search-header">
-				<h3>Search Users</h3>
+				<h3>Search Customers</h3>
 				<div class="search-stats">
-					{filteredUsers.length} of {users.length} users
+					{filteredCustomers.length} of {customers.length} customers
 				</div>
 			</div>
 			
@@ -142,23 +129,14 @@
 					<input 
 						type="text" 
 						bind:value={searchQuery}
-						placeholder="Search by email or user ID..."
+						placeholder="Search by name, email, account number, city, or state..."
 						class="search-input"
 					/>
-					<select bind:value={roleFilter} class="role-filter">
-						<option value="">All Roles</option>
-						<option value="Admin">Admin</option>
-						<option value="Management">Management</option>
-						<option value="Operations">Operations</option>
-						<option value="LSP">LSP</option>
-						<option value="Customer">Customer</option>
-						<option value="Not-Assigned">Not Assigned</option>
-					</select>
 					<button 
 						type="button" 
-						on:click={() => { searchQuery = ''; roleFilter = ''; }} 
+						on:click={() => { searchQuery = ''; handleSearch(); }} 
 						class="clear-button"
-						class:visible={searchQuery.length > 0 || roleFilter.length > 0}
+						class:visible={searchQuery.length > 0}
 					>
 						Clear
 					</button>
@@ -171,67 +149,72 @@
 			{#if searching}
 				<div class="loading-state">
 					<div class="loading-spinner"></div>
-					<p>Loading users...</p>
+					<p>Loading customers...</p>
 				</div>
-			{:else if filteredUsers.length === 0 && users.length > 0}
+			{:else if filteredCustomers.length === 0 && customers.length > 0}
 				<div class="empty-state">
 					<div class="empty-icon">🔍</div>
-					<h3>No users found</h3>
-					<p>Try adjusting your search terms or filters</p>
+					<h3>No customers found</h3>
+					<p>Try adjusting your search terms</p>
 				</div>
-			{:else if users.length === 0}
+			{:else if customers.length === 0}
 				<div class="empty-state">
 					<div class="empty-icon">👥</div>
-					<h3>No users yet</h3>
-					<p>Users will appear here once they are added to the system</p>
+					<h3>No customers yet</h3>
+					<p>Create your first customer to get started</p>
+					<a href="/dashboard/management/add-new-customer" class="empty-action">Add First Customer</a>
 				</div>
 			{:else}
-				<div class="users-grid">
-					{#each filteredUsers as userData (userData.id)}
+				<div class="customers-grid">
+					{#each filteredCustomers as customer (customer.id)}
 						<div 
-							class="user-card" 
-							on:click={() => handleUserClick(userData.id)}
-							on:keydown={(e) => e.key === 'Enter' && handleUserClick(userData.id)}
+							class="customer-card" 
+							on:click={() => handleCustomerClick(customer.id)}
+							on:keydown={(e) => e.key === 'Enter' && handleCustomerClick(customer.id)}
 							role="button"
 							tabindex="0"
 						>
-							<div class="user-header">
-								<div class="user-avatar" style="background: {getRoleColor(userData.role)};">
-									<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-									</svg>
-								</div>
-								<div class="user-info">
-									<h4 class="user-email">{userData.email}</h4>
-									<span class="role-badge" style="background: {getRoleColor(userData.role)};">
-										{userData.role || 'Not Assigned'}
-									</span>
-								</div>
-							</div>
-							
-							<div class="user-details">
-								<div class="detail-row">
-									<span class="detail-label">User ID:</span>
-									<span class="detail-value">{userData.user_id}</span>
-								</div>
-								
-								{#if userData.customer_id}
-									<div class="detail-row">
-										<span class="detail-label">Customer:</span>
-										<span class="detail-value">Linked</span>
-									</div>
-								{/if}
-								
-								{#if userData.lsp_id}
-									<div class="detail-row">
-										<span class="detail-label">LSP:</span>
-										<span class="detail-value">Linked</span>
-									</div>
+							<div class="customer-header">
+								<h4 class="customer-name">{customer.name}</h4>
+								{#if customer.account_number}
+									<span class="account-badge">#{customer.account_number}</span>
 								{/if}
 							</div>
 							
-							<div class="user-footer">
-								<span class="created-date">Created: {formatDate(userData.created_at)}</span>
+							<div class="customer-details">
+								{#if customer.contact_email}
+									<div class="detail-row">
+										<span class="detail-label">Email:</span>
+										<span class="detail-value">{customer.contact_email}</span>
+									</div>
+								{/if}
+								
+								{#if customer.phone}
+									<div class="detail-row">
+										<span class="detail-label">Phone:</span>
+										<span class="detail-value">{customer.phone}</span>
+									</div>
+								{/if}
+								
+								{#if customer.city || customer.state}
+									<div class="detail-row">
+										<span class="detail-label">Location:</span>
+										<span class="detail-value">
+											{customer.city}{customer.city && customer.state ? ', ' : ''}{customer.state}
+										</span>
+									</div>
+								{/if}
+								
+								{#if customer.payment_terms}
+									<div class="detail-row">
+										<span class="detail-label">Terms:</span>
+										<span class="detail-value">{customer.payment_terms}</span>
+									</div>
+								{/if}
+							</div>
+							
+							<div class="customer-footer">
+								<span class="created-date">Created: {formatDate(customer.created_at)}</span>
 								<span class="click-hint">Click to view details →</span>
 							</div>
 						</div>
@@ -250,7 +233,7 @@
 </div>
 
 <style>
-	.users-container {
+	.search-container {
 		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		min-height: 100vh;
@@ -280,7 +263,7 @@
 		font-weight: 700;
 		color: #1f2937;
 		margin: 0 0 0.5rem 0;
-		background: linear-gradient(135deg, #7c3aed, #dc2626);
+		background: linear-gradient(135deg, #ea580c, #dc2626);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
@@ -293,8 +276,11 @@
 	}
 
 	.nav-section {
+		display: flex;
+		gap: 1rem;
 		margin-bottom: 2rem;
-		text-align: center;
+		justify-content: space-between;
+		align-items: center;
 	}
 
 	.nav-link {
@@ -316,6 +302,16 @@
 		background: linear-gradient(135deg, #6d28d9, #5b21b6);
 		transform: translateY(-2px);
 		box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+	}
+
+	.nav-link.add-customer {
+		background: linear-gradient(135deg, #16a34a, #15803d);
+		box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+	}
+
+	.nav-link.add-customer:hover {
+		background: linear-gradient(135deg, #15803d, #166534);
+		box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
 	}
 
 	.user-info {
@@ -385,24 +381,8 @@
 
 	.search-input:focus {
 		outline: none;
-		border-color: #7c3aed;
-		box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
-	}
-
-	.role-filter {
-		padding: 1rem 1.25rem;
-		border: 2px solid #e5e7eb;
-		border-radius: 12px;
-		font-size: 1rem;
-		background: white;
-		min-width: 150px;
-		transition: all 0.3s ease;
-	}
-
-	.role-filter:focus {
-		outline: none;
-		border-color: #7c3aed;
-		box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+		border-color: #ea580c;
+		box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.1);
 	}
 
 	.clear-button {
@@ -450,7 +430,7 @@
 		width: 40px;
 		height: 40px;
 		border: 4px solid #e5e7eb;
-		border-top: 4px solid #7c3aed;
+		border-top: 4px solid #ea580c;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 		margin-bottom: 1rem;
@@ -474,17 +454,32 @@
 
 	.empty-state p {
 		color: #6b7280;
-		margin: 0;
+		margin: 0 0 1.5rem 0;
 	}
 
-	.users-grid {
+	.empty-action {
+		padding: 0.75rem 1.5rem;
+		background: linear-gradient(135deg, #16a34a, #15803d);
+		color: white;
+		text-decoration: none;
+		border-radius: 12px;
+		font-weight: 600;
+		transition: all 0.3s ease;
+	}
+
+	.empty-action:hover {
+		background: linear-gradient(135deg, #15803d, #166534);
+		transform: translateY(-2px);
+	}
+
+	.customers-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
 		gap: 1.5rem;
 		padding: 2rem;
 	}
 
-	.user-card {
+	.customer-card {
 		background: linear-gradient(135deg, #ffffff, #f8fafc);
 		border: 2px solid #e5e7eb;
 		border-radius: 16px;
@@ -494,59 +489,38 @@
 		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 	}
 
-	.user-card:hover {
-		border-color: #7c3aed;
-		box-shadow: 0 8px 30px rgba(124, 58, 237, 0.15);
+	.customer-card:hover {
+		border-color: #ea580c;
+		box-shadow: 0 8px 30px rgba(234, 88, 12, 0.15);
 		transform: translateY(-4px);
 	}
 
-	.user-header {
+	.customer-header {
 		display: flex;
+		justify-content: space-between;
 		align-items: center;
-		gap: 1rem;
 		margin-bottom: 1rem;
 		padding-bottom: 0.75rem;
 		border-bottom: 1px solid #e5e7eb;
 	}
 
-	.user-avatar {
-		width: 32px;
-		height: 32px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: white;
-		flex-shrink: 0;
-	}
-
-	.user-avatar svg {
-		width: 16px;
-		height: 16px;
-	}
-
-	.user-info {
-		flex: 1;
-	}
-
-	.user-email {
-		font-size: 1.1rem;
+	.customer-name {
+		font-size: 1.25rem;
 		font-weight: 600;
 		color: #1f2937;
-		margin: 0 0 0.5rem 0;
+		margin: 0;
 	}
 
-	.role-badge {
+	.account-badge {
+		background: linear-gradient(135deg, #7c3aed, #6d28d9);
 		color: white;
 		padding: 0.25rem 0.75rem;
 		border-radius: 8px;
 		font-size: 0.75rem;
 		font-weight: 600;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
 	}
 
-	.user-details {
+	.customer-details {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
@@ -555,23 +529,22 @@
 
 	.detail-row {
 		display: flex;
-		justify-content: space-between;
-		align-items: center;
+		gap: 0.75rem;
 	}
 
 	.detail-label {
 		font-weight: 600;
 		color: #6b7280;
+		min-width: 60px;
 		font-size: 0.875rem;
 	}
 
 	.detail-value {
 		color: #1f2937;
 		font-size: 0.875rem;
-		font-family: 'Courier New', monospace;
 	}
 
-	.user-footer {
+	.customer-footer {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -586,13 +559,13 @@
 
 	.click-hint {
 		font-size: 0.75rem;
-		color: #7c3aed;
+		color: #ea580c;
 		font-weight: 600;
 		opacity: 0;
 		transition: opacity 0.3s ease;
 	}
 
-	.user-card:hover .click-hint {
+	.customer-card:hover .click-hint {
 		opacity: 1;
 	}
 
@@ -629,27 +602,32 @@
 
 	/* Responsive Design */
 	@media (max-width: 768px) {
-		.users-container {
+		.search-container {
 			padding: 1rem;
 		}
 		
-		.users-grid {
+		.customers-grid {
 			grid-template-columns: 1fr;
 			padding: 1rem;
+		}
+		
+		.nav-section {
+			flex-direction: column;
+			gap: 0.75rem;
 		}
 		
 		.search-input-group {
 			flex-direction: column;
 		}
 		
-		.role-filter, .clear-button {
+		.clear-button {
 			width: 100%;
 		}
 		
-		.user-header {
+		.customer-header {
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 0.5rem;
 		}
 	}
-</style> 
+</style>
