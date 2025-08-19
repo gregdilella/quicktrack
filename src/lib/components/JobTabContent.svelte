@@ -2,6 +2,32 @@
 <script lang="ts">
 	import { supabase } from '$lib/supabase'
 	import { createEventDispatcher } from 'svelte'
+	import { onMount } from 'svelte'
+		import { 
+		getAirlines, 
+		getLSPs, 
+		getJobAWBs, 
+		getJobLSPs, 
+		createAWB, 
+		assignLSPToJob,
+		updateAWBStatus,
+		updateLSPStatus,
+		removeAWB,
+		removeLSPFromJob,
+		getLSPCosts,
+		addLSPCost,
+		deleteLSPCost
+	} from '$lib/services/operationsService'
+	import type { 
+		AWBWithAirline, 
+		LSPLevelWithLSP, 
+		Airline, 
+		LSP 
+	} from '$lib/services/operationsService'
+	import type {
+		LSPCost,
+		LSPCostFormData
+	} from '$lib/types/operations.types'
 	
 	export let activeTab: string = 'where'
 	export let jobData: any = {}
@@ -12,6 +38,43 @@
 	let saving = false
 	let saveMessage = ''
 	let saveError = ''
+	
+	// LSP and AWB Management State
+	let availableLSPs: LSP[] = []
+	let availableAirlines: Airline[] = []
+	let jobLSPs: LSPLevelWithLSP[] = []
+	let jobAWBs: AWBWithAirline[] = []
+	
+	// Test box state
+	let testLSPData: any[] = []
+	let testQueryRan = false
+	
+	// LSP Costs state
+	let lspCosts: { [lspLevelId: string]: LSPCost[] } = {}
+	let newCost = {
+		cost: 0,
+		description: '',
+		ledgercode: ''
+	}
+	
+	// Form state for new assignments (simplified)
+	let newLSP = {
+		lsp_id: '',
+		function: '' as 'Pickup' | 'Delivery' | 'Transport' | 'Customs' | ''
+	}
+	
+	let newAWB = {
+		awb_number: '',
+		airline_id: '',
+		flight_number: '',
+		flight_date: '',
+		pieces: undefined as number | undefined,
+		weight: undefined as number | undefined,
+		weight_unit: 'kg' as 'kg' | 'lbs',
+		origin_airport: '',
+		destination_airport: '',
+		notes: ''
+	}
 	
 	function generateJobNumber(): string {
 		const timestamp = Date.now().toString().slice(-6)
@@ -403,6 +466,474 @@
 			return false
 		} finally {
 			saving = false
+		}
+	}
+
+	// ===========================
+	// LSP AND AWB MANAGEMENT FUNCTIONS
+	// ===========================
+
+	/**
+	 * Load LSPs, Airlines, and existing assignments when component mounts
+	 */
+	onMount(async () => {
+		await loadLSPsAndAirlines()
+		if (jobData.jobnumber) {
+			await loadJobAssignments()
+		}
+	})
+
+	/**
+	 * Load available LSPs and Airlines for dropdowns
+	 */
+	async function loadLSPsAndAirlines() {
+		try {
+			console.log('Loading LSPs and Airlines...');
+			const [lspsResult, airlinesResult] = await Promise.all([
+				getLSPs(),
+				getAirlines()
+			]);
+			
+			console.log('LSPs loaded:', lspsResult.length, lspsResult);
+			console.log('Airlines loaded:', airlinesResult.length, airlinesResult);
+			
+			availableLSPs = lspsResult;
+			availableAirlines = airlinesResult;
+			
+			// Additional debugging
+			if (lspsResult.length === 0) {
+				console.warn('No LSPs found - check database or RLS policies');
+				saveError = 'No LSPs available. Please add LSPs to the database first.';
+			}
+		} catch (error) {
+			console.error('Error loading LSPs and Airlines:', error);
+			saveError = 'Failed to load LSPs and Airlines from database';
+		}
+	}
+
+	/**
+	 * Load existing LSP assignments and AWBs for the job
+	 */
+	async function loadJobAssignments() {
+		const jobId = jobData.jobnumber || jobData.jobno || jobData.job_number;
+		
+		if (!jobId) {
+			console.warn('No job identifier available for loading assignments', {
+				jobnumber: jobData.jobnumber,
+				jobno: jobData.jobno,
+				job_number: jobData.job_number
+			});
+			return;
+		}
+		
+		try {
+			console.log('Loading job assignments for job ID:', jobId);
+			console.log('Available job identifiers:', {
+				jobnumber: jobData.jobnumber,
+				jobno: jobData.jobno,
+				job_number: jobData.job_number
+			});
+			
+			const [lspsResult, awbsResult] = await Promise.all([
+				getJobLSPs(jobId),
+				getJobAWBs(jobId)
+			]);
+			
+			console.log('Job LSPs loaded:', lspsResult.length, lspsResult);
+			console.log('Job AWBs loaded:', awbsResult.length, awbsResult);
+			
+			// Force reactivity by creating new arrays
+			jobLSPs = [...lspsResult];
+			jobAWBs = [...awbsResult];
+			
+			console.log('Updated jobLSPs array:', jobLSPs);
+		} catch (error) {
+			console.error('Error loading job assignments:', error);
+		}
+	}
+
+	/**
+	 * Add LSP to job
+	 */
+	async function addLSPToJob() {
+		const jobId = jobData.jobnumber || jobData.jobno || jobData.job_number;
+		
+		console.log('Add LSP button clicked', { 
+			lsp_id: newLSP.lsp_id, 
+			function: newLSP.function, 
+			jobId: jobId,
+			allJobFields: {
+				jobnumber: jobData.jobnumber,
+				jobno: jobData.jobno,
+				job_number: jobData.job_number
+			}
+		});
+		
+		if (!newLSP.lsp_id || !newLSP.function) {
+			console.warn('Missing required fields:', { lsp_id: newLSP.lsp_id, function: newLSP.function });
+			saveError = 'Please select both LSP and function';
+			return;
+		}
+		
+		if (!jobId) {
+			console.error('No job identifier available');
+			saveError = 'Job identifier is required';
+			return;
+		}
+		
+		try {
+			saving = true
+			saveError = '';
+			console.log('Calling assignLSPToJob with:', {
+				jobnumber: jobId,
+				lspData: {
+					lsp_id: newLSP.lsp_id,
+					function: newLSP.function
+				}
+			});
+			
+			const result = await assignLSPToJob(jobId, {
+				lsp_id: newLSP.lsp_id,
+				function: newLSP.function as 'Pickup' | 'Delivery' | 'Transport' | 'Customs'
+			});
+			
+			console.log('assignLSPToJob result:', result);
+			
+			if (result.success) {
+				console.log('LSP assignment successful');
+				
+				// Reset form
+				newLSP = {
+					lsp_id: '',
+					function: '' as 'Pickup' | 'Delivery' | 'Transport' | 'Customs' | ''
+				}
+				
+				// Reload the LSP data
+				await loadLSPLevelRows();
+				
+				saveMessage = 'LSP assigned successfully!'
+				setTimeout(() => saveMessage = '', 2000)
+			} else {
+				saveError = result.error || 'Failed to assign LSP'
+			}
+		} catch (error) {
+			console.error('Error adding LSP:', error)
+			saveError = 'Failed to assign LSP'
+		} finally {
+			saving = false
+		}
+	}
+
+	/**
+	 * Add AWB to job
+	 */
+	async function addAWBToJob() {
+		if (!newAWB.awb_number || !newAWB.airline_id) return
+		
+		try {
+			saving = true
+			const result = await createAWB(jobData.jobnumber, {
+				awb_number: newAWB.awb_number,
+				airline_id: parseInt(newAWB.airline_id),
+				flight_number: newAWB.flight_number,
+				flight_date: newAWB.flight_date,
+				pieces: newAWB.pieces,
+				weight: newAWB.weight,
+				weight_unit: newAWB.weight_unit,
+				origin_airport: newAWB.origin_airport,
+				destination_airport: newAWB.destination_airport,
+				notes: newAWB.notes
+			})
+			
+			if (result.success) {
+				// Reset form and reload assignments
+				newAWB = {
+					awb_number: '',
+					airline_id: '',
+					flight_number: '',
+					flight_date: '',
+					pieces: undefined,
+					weight: undefined,
+					weight_unit: 'kg',
+					origin_airport: '',
+					destination_airport: '',
+					notes: ''
+				}
+				await loadJobAssignments()
+				saveMessage = 'AWB created successfully!'
+				setTimeout(() => saveMessage = '', 2000)
+			} else {
+				saveError = result.error || 'Failed to create AWB'
+			}
+		} catch (error) {
+			console.error('Error adding AWB:', error)
+			saveError = 'Failed to create AWB'
+		} finally {
+			saving = false
+		}
+	}
+
+	/**
+	 * Update LSP assignment status
+	 */
+	async function updateLSPAssignmentStatus(assignmentId: string, status: string) {
+		try {
+			const result = await updateLSPStatus(assignmentId, { status })
+			if (result.success) {
+				await loadJobAssignments()
+				saveMessage = `LSP status updated to ${status}`
+				setTimeout(() => saveMessage = '', 2000)
+			} else {
+				saveError = result.error || 'Failed to update LSP status'
+			}
+		} catch (error) {
+			console.error('Error updating LSP status:', error)
+			saveError = 'Failed to update LSP status'
+		}
+	}
+
+	/**
+	 * Remove LSP assignment
+	 */
+	async function removeLSPAssignment(assignmentId: string) {
+		if (!confirm('Are you sure you want to remove this LSP assignment?')) return
+		
+		try {
+			const result = await removeLSPFromJob(assignmentId)
+			if (result.success) {
+				await loadJobAssignments()
+				saveMessage = 'LSP assignment removed'
+				setTimeout(() => saveMessage = '', 2000)
+			} else {
+				saveError = result.error || 'Failed to remove LSP assignment'
+			}
+		} catch (error) {
+			console.error('Error removing LSP assignment:', error)
+			saveError = 'Failed to remove LSP assignment'
+		}
+	}
+
+	/**
+	 * Update AWB status
+	 */
+	async function updateAWBStatusHandler(awbId: string, status: string) {
+		try {
+			const result = await updateAWBStatus(awbId, { status })
+			if (result.success) {
+				await loadJobAssignments()
+				saveMessage = `AWB status updated to ${status}`
+				setTimeout(() => saveMessage = '', 2000)
+			} else {
+				saveError = result.error || 'Failed to update AWB status'
+			}
+		} catch (error) {
+			console.error('Error updating AWB status:', error)
+			saveError = 'Failed to update AWB status'
+		}
+	}
+
+	/**
+	 * Remove AWB
+	 */
+	async function removeAWBHandler(awbId: string) {
+		if (!confirm('Are you sure you want to remove this Air Waybill?')) return
+		
+		try {
+			const result = await removeAWB(awbId)
+			if (result.success) {
+				await loadJobAssignments()
+				saveMessage = 'AWB removed'
+				setTimeout(() => saveMessage = '', 2000)
+			} else {
+				saveError = result.error || 'Failed to remove AWB'
+			}
+		} catch (error) {
+			console.error('Error removing AWB:', error)
+			saveError = 'Failed to remove AWB'
+		}
+	}
+
+	/**
+	 * Format date for display
+	 */
+	function formatDate(dateString: string | null): string {
+		if (!dateString) return 'N/A'
+		return new Date(dateString).toLocaleDateString('en-US', {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		})
+	}
+
+	/**
+	 * Format date and time for display
+	 */
+	function formatDateTime(dateString: string | null): string {
+		if (!dateString) return 'N/A'
+		return new Date(dateString).toLocaleString('en-US', {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		})
+	}
+
+	// Watch for jobData changes to reload assignments
+	$: {
+		const jobId = jobData.jobnumber || jobData.jobno || jobData.job_number;
+		if (jobId && (activeTab === 'how')) {
+			console.log('Reactive statement triggered for job ID:', jobId);
+			loadLSPLevelRows();
+		}
+	}
+	
+	// Manual refresh function for debugging
+	async function refreshAssignments() {
+		console.log('Manual refresh triggered');
+		await loadLSPLevelRows();
+	}
+
+	// Load LSP assignments from lsp_level table for this job
+	async function loadLSPLevelRows() {
+		const jobId = jobData.jobnumber || jobData.jobno || jobData.job_number;
+		
+		try {
+			testQueryRan = true;
+			console.log('Loading LSP_LEVEL rows for job:', jobId);
+			
+			// First get the lsp_level rows for this job
+			const { data: lspLevelRows, error: lspLevelError } = await supabase
+				.from('lsp_level')
+				.select('*')
+				.eq('jobnumber', jobId);
+			
+			console.log('LSP Level rows:', { lspLevelRows, lspLevelError, jobId });
+			
+			if (lspLevelError) {
+				console.error('Error querying lsp_level table:', lspLevelError);
+				saveError = `Query failed: ${lspLevelError.message}`;
+				testLSPData = [];
+				return;
+			}
+			
+			// Now get LSP names for each row
+			if (lspLevelRows && lspLevelRows.length > 0) {
+				const lspIds = lspLevelRows.map(row => row.lsp_id).filter(Boolean);
+				
+				// Get LSP details
+				const { data: lspDetails, error: lspDetailsError } = await supabase
+					.from('lsps')
+					.select('id, vendor_name')
+					.in('id', lspIds);
+				
+				if (lspDetailsError) {
+					console.error('Error loading LSP details:', lspDetailsError);
+				}
+				
+				// Combine the data
+				testLSPData = lspLevelRows.map(row => {
+					const lsp = lspDetails?.find(l => l.id === row.lsp_id);
+					return {
+						...row,
+						lsp_name: lsp?.vendor_name || 'Unknown LSP'
+					};
+				});
+			} else {
+				testLSPData = [];
+			}
+			
+			console.log('Final LSP data loaded:', testLSPData.length, testLSPData);
+			
+			// Load costs for each LSP assignment
+			await loadAllLSPCosts();
+			
+		} catch (error) {
+			console.error('Error in loadLSPLevelRows:', error);
+			testLSPData = [];
+		}
+	}
+
+	// Load costs for all LSP assignments
+	async function loadAllLSPCosts() {
+		if (testLSPData.length === 0) return;
+		
+		try {
+			console.log('Loading costs for all LSP assignments...');
+			const costsPromises = testLSPData.map(async (lspRow) => {
+				const costs = await getLSPCosts(lspRow.id);
+				return { lspLevelId: lspRow.id, costs };
+			});
+			
+			const costsResults = await Promise.all(costsPromises);
+			
+			// Build costs object
+			lspCosts = {};
+			costsResults.forEach(({ lspLevelId, costs }) => {
+				lspCosts[lspLevelId] = costs;
+			});
+			
+			console.log('LSP costs loaded:', lspCosts);
+		} catch (error) {
+			console.error('Error loading LSP costs:', error);
+		}
+	}
+
+	// Add cost to specific LSP assignment
+	async function addCostToLSP(lspRow: any) {
+		if (!newCost.cost || !newCost.description || !newCost.ledgercode) {
+			saveError = 'Please fill in all cost fields';
+			return;
+		}
+		
+		try {
+			console.log('Adding cost to LSP:', lspRow.id, newCost);
+			
+			const result = await addLSPCost(
+				lspRow.id, 
+				lspRow.jobnumber, 
+				lspRow.vendorcode, 
+				newCost
+			);
+			
+			if (result.success) {
+				// Reload costs for this specific LSP
+				const updatedCosts = await getLSPCosts(lspRow.id);
+				lspCosts[lspRow.id] = updatedCosts;
+				lspCosts = { ...lspCosts }; // Force reactivity
+				
+				// Reset form
+				newCost = { cost: 0, description: '', ledgercode: '' };
+				saveMessage = 'Cost added successfully!';
+				setTimeout(() => saveMessage = '', 2000);
+			} else {
+				saveError = result.error || 'Failed to add cost';
+			}
+		} catch (error) {
+			console.error('Error adding cost:', error);
+			saveError = 'Failed to add cost';
+		}
+	}
+
+	// Remove cost from LSP assignment
+	async function removeCostFromLSP(costId: string, lspLevelId: string) {
+		try {
+			const result = await deleteLSPCost(costId);
+			
+			if (result.success) {
+				// Reload costs for this specific LSP
+				const updatedCosts = await getLSPCosts(lspLevelId);
+				lspCosts[lspLevelId] = updatedCosts;
+				lspCosts = { ...lspCosts }; // Force reactivity
+				
+				saveMessage = 'Cost removed successfully!';
+				setTimeout(() => saveMessage = '', 2000);
+			} else {
+				saveError = result.error || 'Failed to remove cost';
+			}
+		} catch (error) {
+			console.error('Error removing cost:', error);
+			saveError = 'Failed to remove cost';
 		}
 	}
 </script>
@@ -825,7 +1356,304 @@
 				></textarea>
 			</div>
 		</div>
-		
+
+		<!-- LSP Management Section -->
+		<div class="management-section">
+			<div class="section-header">
+				<h4 class="blue-text">--- LSP ASSIGNMENTS ---</h4>
+				<button on:click={refreshAssignments} class="refresh-button">
+					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+					</svg>
+					Refresh
+				</button>
+			</div>
+			
+			<!-- Add LSP Form (Simplified) -->
+			<div class="add-form">
+				<div class="form-row">
+					<div class="form-field">
+						<label class="field-label">LSP Company</label>
+						<select bind:value={newLSP.lsp_id} class="form-input">
+							<option value="">Select LSP</option>
+							{#each availableLSPs as lsp}
+								<option value={lsp.id}>{lsp.vendor_name} ({lsp.vendor_code})</option>
+							{/each}
+						</select>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">Function</label>
+						<select bind:value={newLSP.function} class="form-input">
+							<option value="">Select Function</option>
+							<option value="Pickup">Pickup Service</option>
+							<option value="Delivery">Delivery Service</option>
+							<option value="Transport">Transportation</option>
+							<option value="Customs">Customs Clearance</option>
+						</select>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">&nbsp;</label>
+						<button 
+							on:click={addLSPToJob} 
+							disabled={!newLSP.lsp_id || !newLSP.function}
+							class="add-button"
+						>
+							Add LSP
+						</button>
+					</div>
+				</div>
+			</div>
+			
+			<!-- LSP Assignments with Costs -->
+			<div class="assignments-list">
+				{#each testLSPData as row}
+					<div class="assignment-card-with-costs" style="display: flex; gap: 20px; min-height: 200px; border: 2px solid red;">
+						<!-- Left Side: LSP Assignment Info -->
+						<div class="assignment-info">
+							<div class="assignment-header">
+								<strong>{row.lsp_name || 'LSP ID: ' + row.lsp_id}</strong>
+								<span class="function-badge {row.function?.toLowerCase()}">{row.function}</span>
+								<span class="status-badge {row.status?.toLowerCase()}">{row.status}</span>
+							</div>
+							<div class="assignment-details">
+								<p><strong>Vendor Code:</strong> {row.vendorcode || 'N/A'}</p>
+								<p><strong>Job Number:</strong> {row.jobnumber}</p>
+								<p><strong>Assigned:</strong> {formatDateTime(row.assigned_date || null)}</p>
+								{#if row.vehicle_type}
+									<p><strong>Vehicle Type:</strong> {row.vehicle_type}</p>
+								{/if}
+								{#if row.waiting_time}
+									<p><strong>Waiting Time:</strong> {row.waiting_time} minutes</p>
+								{/if}
+							</div>
+							<div class="assignment-actions">
+								<button on:click={() => updateLSPAssignmentStatus(row.id, 'Completed')} class="action-btn complete">Complete</button>
+								<button on:click={() => removeLSPAssignment(row.id)} class="action-btn remove">Remove</button>
+							</div>
+						</div>
+						
+						<!-- Right Side: Costs Management -->
+						<div class="costs-section">
+							<h4>Costs</h4>
+							
+							<!-- Add New Cost Form -->
+							<div class="add-cost-form">
+								<input 
+									type="number" 
+									bind:value={newCost.cost} 
+									placeholder="Amount"
+									min="0"
+									step="0.01"
+									class="cost-input"
+								/>
+								<input 
+									type="text" 
+									bind:value={newCost.description} 
+									placeholder="Description"
+									class="cost-input"
+								/>
+								<input 
+									type="text" 
+									bind:value={newCost.ledgercode} 
+									placeholder="Ledger Code"
+									class="cost-input"
+								/>
+								<button 
+									on:click={() => addCostToLSP(row)} 
+									class="add-cost-btn"
+									disabled={!newCost.cost || !newCost.description || !newCost.ledgercode}
+								>
+									Add Cost
+								</button>
+							</div>
+							
+							<!-- Existing Costs List -->
+							<div class="costs-list">
+								{#if lspCosts[row.id] && lspCosts[row.id].length > 0}
+									{#each lspCosts[row.id] as cost}
+										<div class="cost-item">
+											<div class="cost-details">
+												<strong>${cost.cost}</strong>
+												<span class="cost-description">{cost.description}</span>
+												<small class="cost-ledger">Ledger: {cost.ledgercode}</small>
+											</div>
+											<button 
+												on:click={() => removeCostFromLSP(cost.id, row.id)} 
+												class="remove-cost-btn"
+											>
+												×
+											</button>
+										</div>
+									{/each}
+								{:else}
+									<p class="no-costs">No costs added</p>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/each}
+				
+				{#if testLSPData.length === 0}
+					<div class="empty-state">
+						<p>No LSPs assigned to this job</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<!-- AWB Management Section -->
+		<div class="management-section">
+			<div class="section-header">
+				<h4 class="blue-text">--- AIR WAYBILL MANAGEMENT ---</h4>
+			</div>
+			
+			<!-- Add AWB Form (Reorganized) -->
+			<div class="add-form">
+				<div class="form-row">
+					<div class="form-field">
+						<label class="field-label">AWB Number</label>
+						<input 
+							type="text" 
+							bind:value={newAWB.awb_number} 
+							placeholder="e.g., 020-12345678"
+							class="form-input"
+						/>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">Airline</label>
+						<select bind:value={newAWB.airline_id} class="form-input">
+							<option value="">Select Airline</option>
+							{#each availableAirlines as airline}
+								<option value={airline.id}>{airline.airline_name} ({airline.airline_code})</option>
+							{/each}
+						</select>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">Flight Number</label>
+						<input 
+							type="text" 
+							bind:value={newAWB.flight_number} 
+							placeholder="e.g., AA123"
+							class="form-input"
+						/>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">Flight Date</label>
+						<input 
+							type="date" 
+							bind:value={newAWB.flight_date} 
+							class="form-input"
+						/>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">&nbsp;</label>
+						<button 
+							on:click={addAWBToJob} 
+							disabled={!newAWB.awb_number || !newAWB.airline_id}
+							class="add-button"
+						>
+							Add AWB
+						</button>
+					</div>
+				</div>
+				
+				<div class="form-row">
+					<div class="form-field small">
+						<label class="field-label">Pieces</label>
+						<input 
+							type="number" 
+							bind:value={newAWB.pieces} 
+							placeholder="0"
+							class="form-input"
+						/>
+					</div>
+					
+					<div class="form-field small">
+						<label class="field-label">Weight</label>
+						<input 
+							type="number" 
+							bind:value={newAWB.weight} 
+							placeholder="0"
+							class="form-input"
+							step="0.1"
+						/>
+					</div>
+					
+					<div class="form-field small">
+						<label class="field-label">Unit</label>
+						<select bind:value={newAWB.weight_unit} class="form-input">
+							<option value="kg">kg</option>
+							<option value="lbs">lbs</option>
+						</select>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">Origin Airport</label>
+						<input 
+							type="text" 
+							bind:value={newAWB.origin_airport} 
+							placeholder="e.g., JFK"
+							class="form-input"
+						/>
+					</div>
+					
+					<div class="form-field">
+						<label class="field-label">Destination Airport</label>
+						<input 
+							type="text" 
+							bind:value={newAWB.destination_airport} 
+							placeholder="e.g., LAX"
+							class="form-input"
+						/>
+					</div>
+				</div>
+			</div>
+			
+			<!-- AWB List -->
+			<div class="assignments-list">
+				{#each jobAWBs as awb}
+					<div class="assignment-card">
+						<div class="assignment-header">
+							<strong>AWB: {awb.awb_number}</strong>
+							<span class="airline-badge">{awb.airlines?.airline_name} ({awb.airlines?.airline_code})</span>
+							<span class="status-badge {awb.status?.toLowerCase()}">{awb.status}</span>
+						</div>
+						<div class="assignment-details">
+							<div class="detail-row">
+								<p><strong>Flight:</strong> {awb.flight_number || 'N/A'}</p>
+								<p><strong>Date:</strong> {formatDate(awb.flight_date || null)}</p>
+							</div>
+							<div class="detail-row">
+								<p><strong>Route:</strong> {awb.origin_airport || 'N/A'} → {awb.destination_airport || 'N/A'}</p>
+								{#if awb.pieces || awb.weight}
+									<p><strong>Cargo:</strong> {awb.pieces || 0} pcs, {awb.weight || 0} {awb.weight_unit || 'kg'}</p>
+								{/if}
+							</div>
+							{#if awb.notes}
+								<p><strong>Notes:</strong> {awb.notes}</p>
+							{/if}
+						</div>
+						<div class="assignment-actions">
+							<button on:click={() => updateAWBStatusHandler(awb.id, 'In Transit')} class="action-btn transit">In Transit</button>
+							<button on:click={() => updateAWBStatusHandler(awb.id, 'Delivered')} class="action-btn complete">Delivered</button>
+							<button on:click={() => removeAWBHandler(awb.id)} class="action-btn remove">Remove</button>
+						</div>
+					</div>
+				{/each}
+				
+				{#if jobAWBs.length === 0}
+					<div class="empty-state">
+						<p>No Air Waybills created for this job</p>
+					</div>
+				{/if}
+			</div>
+		</div>
 
 		</div>
 	{/if}
@@ -1628,6 +2456,636 @@
 
 		.tab-panel {
 			padding: 1rem;
+		}
+	}
+
+	/* ===========================
+	   LSP AND AWB MANAGEMENT STYLES
+	   =========================== */
+
+	.management-section {
+		margin-top: 2rem;
+		background: white;
+		border-radius: 12px;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
+		overflow: hidden;
+	}
+
+	.section-header {
+		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+		padding: 1rem 1.5rem;
+		border-bottom: 2px solid #e5e7eb;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.section-header h4 {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.refresh-button {
+		background: #3b82f6;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		padding: 0.5rem 1rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.refresh-button:hover {
+		background: #2563eb;
+		transform: translateY(-1px);
+	}
+
+	.refresh-button svg {
+		width: 14px;
+		height: 14px;
+	}
+
+	.debug-info {
+		background: #f0f9ff;
+		border: 1px solid #bae6fd;
+		border-radius: 6px;
+		padding: 1rem;
+		margin: 1rem 1.5rem;
+		font-size: 0.875rem;
+	}
+
+	.debug-info p {
+		margin: 0.25rem 0;
+		color: #0369a1;
+	}
+
+	.test-box {
+		background: #fffbeb;
+		border: 1px solid #fbbf24;
+		border-radius: 6px;
+		padding: 1rem;
+		margin: 1rem 1.5rem;
+		font-size: 0.875rem;
+	}
+
+	.test-box h5 {
+		margin: 0 0 1rem 0;
+		color: #92400e;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.test-button {
+		background: #f59e0b;
+		color: white;
+		border: none;
+		border-radius: 6px;
+		padding: 0.5rem 1rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		margin-bottom: 1rem;
+	}
+
+	.test-button:hover {
+		background: #d97706;
+		transform: translateY(-1px);
+	}
+
+	.test-results {
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		padding: 1rem;
+		max-height: 200px;
+		overflow-y: auto;
+	}
+
+	.test-row {
+		display: flex;
+		gap: 1rem;
+		padding: 0.5rem 0;
+		border-bottom: 1px solid #f3f4f6;
+		flex-wrap: wrap;
+	}
+
+	.test-row:last-child {
+		border-bottom: none;
+	}
+
+	.test-row span {
+		font-size: 0.75rem;
+		color: #374151;
+	}
+
+	.test-empty {
+		color: #6b7280;
+		font-style: italic;
+		margin: 0.5rem 0;
+	}
+
+	/* LSP Table Styles */
+	.lsp-table-container {
+		padding: 1.5rem;
+		overflow-x: auto;
+	}
+
+	.lsp-table {
+		width: 100%;
+		border-collapse: collapse;
+		background: white;
+		border-radius: 8px;
+		overflow: hidden;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+	}
+
+	.lsp-table th {
+		background: #f8fafc;
+		padding: 0.75rem;
+		text-align: left;
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #374151;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		border-bottom: 2px solid #e5e7eb;
+	}
+
+	.lsp-table td {
+		padding: 0.75rem;
+		border-bottom: 1px solid #f3f4f6;
+		font-size: 0.875rem;
+		color: #1f2937;
+	}
+
+	.lsp-row:hover {
+		background: #f9fafb;
+	}
+
+	.table-input {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		font-size: 0.875rem;
+	}
+
+	.table-input:focus {
+		outline: none;
+		border-color: #dc2626;
+		box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+	}
+
+	.actions-cell {
+		white-space: nowrap;
+	}
+
+	.actions-cell .action-btn {
+		margin-right: 0.5rem;
+		padding: 0.25rem 0.75rem;
+		font-size: 0.75rem;
+	}
+
+	.action-btn.edit {
+		background: #dbeafe;
+		color: #1d4ed8;
+	}
+
+	.action-btn.edit:hover {
+		background: #bfdbfe;
+	}
+
+	.action-btn.save {
+		background: #dcfce7;
+		color: #16a34a;
+	}
+
+	.action-btn.save:hover {
+		background: #bbf7d0;
+	}
+
+	.action-btn.cancel {
+		background: #f3f4f6;
+		color: #374151;
+	}
+
+	.action-btn.cancel:hover {
+		background: #e5e7eb;
+	}
+
+	.empty-row {
+		text-align: center;
+		color: #6b7280;
+		font-style: italic;
+		padding: 2rem;
+	}
+
+	.add-form {
+		padding: 1.5rem;
+		background: #f9fafb;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.form-row {
+		display: flex;
+		gap: 1rem;
+		align-items: end;
+		flex-wrap: wrap;
+	}
+
+	.form-field {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 150px;
+	}
+
+	.form-field.small {
+		flex: 0 0 120px;
+		min-width: 120px;
+	}
+
+	.field-label {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #374151;
+		margin-bottom: 0.5rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.form-row .form-input {
+		padding: 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		transition: all 0.2s ease;
+		width: 100%;
+	}
+
+	.form-row .form-input.small {
+		flex: 0 0 100px;
+		min-width: 100px;
+	}
+
+	.form-row .form-input:focus {
+		outline: none;
+		border-color: #dc2626;
+		box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+	}
+
+	.add-button {
+		background: #dc2626;
+		color: white;
+		border: none;
+		border-radius: 8px;
+		padding: 0.75rem 1.5rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		flex-shrink: 0;
+	}
+
+	.add-button:hover:not(:disabled) {
+		background: #b91c1c;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+	}
+
+	.add-button:disabled {
+		background: #9ca3af;
+		cursor: not-allowed;
+		transform: none;
+		box-shadow: none;
+	}
+
+	.assignments-list {
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.assignment-card {
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
+		padding: 1.5rem;
+		transition: all 0.2s ease;
+	}
+
+	.assignment-card:hover {
+		border-color: #dc2626;
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);
+		transform: translateY(-1px);
+	}
+
+	.assignment-card-with-costs {
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 12px;
+		padding: 1.5rem;
+		transition: all 0.2s ease;
+		display: flex;
+		gap: 20px;
+		min-height: 200px;
+	}
+
+	.assignment-card-with-costs:hover {
+		border-color: #dc2626;
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);
+		transform: translateY(-1px);
+	}
+
+	.assignment-info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.costs-section {
+		flex: 1;
+		border-left: 1px solid #e5e7eb;
+		padding-left: 20px;
+		min-width: 300px;
+	}
+
+	.costs-section h4 {
+		margin: 0 0 12px 0;
+		color: #374151;
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.add-cost-form {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-bottom: 16px;
+		padding: 12px;
+		background: #f9fafb;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+	}
+
+	.cost-input {
+		padding: 6px 8px;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		font-size: 12px;
+		transition: border-color 0.2s ease;
+	}
+
+	.cost-input:focus {
+		outline: none;
+		border-color: #dc2626;
+		box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+	}
+
+	.add-cost-btn {
+		padding: 6px 12px;
+		background: #dc2626;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		font-size: 12px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background-color 0.2s ease;
+	}
+
+	.add-cost-btn:hover:not(:disabled) {
+		background: #b91c1c;
+	}
+
+	.add-cost-btn:disabled {
+		background: #9ca3af;
+		cursor: not-allowed;
+	}
+
+	.costs-list {
+		max-height: 120px;
+		overflow-y: auto;
+	}
+
+	.cost-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 8px;
+		background: #ffffff;
+		border: 1px solid #e5e7eb;
+		border-radius: 4px;
+		margin-bottom: 6px;
+	}
+
+	.cost-details {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.cost-details strong {
+		color: #059669;
+		font-weight: 600;
+	}
+
+	.cost-description {
+		font-size: 12px;
+		color: #374151;
+	}
+
+	.cost-ledger {
+		font-size: 10px;
+		color: #6b7280;
+	}
+
+	.remove-cost-btn {
+		background: #dc3545;
+		color: white;
+		border: none;
+		border-radius: 50%;
+		width: 20px;
+		height: 20px;
+		font-size: 12px;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background-color 0.2s ease;
+	}
+
+	.remove-cost-btn:hover {
+		background: #c82333;
+	}
+
+	.no-costs {
+		font-size: 12px;
+		color: #6b7280;
+		font-style: italic;
+		margin: 0;
+		text-align: center;
+		padding: 12px;
+	}
+
+	.assignment-header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.assignment-header strong {
+		font-size: 1.1rem;
+		color: #1f2937;
+	}
+
+	.function-badge,
+	.status-badge,
+	.airline-badge {
+		padding: 0.25rem 0.75rem;
+		border-radius: 20px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		text-transform: uppercase;
+	}
+
+	.function-badge.pickup { background: #dbeafe; color: #1d4ed8; }
+	.function-badge.delivery { background: #dcfce7; color: #16a34a; }
+	.function-badge.transport { background: #fef3c7; color: #d97706; }
+	.function-badge.customs { background: #f3e8ff; color: #7c3aed; }
+
+	.status-badge.assigned { background: #e0e7ff; color: #3730a3; }
+	.status-badge.dispatched { background: #fef3c7; color: #d97706; }
+	.status-badge.completed { background: #dcfce7; color: #16a34a; }
+	.status-badge.cancelled { background: #fee2e2; color: #dc2626; }
+	.status-badge.created { background: #e0e7ff; color: #3730a3; }
+	.status-badge.confirmed { background: #dbeafe; color: #1d4ed8; }
+	.status-badge.transit { background: #fef3c7; color: #d97706; }
+	.status-badge.delivered { background: #dcfce7; color: #16a34a; }
+
+	.airline-badge {
+		background: #f0f9ff;
+		color: #0369a1;
+	}
+
+	.assignment-details {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.assignment-details p {
+		margin: 0;
+		font-size: 0.875rem;
+		color: #4b5563;
+	}
+
+	.detail-row {
+		display: flex;
+		gap: 2rem;
+		flex-wrap: wrap;
+	}
+
+	.detail-row p {
+		flex: 1;
+		min-width: 200px;
+	}
+
+	.assignment-actions {
+		display: flex;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+
+	.action-btn {
+		padding: 0.5rem 1rem;
+		border: none;
+		border-radius: 6px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		text-transform: uppercase;
+	}
+
+	.action-btn.complete {
+		background: #dcfce7;
+		color: #16a34a;
+	}
+
+	.action-btn.complete:hover {
+		background: #bbf7d0;
+		transform: translateY(-1px);
+	}
+
+	.action-btn.transit {
+		background: #fef3c7;
+		color: #d97706;
+	}
+
+	.action-btn.transit:hover {
+		background: #fde68a;
+		transform: translateY(-1px);
+	}
+
+	.action-btn.remove {
+		background: #fee2e2;
+		color: #dc2626;
+	}
+
+	.action-btn.remove:hover {
+		background: #fecaca;
+		transform: translateY(-1px);
+	}
+
+	.empty-state {
+		text-align: center;
+		padding: 2rem;
+		color: #6b7280;
+		font-style: italic;
+	}
+
+	/* Mobile responsiveness for management sections */
+	@media (max-width: 768px) {
+		.form-row {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.form-row .form-input {
+			min-width: auto;
+		}
+
+		.assignment-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.5rem;
+		}
+
+		.detail-row {
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.detail-row p {
+			min-width: auto;
+		}
+
+		.assignment-actions {
+			justify-content: center;
 		}
 	}
 </style> 

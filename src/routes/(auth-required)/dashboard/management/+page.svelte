@@ -5,7 +5,6 @@
 	import { getCurrentUserProfile } from '$lib/userService'
 	import type { User } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
-	import UserAssignment from '$lib/components/UserAssignment.svelte'
 
 	
 	let user: User | null = null
@@ -53,49 +52,17 @@
 		<div class="dashboard-section">
 			<h3 class="blue-text">--- MANAGEMENT MENU ---</h3>
 			<div class="dashboard-menu">
-				<a href="/dashboard/management/customer-search" class="menu-item mgmt-item">► CUSTOMER SEARCH</a>
-				<a href="/dashboard/management/add-new-customer" class="menu-item mgmt-item">► ADD NEW CUSTOMER</a>
+				<a href="/dashboard/management/search" class="menu-item mgmt-item">► SEARCH</a>
+				<a href="/dashboard/management/add-new" class="menu-item mgmt-item">► ADD NEW</a>
 				<a href="/dashboard/management/customer-pl" class="menu-item mgmt-item">► CUSTOMER P&L</a>
 				<a href="/dashboard/management/users" class="menu-item mgmt-item">► USERS</a>
 				<a href="/dashboard/management/graphs" class="menu-item mgmt-item">► TABLEAU STYLE GRAPHS</a>
 			</div>
 		</div>
 
-		<!-- KPI Section -->
-		<div class="kpi-section">
-			<h3 class="blue-text">--- KEY PERFORMANCE INDICATORS ---</h3>
-			<div class="kpi-grid">
-				<div class="kpi-card">
-					<div class="kpi-title">MONTHLY REVENUE</div>
-					<div class="kpi-value">$2.4M</div>
-					<div class="kpi-trend positive">▲ 12.3%</div>
-				</div>
-				<div class="kpi-card">
-					<div class="kpi-title">CUSTOMER SATISFACTION</div>
-					<div class="kpi-value">94.7%</div>
-					<div class="kpi-trend positive">▲ 2.1%</div>
-				</div>
-				<div class="kpi-card">
-					<div class="kpi-title">OPERATIONAL EFFICIENCY</div>
-					<div class="kpi-value">87.3%</div>
-					<div class="kpi-trend negative">▼ 1.2%</div>
-				</div>
-				<div class="kpi-card">
-					<div class="kpi-title">MARKET SHARE</div>
-					<div class="kpi-value">23.8%</div>
-					<div class="kpi-trend positive">▲ 3.4%</div>
-				</div>
-			</div>
-		</div>
 
-		<!-- User Assignment Section -->
-		<UserAssignment />
 
-		<!-- Support Message -->
-		<div class="support-message">
-			<p class="blue-text">Management Portal: Strategic oversight and reporting</p>
-			<p class="blue-text">Executive briefings available daily at 0800 hours</p>
-		</div>
+
 
 		<!-- Command Prompt -->
 		<div class="command-prompt">
@@ -169,8 +136,7 @@
 		border: 1px solid #e5e7eb;
 	}
 
-	.user-info p,
-	.support-message p {
+	.user-info p {
 		margin: 0.5rem 0;
 		font-size: 1rem;
 	}
@@ -225,73 +191,7 @@
 		border-left: 4px solid #7c3aed;
 	}
 
-	.kpi-section {
-		margin: 2rem 0;
-		padding: 2rem;
-		background: white;
-		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
-	}
 
-	.kpi-section h3 {
-		margin: 0 0 1.5rem 0;
-		text-align: center;
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: #1f2937;
-	}
-
-	.kpi-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-		gap: 1.5rem;
-	}
-
-	.kpi-card {
-		background: white;
-		border: 1px solid #e5e7eb;
-		border-radius: 15px;
-		padding: 1.5rem;
-		text-align: center;
-		transition: all 0.3s ease;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-	}
-
-	.kpi-card:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		border-color: #7c3aed;
-	}
-
-	.kpi-title {
-		font-size: 0.875rem;
-		color: #6b7280;
-		font-weight: 500;
-		margin-bottom: 1rem;
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-
-	.kpi-value {
-		font-size: 2rem;
-		font-weight: 700;
-		color: #7c3aed;
-		margin-bottom: 0.5rem;
-	}
-
-	.kpi-trend {
-		font-size: 0.875rem;
-		font-weight: 600;
-	}
-
-	.kpi-trend.positive {
-		color: #10b981;
-	}
-
-	.kpi-trend.negative {
-		color: #ef4444;
-	}
 
 	.admin-nav {
 		margin-top: 10px;
@@ -319,15 +219,7 @@
 		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
 	}
 
-	.support-message {
-		margin: 2rem 0;
-		background: white;
-		padding: 1.5rem;
-		border-radius: 15px;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
-		text-align: center;
-	}
+
 
 	.command-prompt {
 		margin-top: 2rem;
@@ -350,9 +242,7 @@
 			max-width: 100%;
 		}
 
-		.kpi-grid {
-			grid-template-columns: 1fr;
-		}
+
 
 		.page-title {
 			font-size: 2rem;

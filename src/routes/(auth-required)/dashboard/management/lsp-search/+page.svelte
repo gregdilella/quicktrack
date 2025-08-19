@@ -1,4 +1,4 @@
-<!-- Customer Search - Management -->
+<!-- LSP Search - Management -->
 <script lang="ts">
 	import { onMount } from 'svelte'
 	import { goto } from '$app/navigation'
@@ -13,40 +13,46 @@
 	let loading = false
 	let searching = false
 	let searchQuery = ''
-	let customers: any[] = []
-	let filteredCustomers: any[] = []
+	let lsps: any[] = []
+	let filteredLsps: any[] = []
+	let currentPage = 1
+	let lspsPerPage = 20
+	let totalLsps = 0
+	let totalPages = 0
+	let paginatedLsps: any[] = []
 	
 	onMount(async () => {
 		user = await getCurrentUser()
 		if (user) {
 			try {
 				userProfile = await getCurrentUserProfile()
-				await loadCustomers()
+				await loadLsps()
 			} catch (error) {
 				console.error('Error loading user profile:', error)
 			}
 		}
 	})
 
-	async function loadCustomers() {
+	async function loadLsps() {
 		try {
 			searching = true
 			const { data, error } = await supabase
-				.from('customers')
+				.from('lsps')
 				.select('*')
-				.not('name', 'is', null)
-				.neq('name', '')
+				.not('vendor_name', 'is', null)
+				.neq('vendor_name', '')
 				.order('created_at', { ascending: false })
 			
 			if (error) {
-				console.error('Error loading customers:', error)
+				console.error('Error loading LSPs:', error)
 				return
 			}
 			
-			customers = data || []
-			filteredCustomers = customers
+			lsps = data || []
+			filteredLsps = lsps
+			updatePagination()
 		} catch (err) {
-			console.error('Error in loadCustomers:', err)
+			console.error('Error in loadLsps:', err)
 		} finally {
 			searching = false
 		}
@@ -54,22 +60,47 @@
 
 	function handleSearch() {
 		if (!searchQuery.trim()) {
-			filteredCustomers = customers
-			return
+			filteredLsps = lsps
+		} else {
+			const query = searchQuery.toLowerCase().trim()
+			filteredLsps = lsps.filter(lsp => 
+				lsp.vendor_name?.toLowerCase().includes(query) ||
+				lsp.contact_email?.toLowerCase().includes(query) ||
+				lsp.vendor_code?.toLowerCase().includes(query) ||
+				lsp.phone?.toLowerCase().includes(query) ||
+				lsp.mobile?.toLowerCase().includes(query) ||
+				lsp.address?.toLowerCase().includes(query)
+			)
 		}
-		
-		const query = searchQuery.toLowerCase().trim()
-		filteredCustomers = customers.filter(customer => 
-			customer.name?.toLowerCase().includes(query) ||
-			customer.contact_email?.toLowerCase().includes(query) ||
-			customer.account_number?.toLowerCase().includes(query) ||
-			customer.city?.toLowerCase().includes(query) ||
-			customer.state?.toLowerCase().includes(query)
-		)
+		currentPage = 1 // Reset to first page when searching
+		updatePagination()
 	}
 
-	function handleCustomerClick(customerId: string) {
-		goto(`/dashboard/management/customers/${customerId}`)
+	function updatePagination() {
+		totalLsps = filteredLsps.length
+		totalPages = Math.ceil(totalLsps / lspsPerPage)
+		
+		// Ensure current page is valid
+		if (currentPage > totalPages && totalPages > 0) {
+			currentPage = totalPages
+		}
+		
+		// Calculate paginated results
+		const startIndex = (currentPage - 1) * lspsPerPage
+		const endIndex = startIndex + lspsPerPage
+		paginatedLsps = filteredLsps.slice(startIndex, endIndex)
+	}
+
+	function goToPage(page: number) {
+		if (page >= 1 && page <= totalPages) {
+			currentPage = page
+			updatePagination()
+		}
+	}
+
+	function handleLspClick(lspId: string) {
+		// For now, just log the click - you can implement LSP detail view later
+		console.log('LSP clicked:', lspId)
 	}
 
 	async function handleSignOut() {
@@ -87,9 +118,35 @@
 		return new Date(dateString).toLocaleDateString()
 	}
 
-	// Reactive search
+	// Reactive search and pagination
 	$: if (searchQuery !== undefined) {
 		handleSearch()
+	}
+
+	// Generate page numbers for pagination
+	function getPageNumbers() {
+		const pages = []
+		const maxVisible = 5
+		
+		if (totalPages <= maxVisible) {
+			for (let i = 1; i <= totalPages; i++) {
+				pages.push(i)
+			}
+		} else {
+			const half = Math.floor(maxVisible / 2)
+			let start = Math.max(1, currentPage - half)
+			let end = Math.min(totalPages, start + maxVisible - 1)
+			
+			if (end - start + 1 < maxVisible) {
+				start = Math.max(1, end - maxVisible + 1)
+			}
+			
+			for (let i = start; i <= end; i++) {
+				pages.push(i)
+			}
+		}
+		
+		return pages
 	}
 </script>
 
@@ -98,31 +155,31 @@
 		<!-- Header -->
 		<div class="header-section">
 			<div class="header-content">
-				<h1 class="page-title">Customer Search</h1>
-				<p class="page-subtitle">Find and manage customer information</p>
+				<h1 class="page-title">LSP Search</h1>
+				<p class="page-subtitle">Find and manage logistics service providers</p>
 			</div>
 		</div>
 
 		<!-- Navigation -->
 		<div class="nav-section">
 			<a href="/dashboard/management" class="nav-link">⬅ Back to Management</a>
-			<a href="/dashboard/management/add-new-customer" class="nav-link add-customer">+ Add New Customer</a>
+			<a href="/dashboard/management/add-new-lsp" class="nav-link add-lsp">+ Add New LSP</a>
 		</div>
 
 		<!-- User Information -->
 		{#if user && userProfile}
 			<div class="user-info">
 				<p class="status-text">Status: <span class="highlight">Management Access</span></p>
-				<p class="function-text">Function: Customer Search & Management</p>
+				<p class="function-text">Function: LSP Search & Management</p>
 			</div>
 		{/if}
 
 		<!-- Search Section -->
 		<div class="search-section">
 			<div class="search-header">
-				<h3>Search Customers</h3>
+				<h3>Search LSPs</h3>
 				<div class="search-stats">
-					{filteredCustomers.length} of {customers.length} customers
+					{filteredLsps.length} of {lsps.length} LSPs
 				</div>
 			</div>
 			
@@ -131,7 +188,7 @@
 					<input 
 						type="text" 
 						bind:value={searchQuery}
-						placeholder="Search by name, email, account number, city, or state..."
+						placeholder="Search by vendor name, email, vendor code, phone, or address..."
 						class="search-input"
 					/>
 					<button 
@@ -151,77 +208,121 @@
 			{#if searching}
 				<div class="loading-state">
 					<div class="loading-spinner"></div>
-					<p>Loading customers...</p>
+					<p>Loading LSPs...</p>
 				</div>
-			{:else if filteredCustomers.length === 0 && customers.length > 0}
+			{:else if filteredLsps.length === 0 && lsps.length > 0}
 				<div class="empty-state">
 					<div class="empty-icon">🔍</div>
-					<h3>No customers found</h3>
+					<h3>No LSPs found</h3>
 					<p>Try adjusting your search terms</p>
 				</div>
-			{:else if customers.length === 0}
+			{:else if lsps.length === 0}
 				<div class="empty-state">
-					<div class="empty-icon">👥</div>
-					<h3>No customers yet</h3>
-					<p>Create your first customer to get started</p>
-					<a href="/dashboard/management/add-new-customer" class="empty-action">Add First Customer</a>
+					<div class="empty-icon">🚚</div>
+					<h3>No LSPs yet</h3>
+					<p>Create your first LSP to get started</p>
+					<a href="/dashboard/management/add-new-lsp" class="empty-action">Add First LSP</a>
 				</div>
 			{:else}
-				<div class="customers-grid">
-					{#each filteredCustomers as customer (customer.id)}
+				<!-- Pagination Info -->
+				<div class="pagination-info">
+					<p>Showing {((currentPage - 1) * lspsPerPage) + 1} to {Math.min(currentPage * lspsPerPage, filteredLsps.length)} of {filteredLsps.length} LSPs</p>
+				</div>
+
+				<!-- LSPs Grid -->
+				<div class="lsps-grid">
+					{#each paginatedLsps as lsp (lsp.id)}
 						<div 
-							class="customer-card" 
-							on:click={() => handleCustomerClick(customer.id)}
-							on:keydown={(e) => e.key === 'Enter' && handleCustomerClick(customer.id)}
+							class="lsp-card" 
+							on:click={() => handleLspClick(lsp.id)}
+							on:keydown={(e) => e.key === 'Enter' && handleLspClick(lsp.id)}
 							role="button"
 							tabindex="0"
 						>
-							<div class="customer-header">
-								<h4 class="customer-name">{customer.name}</h4>
-								{#if customer.account_number}
-									<span class="account-badge">#{customer.account_number}</span>
+							<div class="lsp-header">
+								<h4 class="lsp-name">{lsp.vendor_name}</h4>
+								{#if lsp.vendor_code}
+									<span class="vendor-badge">#{lsp.vendor_code}</span>
 								{/if}
 							</div>
 							
-							<div class="customer-details">
-								{#if customer.contact_email}
+							<div class="lsp-details">
+								{#if lsp.contact_email}
 									<div class="detail-row">
 										<span class="detail-label">Email:</span>
-										<span class="detail-value">{customer.contact_email}</span>
+										<span class="detail-value">{lsp.contact_email}</span>
 									</div>
 								{/if}
 								
-								{#if customer.phone}
+								{#if lsp.phone}
 									<div class="detail-row">
 										<span class="detail-label">Phone:</span>
-										<span class="detail-value">{customer.phone}</span>
+										<span class="detail-value">{lsp.phone}</span>
 									</div>
 								{/if}
 								
-								{#if customer.city || customer.state}
+								{#if lsp.mobile}
 									<div class="detail-row">
-										<span class="detail-label">Location:</span>
-										<span class="detail-value">
-											{customer.city}{customer.city && customer.state ? ', ' : ''}{customer.state}
-										</span>
+										<span class="detail-label">Mobile:</span>
+										<span class="detail-value">{lsp.mobile}</span>
 									</div>
 								{/if}
 								
-								{#if customer.payment_terms}
+								{#if lsp.currency_code}
 									<div class="detail-row">
-										<span class="detail-label">Terms:</span>
-										<span class="detail-value">{customer.payment_terms}</span>
+										<span class="detail-label">Currency:</span>
+										<span class="detail-value">{lsp.currency_code}</span>
+									</div>
+								{/if}
+
+								{#if lsp.address}
+									<div class="detail-row">
+										<span class="detail-label">Address:</span>
+										<span class="detail-value address-text">{lsp.address}</span>
 									</div>
 								{/if}
 							</div>
 							
-							<div class="customer-footer">
-								<span class="created-date">Created: {formatDate(customer.created_at)}</span>
+							<div class="lsp-footer">
+								<span class="created-date">Created: {formatDate(lsp.created_at)}</span>
 								<span class="click-hint">Click to view details →</span>
 							</div>
 						</div>
 					{/each}
 				</div>
+
+				<!-- Pagination Controls -->
+				{#if totalPages > 1}
+					<div class="pagination-controls">
+						<button 
+							class="pagination-btn" 
+							disabled={currentPage === 1}
+							on:click={() => goToPage(currentPage - 1)}
+						>
+							← Previous
+						</button>
+						
+						<div class="pagination-numbers">
+							{#each getPageNumbers() as pageNum}
+								<button 
+									class="pagination-num" 
+									class:active={pageNum === currentPage}
+									on:click={() => goToPage(pageNum)}
+								>
+									{pageNum}
+								</button>
+							{/each}
+						</div>
+						
+						<button 
+							class="pagination-btn" 
+							disabled={currentPage === totalPages}
+							on:click={() => goToPage(currentPage + 1)}
+						>
+							Next →
+						</button>
+					</div>
+				{/if}
 			{/if}
 		</div>
 
@@ -306,12 +407,12 @@
 		box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
 	}
 
-	.nav-link.add-customer {
+	.nav-link.add-lsp {
 		background: linear-gradient(135deg, #16a34a, #15803d);
 		box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
 	}
 
-	.nav-link.add-customer:hover {
+	.nav-link.add-lsp:hover {
 		background: linear-gradient(135deg, #15803d, #166534);
 		box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
 	}
@@ -474,14 +575,25 @@
 		transform: translateY(-2px);
 	}
 
-	.customers-grid {
+	.pagination-info {
+		padding: 1rem 2rem;
+		border-bottom: 1px solid #e5e7eb;
+		color: #6b7280;
+		font-size: 0.875rem;
+	}
+
+	.pagination-info p {
+		margin: 0;
+	}
+
+	.lsps-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
 		gap: 1.5rem;
 		padding: 2rem;
 	}
 
-	.customer-card {
+	.lsp-card {
 		background: linear-gradient(135deg, #ffffff, #f8fafc);
 		border: 2px solid #e5e7eb;
 		border-radius: 16px;
@@ -491,13 +603,13 @@
 		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 	}
 
-	.customer-card:hover {
+	.lsp-card:hover {
 		border-color: #ea580c;
 		box-shadow: 0 8px 30px rgba(234, 88, 12, 0.15);
 		transform: translateY(-4px);
 	}
 
-	.customer-header {
+	.lsp-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -506,14 +618,14 @@
 		border-bottom: 1px solid #e5e7eb;
 	}
 
-	.customer-name {
+	.lsp-name {
 		font-size: 1.25rem;
 		font-weight: 600;
 		color: #1f2937;
 		margin: 0;
 	}
 
-	.account-badge {
+	.vendor-badge {
 		background: linear-gradient(135deg, #7c3aed, #6d28d9);
 		color: white;
 		padding: 0.25rem 0.75rem;
@@ -522,7 +634,7 @@
 		font-weight: 600;
 	}
 
-	.customer-details {
+	.lsp-details {
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
@@ -537,16 +649,21 @@
 	.detail-label {
 		font-weight: 600;
 		color: #6b7280;
-		min-width: 60px;
+		min-width: 70px;
 		font-size: 0.875rem;
 	}
 
 	.detail-value {
 		color: #1f2937;
 		font-size: 0.875rem;
+		flex: 1;
 	}
 
-	.customer-footer {
+	.address-text {
+		line-height: 1.4;
+	}
+
+	.lsp-footer {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
@@ -567,8 +684,68 @@
 		transition: opacity 0.3s ease;
 	}
 
-	.customer-card:hover .click-hint {
+	.lsp-card:hover .click-hint {
 		opacity: 1;
+	}
+
+	.pagination-controls {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 1rem;
+		padding: 2rem;
+		border-top: 1px solid #e5e7eb;
+	}
+
+	.pagination-btn {
+		padding: 0.75rem 1.5rem;
+		background: linear-gradient(135deg, #6b7280, #4b5563);
+		color: white;
+		border: none;
+		border-radius: 12px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		font-size: 0.875rem;
+	}
+
+	.pagination-btn:hover:not(:disabled) {
+		background: linear-gradient(135deg, #4b5563, #374151);
+		transform: translateY(-2px);
+	}
+
+	.pagination-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+		transform: none;
+	}
+
+	.pagination-numbers {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.pagination-num {
+		padding: 0.75rem 1rem;
+		background: white;
+		color: #6b7280;
+		border: 2px solid #e5e7eb;
+		border-radius: 8px;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		min-width: 45px;
+	}
+
+	.pagination-num:hover {
+		border-color: #ea580c;
+		color: #ea580c;
+	}
+
+	.pagination-num.active {
+		background: linear-gradient(135deg, #ea580c, #dc2626);
+		color: white;
+		border-color: #ea580c;
 	}
 
 	.logout-section {
@@ -608,7 +785,7 @@
 			padding: 1rem;
 		}
 		
-		.customers-grid {
+		.lsps-grid {
 			grid-template-columns: 1fr;
 			padding: 1rem;
 		}
@@ -626,10 +803,20 @@
 			width: 100%;
 		}
 		
-		.customer-header {
+		.lsp-header {
 			flex-direction: column;
 			align-items: flex-start;
 			gap: 0.5rem;
+		}
+
+		.pagination-controls {
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.pagination-numbers {
+			flex-wrap: wrap;
+			justify-content: center;
 		}
 	}
 </style>

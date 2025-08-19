@@ -4,12 +4,27 @@
 	import { goto } from '$app/navigation'
 	import { getCurrentUser, signOut } from '$lib/auth'
 	import { getCurrentUserProfile } from '$lib/userService'
+	import { getCurrentUserCustomer, getCustomerJobStats } from '$lib/services/customerService'
 	import type { User } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
+	import type { Customer } from '$lib/services/customerService'
 	
 	let user: User | null = null
 	let userProfile: UserProfile | null = null
+	let customer: Customer | null = null
+	let jobStats: {
+		totalJobs: number;
+		activeJobs: number;
+		completedJobs: number;
+		recentJobs: any[];
+	} = {
+		totalJobs: 0,
+		activeJobs: 0,
+		completedJobs: 0,
+		recentJobs: []
+	}
 	let loading = false
+	let dataLoading = true
 
 	// Load user data on page load (authentication is handled server-side)
 	onMount(async () => {
@@ -17,10 +32,23 @@
 		
 		if (user) {
 			try {
-				userProfile = await getCurrentUserProfile()
+				// Load user profile and customer data in parallel
+				const [profileResult, customerResult, statsResult] = await Promise.all([
+					getCurrentUserProfile(),
+					getCurrentUserCustomer(),
+					getCustomerJobStats()
+				])
+				
+				userProfile = profileResult
+				customer = customerResult
+				jobStats = statsResult
 			} catch (error) {
-				console.error('Error loading user profile:', error)
+				console.error('Error loading user data:', error)
+			} finally {
+				dataLoading = false
 			}
+		} else {
+			dataLoading = false
 		}
 	})
 
@@ -36,14 +64,33 @@
 		}
 		loading = false
 	}
+
+	// Get personalized greeting based on time of day
+	function getGreeting(): string {
+		const hour = new Date().getHours()
+		if (hour < 12) return 'Good morning'
+		if (hour < 17) return 'Good afternoon'
+		return 'Good evening'
+	}
+
+	// Get customer display name with fallback
+	function getCustomerDisplayName(): string {
+		if (userProfile?.role === 'Admin') return 'Netjets' // Default for admin as requested
+		return customer?.name || 'Valued Customer'
+	}
 </script>
 
 <div class="customer-container">
 	<!-- Header Section -->
 	<div class="header-section">
 		<div class="brand-header">
-			<h1 class="main-title">Customer Portal</h1>
-			<p class="subtitle">International Courier System</p>
+			{#if dataLoading}
+				<h1 class="main-title">Welcome</h1>
+				<p class="subtitle">Loading your dashboard...</p>
+			{:else}
+				<h1 class="main-title">{getGreeting()}, {getCustomerDisplayName()}!</h1>
+				<p class="subtitle">Your CERTrack Customer Portal</p>
+			{/if}
 		</div>
 		
 		{#if user}
@@ -70,6 +117,50 @@
 		{/if}
 	</div>
 
+	<!-- Job Statistics Section -->
+	{#if !dataLoading}
+		<div class="stats-section">
+			<h2 class="section-title">Your Job Overview</h2>
+			<div class="stats-grid">
+				<div class="stat-card">
+					<div class="stat-icon total">
+						<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+						</svg>
+					</div>
+					<div class="stat-content">
+						<h3>{jobStats.totalJobs}</h3>
+						<p>Total Jobs</p>
+					</div>
+				</div>
+
+				<div class="stat-card">
+					<div class="stat-icon active">
+						<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+						</svg>
+					</div>
+					<div class="stat-content">
+						<h3>{jobStats.activeJobs}</h3>
+						<p>Active Jobs</p>
+					</div>
+				</div>
+
+				<div class="stat-card">
+					<div class="stat-icon completed">
+						<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+						</svg>
+					</div>
+					<div class="stat-content">
+						<h3>{jobStats.completedJobs}</h3>
+						<p>Completed Jobs</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	{/if}
+
 	<!-- Quick Actions Section -->
 	<div class="quick-actions-section">
 		<h2 class="section-title">Quick Actions</h2>
@@ -77,12 +168,12 @@
 			<div class="action-card">
 				<div class="action-icon">
 					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
 					</svg>
 				</div>
-				<h3>Track Shipment</h3>
-				<p>Track your packages in real-time</p>
-				<button class="action-btn">Track Now</button>
+				<h3>Search Jobs</h3>
+				<p>Find and track your shipments</p>
+				<a href="/dashboard/customer/job-search" class="action-btn">Search Now</a>
 			</div>
 
 			<div class="action-card">
@@ -91,20 +182,20 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
 					</svg>
 				</div>
-				<h3>New Shipment</h3>
+				<h3>New Job</h3>
 				<p>Create a new shipment order</p>
-				<button class="action-btn">Create</button>
+				<a href="/dashboard/customer/new-job" class="action-btn">Create Job</a>
 			</div>
 
 			<div class="action-card">
 				<div class="action-icon">
 					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
 					</svg>
 				</div>
-				<h3>Shipment History</h3>
-				<p>View your past shipments</p>
-				<button class="action-btn">View History</button>
+				<h3>Get Quote</h3>
+				<p>Request pricing for your shipment</p>
+				<a href="/dashboard/customer/quote" class="action-btn">Get Quote</a>
 			</div>
 		</div>
 	</div>
@@ -182,25 +273,7 @@
 		</div>
 	</div>
 
-	<!-- Support Section -->
-	<div class="support-section">
-		<h2 class="section-title">Need Help?</h2>
-		<div class="support-card">
-			<div class="support-content">
-				<div class="support-icon">
-					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-					</svg>
-				</div>
-				<div class="support-text">
-					<h3>Customer Support</h3>
-					<p>Phone: 1-800-CERTRACK</p>
-					<p>Email: support@certrack.com</p>
-				</div>
-			</div>
-			<button class="support-btn">Contact Support</button>
-		</div>
-	</div>
+
 
 	{#if userProfile?.role === 'Admin'}
 		<div class="admin-section">
@@ -330,6 +403,77 @@
 		color: #1f2937;
 		margin: 0 0 1.5rem 0;
 		text-align: center;
+	}
+
+	/* Statistics Section */
+	.stats-section {
+		max-width: 1200px;
+		margin: 0 auto 3rem;
+	}
+
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 1.5rem;
+	}
+
+	.stat-card {
+		background: white;
+		padding: 1.5rem;
+		border-radius: 16px;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+		border: 1px solid rgba(0, 0, 0, 0.05);
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		transition: all 0.3s ease;
+	}
+
+	.stat-card:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+	}
+
+	.stat-icon {
+		width: 56px;
+		height: 56px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		color: white;
+	}
+
+	.stat-icon.total {
+		background: linear-gradient(45deg, #3b82f6, #2563eb);
+	}
+
+	.stat-icon.active {
+		background: linear-gradient(45deg, #f59e0b, #d97706);
+	}
+
+	.stat-icon.completed {
+		background: linear-gradient(45deg, #10b981, #059669);
+	}
+
+	.stat-icon svg {
+		width: 28px;
+		height: 28px;
+	}
+
+	.stat-content h3 {
+		font-size: 2rem;
+		font-weight: 700;
+		color: #1f2937;
+		margin: 0 0 0.25rem 0;
+	}
+
+	.stat-content p {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin: 0;
+		font-weight: 500;
 	}
 
 	/* Quick Actions Section */
@@ -531,78 +675,7 @@
 		margin: 0;
 	}
 
-	/* Support Section */
-	.support-section {
-		max-width: 1200px;
-		margin: 0 auto 3rem;
-	}
 
-	.support-card {
-		background: white;
-		padding: 2rem;
-		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
-		display: flex;
-		align-items: center;
-		gap: 2rem;
-	}
-
-	.support-content {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		flex: 1;
-	}
-
-	.support-icon {
-		width: 56px;
-		height: 56px;
-		background: rgba(220, 38, 38, 0.1);
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		color: #dc2626;
-		flex-shrink: 0;
-	}
-
-	.support-icon svg {
-		width: 28px;
-		height: 28px;
-	}
-
-	.support-text h3 {
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: #1f2937;
-		margin: 0 0 0.5rem 0;
-	}
-
-	.support-text p {
-		font-size: 0.875rem;
-		color: #6b7280;
-		margin: 0.25rem 0;
-	}
-
-	.support-btn {
-		background: #dc2626;
-		color: white;
-		border: none;
-		border-radius: 12px;
-		padding: 0.875rem 2rem;
-		font-size: 1rem;
-		font-weight: 500;
-		cursor: pointer;
-		transition: all 0.2s ease;
-		flex-shrink: 0;
-	}
-
-	.support-btn:hover {
-		background: #b91c1c;
-		transform: translateY(-2px);
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-	}
 
 	/* Admin Section */
 	.admin-section {
@@ -684,11 +757,6 @@
 
 		.services-grid {
 			grid-template-columns: 1fr;
-		}
-
-		.support-card {
-			flex-direction: column;
-			text-align: center;
 		}
 
 		.admin-card {

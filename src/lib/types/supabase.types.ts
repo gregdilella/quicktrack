@@ -7,13 +7,124 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
+      airlines: {
+        Row: {
+          airline_code: string
+          airline_name: string
+          contact_email: string | null
+          created_at: string | null
+          id: number
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          airline_code: string
+          airline_name: string
+          contact_email?: string | null
+          created_at?: string | null
+          id?: number
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          airline_code?: string
+          airline_name?: string
+          contact_email?: string | null
+          created_at?: string | null
+          id?: number
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      awb: {
+        Row: {
+          airline_id: number
+          awb_number: string
+          cost: number | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          destination_airport: string | null
+          dimensions: string | null
+          flight_date: string | null
+          flight_number: string | null
+          id: string
+          jobnumber: string
+          notes: string | null
+          origin_airport: string | null
+          pieces: number | null
+          status: string | null
+          updated_at: string | null
+          weight: number | null
+          weight_unit: string | null
+        }
+        Insert: {
+          airline_id: number
+          awb_number: string
+          cost?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          destination_airport?: string | null
+          dimensions?: string | null
+          flight_date?: string | null
+          flight_number?: string | null
+          id?: string
+          jobnumber: string
+          notes?: string | null
+          origin_airport?: string | null
+          pieces?: number | null
+          status?: string | null
+          updated_at?: string | null
+          weight?: number | null
+          weight_unit?: string | null
+        }
+        Update: {
+          airline_id?: number
+          awb_number?: string
+          cost?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          destination_airport?: string | null
+          dimensions?: string | null
+          flight_date?: string | null
+          flight_number?: string | null
+          id?: string
+          jobnumber?: string
+          notes?: string | null
+          origin_airport?: string | null
+          pieces?: number | null
+          status?: string | null
+          updated_at?: string | null
+          weight?: number | null
+          weight_unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "awb_airline_id_fkey"
+            columns: ["airline_id"]
+            isOneToOne: false
+            referencedRelation: "airlines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "awb_jobnumber_fkey"
+            columns: ["jobnumber"]
+            isOneToOne: false
+            referencedRelation: "jobsfile"
+            referencedColumns: ["jobnumber"]
+          },
+        ]
+      }
       billing: {
         Row: {
           charge: number | null
@@ -48,52 +159,52 @@ export type Database = {
       }
       customers: {
         Row: {
+          account_number: string | null
+          address1: string | null
+          address2: string | null
+          billing_contact: string | null
+          city: string | null
           contact_email: string | null
           created_at: string | null
           id: string
           name: string
-          account_number: string | null
+          notes: string | null
+          payment_terms: string | null
           phone: string | null
-          address1: string | null
-          address2: string | null
-          city: string | null
           state: string | null
           zip: string | null
-          billing_contact: string | null
-          payment_terms: string | null
-          notes: string | null
         }
         Insert: {
+          account_number?: string | null
+          address1?: string | null
+          address2?: string | null
+          billing_contact?: string | null
+          city?: string | null
           contact_email?: string | null
           created_at?: string | null
           id?: string
           name: string
-          account_number?: string | null
+          notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
-          address1?: string | null
-          address2?: string | null
-          city?: string | null
           state?: string | null
           zip?: string | null
-          billing_contact?: string | null
-          payment_terms?: string | null
-          notes?: string | null
         }
         Update: {
+          account_number?: string | null
+          address1?: string | null
+          address2?: string | null
+          billing_contact?: string | null
+          city?: string | null
           contact_email?: string | null
           created_at?: string | null
           id?: string
           name?: string
-          account_number?: string | null
+          notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
-          address1?: string | null
-          address2?: string | null
-          city?: string | null
           state?: string | null
           zip?: string | null
-          billing_contact?: string | null
-          payment_terms?: string | null
-          notes?: string | null
         }
         Relationships: []
       }
@@ -144,10 +255,6 @@ export type Database = {
           bol_number: string | null
           commodity: string | null
           commodity_code: string | null
-          weight_unit: string | null
-          dimensions: string | null
-          declared_value: number | null
-          description: string | null
           consignee_address1: string | null
           consignee_address2: string | null
           consignee_city: string | null
@@ -158,12 +265,16 @@ export type Database = {
           consignee_zip: string | null
           created_at: string | null
           created_by: string | null
-          customer_id: string | null
-          customer_name: string | null
           customer_account: string | null
           customer_contact: string | null
-          customer_phone: string | null
           customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          declared_value: number | null
+          description: string | null
+          dimensions: string | null
+          equipment_type: string | null
           id: number
           job_number: string | null
           job_type: string | null
@@ -173,11 +284,8 @@ export type Database = {
           po_number: string | null
           ready_date: string | null
           ready_time: string | null
-          service_type: string | null
-          transport_mode: string | null
-          equipment_type: string | null
           service_level: string | null
-          special_instructions: string | null
+          service_type: string | null
           shipper_address1: string | null
           shipper_address2: string | null
           shipper_city: string | null
@@ -186,20 +294,19 @@ export type Database = {
           shipper_phone: string | null
           shipper_state: string | null
           shipper_zip: string | null
+          special_instructions: string | null
           status: string | null
+          transport_mode: string | null
           updated_at: string | null
           vendorcode: string | null
           weight: number | null
+          weight_unit: string | null
         }
         Insert: {
           account_number?: string | null
           bol_number?: string | null
           commodity?: string | null
           commodity_code?: string | null
-          weight_unit?: string | null
-          dimensions?: string | null
-          declared_value?: number | null
-          description?: string | null
           consignee_address1?: string | null
           consignee_address2?: string | null
           consignee_city?: string | null
@@ -210,12 +317,16 @@ export type Database = {
           consignee_zip?: string | null
           created_at?: string | null
           created_by?: string | null
-          customer_id?: string | null
-          customer_name?: string | null
           customer_account?: string | null
           customer_contact?: string | null
-          customer_phone?: string | null
           customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          declared_value?: number | null
+          description?: string | null
+          dimensions?: string | null
+          equipment_type?: string | null
           id?: number
           job_number?: string | null
           job_type?: string | null
@@ -225,11 +336,8 @@ export type Database = {
           po_number?: string | null
           ready_date?: string | null
           ready_time?: string | null
-          service_type?: string | null
-          transport_mode?: string | null
-          equipment_type?: string | null
           service_level?: string | null
-          special_instructions?: string | null
+          service_type?: string | null
           shipper_address1?: string | null
           shipper_address2?: string | null
           shipper_city?: string | null
@@ -238,20 +346,19 @@ export type Database = {
           shipper_phone?: string | null
           shipper_state?: string | null
           shipper_zip?: string | null
+          special_instructions?: string | null
           status?: string | null
+          transport_mode?: string | null
           updated_at?: string | null
           vendorcode?: string | null
           weight?: number | null
+          weight_unit?: string | null
         }
         Update: {
           account_number?: string | null
           bol_number?: string | null
           commodity?: string | null
           commodity_code?: string | null
-          weight_unit?: string | null
-          dimensions?: string | null
-          declared_value?: number | null
-          description?: string | null
           consignee_address1?: string | null
           consignee_address2?: string | null
           consignee_city?: string | null
@@ -262,12 +369,16 @@ export type Database = {
           consignee_zip?: string | null
           created_at?: string | null
           created_by?: string | null
-          customer_id?: string | null
-          customer_name?: string | null
           customer_account?: string | null
           customer_contact?: string | null
-          customer_phone?: string | null
           customer_email?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          declared_value?: number | null
+          description?: string | null
+          dimensions?: string | null
+          equipment_type?: string | null
           id?: number
           job_number?: string | null
           job_type?: string | null
@@ -277,11 +388,8 @@ export type Database = {
           po_number?: string | null
           ready_date?: string | null
           ready_time?: string | null
-          service_type?: string | null
-          transport_mode?: string | null
-          equipment_type?: string | null
           service_level?: string | null
-          special_instructions?: string | null
+          service_type?: string | null
           shipper_address1?: string | null
           shipper_address2?: string | null
           shipper_city?: string | null
@@ -290,10 +398,13 @@ export type Database = {
           shipper_phone?: string | null
           shipper_state?: string | null
           shipper_zip?: string | null
+          special_instructions?: string | null
           status?: string | null
+          transport_mode?: string | null
           updated_at?: string | null
           vendorcode?: string | null
           weight?: number | null
+          weight_unit?: string | null
         }
         Relationships: [
           {
@@ -308,69 +419,7 @@ export type Database = {
             columns: ["vendorcode"]
             isOneToOne: false
             referencedRelation: "lsps"
-            referencedColumns: ["vendorcode"]
-          },
-        ]
-      }
-      timetable: {
-        Row: {
-          id: number
-          jobnumber: string
-          jobcreated: string | null
-          pdriver_dispatched: string | null
-          pdriver_arrived: string | null
-          pdriver_pickup: string | null
-          airport_dropoff: string | null
-          flight_tenured: string | null
-          flight_recovered: string | null
-          ddriver_dispatched: string | null
-          ddriver_recovered: string | null
-          ddriver_delivery: string | null
-          pod: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: number
-          jobnumber: string
-          jobcreated?: string | null
-          pdriver_dispatched?: string | null
-          pdriver_arrived?: string | null
-          pdriver_pickup?: string | null
-          airport_dropoff?: string | null
-          flight_tenured?: string | null
-          flight_recovered?: string | null
-          ddriver_dispatched?: string | null
-          ddriver_recovered?: string | null
-          ddriver_delivery?: string | null
-          pod?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: number
-          jobnumber?: string
-          jobcreated?: string | null
-          pdriver_dispatched?: string | null
-          pdriver_arrived?: string | null
-          pdriver_pickup?: string | null
-          airport_dropoff?: string | null
-          flight_tenured?: string | null
-          flight_recovered?: string | null
-          ddriver_dispatched?: string | null
-          ddriver_recovered?: string | null
-          ddriver_delivery?: string | null
-          pod?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "timetable_jobnumber_fkey"
-            columns: ["jobnumber"]
-            isOneToOne: false
-            referencedRelation: "jobsfile"
-            referencedColumns: ["jobnumber"]
+            referencedColumns: ["vendor_code"]
           },
         ]
       }
@@ -425,7 +474,7 @@ export type Database = {
             columns: ["vendorcode"]
             isOneToOne: false
             referencedRelation: "lsps"
-            referencedColumns: ["vendorcode"]
+            referencedColumns: ["vendor_code"]
           },
         ]
       }
@@ -489,31 +538,43 @@ export type Database = {
             columns: ["vendorcode"]
             isOneToOne: false
             referencedRelation: "lsps"
-            referencedColumns: ["vendorcode"]
+            referencedColumns: ["vendor_code"]
           },
         ]
       }
       lsps: {
         Row: {
+          address: string | null
           contact_email: string | null
           created_at: string | null
+          currency_code: string | null
           id: string
-          name: string
-          vendorcode: string | null
+          mobile: string | null
+          phone: string | null
+          vendor_code: string | null
+          vendor_name: string
         }
         Insert: {
+          address?: string | null
           contact_email?: string | null
           created_at?: string | null
+          currency_code?: string | null
           id?: string
-          name: string
-          vendorcode?: string | null
+          mobile?: string | null
+          phone?: string | null
+          vendor_code?: string | null
+          vendor_name: string
         }
         Update: {
+          address?: string | null
           contact_email?: string | null
           created_at?: string | null
+          currency_code?: string | null
           id?: string
-          name?: string
-          vendorcode?: string | null
+          mobile?: string | null
+          phone?: string | null
+          vendor_code?: string | null
+          vendor_name?: string
         }
         Relationships: []
       }
