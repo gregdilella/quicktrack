@@ -132,3 +132,4 @@ ON CONFLICT (airline_code) DO UPDATE SET
     phone = EXCLUDED.phone,
     updated_at = NOW();
 */
+

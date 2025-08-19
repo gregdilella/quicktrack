@@ -140,3 +140,4 @@ ON CONFLICT (vendor_code) DO UPDATE SET
     phone = EXCLUDED.phone,
     updated_at = NOW();
 */
+

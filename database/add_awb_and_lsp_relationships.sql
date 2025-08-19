@@ -263,3 +263,4 @@ INSERT INTO airlines (airline_name, airline_code, contact_email, phone) VALUES
 ('UPS Airlines', '5X', 'customer@ups.com', '+1-800-742-5877')
 ON CONFLICT (airline_code) DO NOTHING;
 */
+

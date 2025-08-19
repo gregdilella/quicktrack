@@ -235,3 +235,4 @@ SELECT
 FROM information_schema.columns 
 WHERE table_name = 'lsp_level' 
 ORDER BY ordinal_position;
+
