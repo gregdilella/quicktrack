@@ -139,7 +139,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 
 <style>
 	.selection-container {
-		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		font-size: 14px;
 		line-height: 1.5;
@@ -428,4 +428,5 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 		}
 	}
 </style>
+
 

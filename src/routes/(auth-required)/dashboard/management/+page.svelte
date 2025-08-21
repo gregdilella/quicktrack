@@ -74,7 +74,7 @@
 <style>
 	.management-container {
 		min-height: 100vh;
-		background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		padding: 2rem;
 	}
@@ -95,7 +95,7 @@
 		font-weight: 700;
 		color: #1f2937;
 		margin: 0 0 1rem 0;
-		background: linear-gradient(45deg, #7c3aed, #6d28d9);
+		background: linear-gradient(45deg, #34547a, #2c4766);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
@@ -108,32 +108,28 @@
 
 	.system-title span {
 		font-size: 1.2rem;
-		color: #7c3aed;
-		font-weight: 600;
-	}
-
-	.red-text {
-		color: #dc2626;
+		color: #34547a;
 		font-weight: 600;
 	}
 
 	.blue-text {
-		color: #2563eb;
+		color: #34547a;
 		font-weight: 600;
 	}
 
 	.purple-text {
-		color: #7c3aed;
+		color: #34547a;
 		font-weight: 600;
 	}
 
 	.user-info {
 		margin: 2rem 0;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		padding: 1.5rem;
-		border-radius: 15px;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.user-info p {
@@ -144,10 +140,11 @@
 	.dashboard-section {
 		margin: 2rem 0;
 		padding: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.dashboard-section h3 {
@@ -167,8 +164,9 @@
 	.menu-item {
 		display: block;
 		padding: 1rem 1.5rem;
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 12px;
 		cursor: pointer;
 		color: #1f2937;
@@ -176,19 +174,19 @@
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		text-decoration: none;
 		transition: all 0.3s ease;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.1);
 	}
 
 	.menu-item:hover {
-		background: #f9fafb;
-		color: #7c3aed;
+		background: rgba(255, 255, 255, 0.15);
+		color: #34547a;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		border-color: #7c3aed;
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.2);
+		border-color: rgba(255, 255, 255, 0.3);
 	}
 
 	.mgmt-item {
-		border-left: 4px solid #7c3aed;
+		border-left: 4px solid #34547a;
 	}
 
 
@@ -201,35 +199,35 @@
 	.admin-link {
 		display: inline-block;
 		padding: 0.75rem 1.5rem;
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		text-decoration: none;
 		font-size: 0.875rem;
 		font-weight: 500;
-		border: 1px solid #dc2626;
+		border: 1px solid #34547a;
 		border-radius: 12px;
 		transition: all 0.2s ease;
-		box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 	}
 
 	.admin-link:hover {
-		background: #b91c1c;
-		border-color: #b91c1c;
+		background: #2c4766;
+		border-color: #2c4766;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.4);
 	}
 
 
 
 	.command-prompt {
 		margin-top: 2rem;
-		background: linear-gradient(45deg, #7c3aed, #6d28d9);
+		background: linear-gradient(135deg, #34547a, #2c4766);
 		color: white;
 		padding: 1rem 1.5rem;
 		border-radius: 12px;
 		font-weight: 600;
 		text-align: center;
-		box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 	}
 
 	/* Responsive Design */

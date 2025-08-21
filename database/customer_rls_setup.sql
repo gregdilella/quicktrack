@@ -149,3 +149,4 @@ COMMENT ON POLICY "jobsfile_customer_select" ON jobsfile IS 'Customers can only 
 COMMENT ON POLICY "jobsfile_customer_insert" ON jobsfile IS 'Customers can create jobs, auto-populated with their customer_id';
 COMMENT ON FUNCTION get_current_user_customer() IS 'Returns current users customer information for auto-population';
 
+

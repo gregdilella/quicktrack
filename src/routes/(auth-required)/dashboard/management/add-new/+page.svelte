@@ -125,7 +125,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 
 <style>
 	.selection-container {
-		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		font-size: 14px;
 		line-height: 1.5;
@@ -141,11 +141,12 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 
 	.ascii-header {
 		margin-bottom: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		padding: 1.5rem;
 		border-radius: 16px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.ascii-header pre {
@@ -156,28 +157,29 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 	}
 
 	.red-text {
-		color: #ea580c;
+		color: #34547a;
 		font-weight: 700;
 	}
 
 	.blue-text {
-		color: #2563eb;
+		color: #34547a;
 		font-weight: 600;
 	}
 
 	.purple-text {
-		color: #7c3aed;
+		color: #34547a;
 		font-weight: 600;
 	}
 
 	.system-title {
 		margin: 2rem 0;
 		text-align: center;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		padding: 1.5rem;
 		border-radius: 16px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.nav-section {
@@ -188,31 +190,32 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 	.nav-link {
 		display: inline-block;
 		padding: 0.75rem 1.5rem;
-		background: linear-gradient(135deg, #7c3aed, #6d28d9);
+		background: linear-gradient(135deg, #34547a, #2c4766);
 		color: white;
 		text-decoration: none;
 		font-size: 0.875rem;
 		font-weight: 600;
 		border-radius: 12px;
 		transition: all 0.3s ease;
-		box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
 	}
 
 	.nav-link:hover {
-		background: linear-gradient(135deg, #6d28d9, #5b21b6);
+		background: linear-gradient(135deg, #2c4766, #1e3a5f);
 		transform: translateY(-2px);
-		box-shadow: 0 8px 25px rgba(124, 58, 237, 0.4);
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.4);
 	}
 
 	.user-info {
 		margin: 2rem 0;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		padding: 1.5rem;
 		border-radius: 16px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.user-info p {
@@ -224,9 +227,10 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 		margin: 2rem 0;
 		padding: 2.5rem;
 		border-radius: 20px;
-		background: white;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.selection-section h3 {
@@ -347,12 +351,12 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 
 	.command-prompt {
 		margin-top: 2rem;
-		background: linear-gradient(135deg, #ea580c, #dc2626);
+		background: linear-gradient(135deg, #34547a, #2c4766);
 		color: white;
 		padding: 1rem 1.5rem;
 		font-weight: 600;
 		border-radius: 12px;
-		box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 		text-align: center;
 	}
 
@@ -365,7 +369,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 		padding: 0.75rem 1.5rem;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		font-size: 0.875rem;
-		background: linear-gradient(135deg, #dc2626, #b91c1c);
+		background: linear-gradient(135deg, #34547a, #2c4766);
 		color: white;
 		border: none;
 		border-radius: 12px;
@@ -374,13 +378,13 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 		transition: all 0.3s ease;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 	}
 
 	.logout-button:hover:not(:disabled) {
-		background: linear-gradient(135deg, #b91c1c, #991b1b);
+		background: linear-gradient(135deg, #2c4766, #1e3a5f);
 		transform: translateY(-2px);
-		box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.4);
 	}
 
 	.logout-button:disabled {
@@ -414,4 +418,5 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS</pre>
 		}
 	}
 </style>
+
 

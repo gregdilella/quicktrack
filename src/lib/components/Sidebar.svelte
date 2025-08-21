@@ -70,51 +70,51 @@
 		switch (section) {
 			case 'customer':
 				return {
-					primary: '#dc2626',
-					secondary: '#b91c1c',
-					background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-					accent: 'rgba(220, 38, 38, 0.1)',
-					text: '#dc2626'
+					primary: '#34547a',
+					secondary: '#2c4766',
+					background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+					accent: 'rgba(52, 84, 122, 0.1)',
+					text: '#34547a'
 				};
 			case 'lsp':
 				return {
-					primary: '#2563eb',
-					secondary: '#1d4ed8',
-					background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-					accent: 'rgba(37, 99, 235, 0.1)',
-					text: '#2563eb'
+					primary: '#34547a',
+					secondary: '#2c4766',
+					background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+					accent: 'rgba(52, 84, 122, 0.1)',
+					text: '#34547a'
 				};
 			case 'management':
 				return {
-					primary: '#7c3aed',
-					secondary: '#6d28d9',
-					background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-					accent: 'rgba(124, 58, 237, 0.1)',
-					text: '#7c3aed'
+					primary: '#34547a',
+					secondary: '#2c4766',
+					background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+					accent: 'rgba(52, 84, 122, 0.1)',
+					text: '#34547a'
 				};
 			case 'operations':
 				return {
-					primary: '#ea580c',
-					secondary: '#dc2626',
-					background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
-					accent: 'rgba(234, 88, 12, 0.1)',
-					text: '#ea580c'
+					primary: '#34547a',
+					secondary: '#2c4766',
+					background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+					accent: 'rgba(52, 84, 122, 0.1)',
+					text: '#34547a'
 				};
 			case 'admin':
 				return {
-					primary: '#ef4444',
-					secondary: '#dc2626',
-					background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
-					accent: 'rgba(239, 68, 68, 0.1)',
-					text: '#ef4444'
+					primary: '#34547a',
+					secondary: '#2c4766',
+					background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+					accent: 'rgba(52, 84, 122, 0.1)',
+					text: '#34547a'
 				};
 			default:
 				return {
-					primary: '#6b7280',
-					secondary: '#4b5563',
-					background: 'linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%)',
-					accent: 'rgba(107, 114, 128, 0.1)',
-					text: '#6b7280'
+					primary: '#34547a',
+					secondary: '#2c4766',
+					background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+					accent: 'rgba(52, 84, 122, 0.1)',
+					text: '#34547a'
 				};
 		}
 	}
@@ -213,42 +213,31 @@
 {/if}
 
 <aside class="sidebar" class:open={sidebarOpen} class:mobile={isMobile} style="background: {themeColors.background};">
-	<!-- Header Section -->
+	<!-- Header Section with Logo and User Info -->
 	<div class="sidebar-header">
-		<div class="brand-section">
-			<h1 class="brand-title" style="color: {themeColors.primary};">CERTrack</h1>
-			<p class="brand-subtitle">Control Panel</p>
-		</div>
+		{#if loading}
+			<div class="status-card">
+				<div class="loading-indicator">
+					<div class="spinner" style="border-top-color: {themeColors.primary};"></div>
+					<p>Loading...</p>
+				</div>
+			</div>
+		{:else if userProfile}
+			<div class="status-card">
+				<div class="header-content">
+					<div class="logo-blur-container">
+						<img src="/Certus Logo.png" alt="Certus Freight" class="brand-logo-img" />
+					</div>
+					<div class="user-info">
+						<p class="user-status" style="color: {themeColors.text};">
+							{getStatusText(currentSection ? sectionRole : userProfile.role || 'User')}
+						</p>
+						<p class="user-email">{userProfile.email}</p>
+					</div>
+				</div>
+			</div>
+		{/if}
 	</div>
-
-	<!-- User Status Card -->
-	{#if loading}
-		<div class="status-card">
-			<div class="loading-indicator">
-				<div class="spinner" style="border-top-color: {themeColors.primary};"></div>
-				<p>Loading...</p>
-			</div>
-		</div>
-	{:else if userProfile}
-		<div class="status-card">
-			<div class="user-avatar" style="background: {themeColors.primary};">
-				<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-				</svg>
-			</div>
-			<div class="user-info">
-				<p class="user-status" style="color: {themeColors.text};">
-					{getStatusText(currentSection ? sectionRole : userProfile.role || 'User')}
-				</p>
-				<p class="user-email">{userProfile.email}</p>
-				{#if currentSection}
-					<p class="user-section" style="color: {themeColors.text};">
-						{sectionRole} Panel
-					</p>
-				{/if}
-			</div>
-		</div>
-	{/if}
 
 	<!-- Navigation Menu -->
 	<nav class="navigation">
@@ -428,25 +417,24 @@
 		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 	}
 
-	.brand-section {
-		text-align: center;
+	.header-content {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 	}
 
-	.brand-title {
-		font-size: 1.75rem;
-		font-weight: 700;
-		margin: 0 0 0.25rem 0;
-		background: linear-gradient(45deg, currentColor, rgba(0, 0, 0, 0.8));
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
+	.logo-blur-container {
+		max-width: fit-content;
+		flex-shrink: 0;
 	}
 
-	.brand-subtitle {
-		font-size: 0.875rem;
-		color: #6b7280;
+	.brand-logo-img {
+		max-width: 70px;
+		width: 100%;
+		height: auto;
 		margin: 0;
-		font-weight: 400;
+		display: block;
+		transition: all 0.3s ease;
 	}
 
 	/* Status Card */
@@ -485,43 +473,27 @@
 		margin: 0;
 	}
 
-	.user-avatar {
-		width: 48px;
-		height: 48px;
-		border-radius: 50%;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin: 0 auto 1rem;
-		color: white;
-	}
-
-	.user-avatar svg {
-		width: 24px;
-		height: 24px;
-	}
-
 	.user-info {
-		text-align: center;
+		flex: 1;
+		min-width: 0;
 	}
 
 	.user-status {
-		font-size: 0.875rem;
+		font-size: 0.7rem;
 		font-weight: 600;
-		margin: 0 0 0.5rem 0;
+		margin: 0 0 0.2rem 0;
+		line-height: 1.1;
 	}
 
 	.user-email {
-		font-size: 0.875rem;
+		font-size: 0.65rem;
 		color: #6b7280;
-		margin: 0 0 0.5rem 0;
+		margin: 0 0 0.2rem 0;
+		line-height: 1.1;
+		word-break: break-all;
 	}
 
-	.user-section {
-		font-size: 0.75rem;
-		font-weight: 500;
-		margin: 0;
-	}
+
 
 	/* Navigation */
 	.navigation {
@@ -654,8 +626,20 @@
 
 	/* Mobile specific styles */
 	@media (max-width: 768px) {
-		.brand-title {
-			font-size: 1.5rem;
+		.header-content {
+			gap: 0.5rem;
+		}
+
+		.brand-logo-img {
+			max-width: 50px;
+		}
+
+		.user-status {
+			font-size: 0.65rem;
+		}
+
+		.user-email {
+			font-size: 0.6rem;
 		}
 	}
 </style> 

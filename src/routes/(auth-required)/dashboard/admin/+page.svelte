@@ -48,21 +48,16 @@
 
 <div class="admin-container">
 	<div class="main-content">
-		<!-- ASCII Art Header -->
-		<div class="ascii-header">
-			<pre class="red-text">CCCCCC EEEEEEE RRRRRR TTTTTTTT UU   UU  SSSSS
-CC     EE      RR   RR   TT    UU   UU SS    
-CC     EE      RR   RR   TT    UU   UU SS    
-CC     EEEE    RRRRRR    TT    UU   UU  SSSSS
-CC     EEEE    RR RR     TT    UU   UU      SS
-CC     EE      RR  RR    TT    UU   UU      SS
-CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
-</pre>
+		<!-- Mobile Logo (only visible on mobile) -->
+		<div class="mobile-logo-section">
+			<div class="mobile-logo-container">
+				<img src="/Certus Logo.png" alt="Certus Freight" class="mobile-logo" />
+			</div>
 		</div>
 
 		<!-- System Title -->
 		<div class="system-title">
-			<span class="red-text">INTERNATIONAL COURIER - ADMIN CONTROL PANEL</span>
+			<span class="blue-text">CERTUS FREIGHT - ADMIN CONTROL PANEL</span>
 		</div>
 
 		<!-- User Information -->
@@ -135,16 +130,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 			</div>
 		</div>
 
-		<!-- Support Message -->
-		<div class="support-message">
-			<p class="blue-text">ADMIN NOTICE: All system changes are logged</p>
-			<p class="blue-text">Contact System Architecture for critical issues</p>
-		</div>
 
-		<!-- Command Prompt -->
-		<div class="command-prompt">
-			<span class="red-text">([ADMIN] Administrative Terminal Active)</span>
-		</div>
 
 		<!-- Logout Button -->
 		<div class="logout-section">
@@ -159,7 +145,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 	/* Admin Container */
 	.admin-container {
 		min-height: 100vh;
-		background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		padding: 2rem;
 	}
@@ -170,57 +156,82 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		margin: 0 auto;
 	}
 
-	/* ASCII Art Header */
-	.ascii-header {
-		margin-bottom: 20px;
+
+
+	/* Mobile Logo Section */
+	.mobile-logo-section {
+		display: none;
+		text-align: center;
+		margin-bottom: 1.5rem;
 	}
 
-	.ascii-header pre {
+	.mobile-logo-container {
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1rem;
+		margin: 0 auto;
+		max-width: fit-content;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
+	}
+
+	.mobile-logo {
+		max-width: 200px;
+		width: 100%;
+		height: auto;
 		margin: 0;
-		font-size: 12px;
-		line-height: 1;
+		display: block;
 	}
 
 	/* Color Classes */
-	.red-text {
-		color: red;
-		font-weight: bold;
-	}
-
 	.blue-text {
-		color: blue;
+		color: #34547a;
 		font-weight: bold;
 	}
 
 	.green-text {
-		color: green;
+		color: #16a34a;
 		font-weight: bold;
 	}
 
 	/* System Title */
 	.system-title {
-		margin: 20px 0;
-		text-align: left;
+		margin: 2rem 0;
+		text-align: center;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1.5rem;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	/* User Information */
 	.user-info {
-		margin: 20px 0;
+		margin: 2rem 0;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1.5rem;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
-	.user-info p,
-	.support-message p {
-		margin: 5px 0;
+	.user-info p {
+		margin: 0.5rem 0;
+		font-size: 0.95rem;
 	}
 
 	/* Dashboard Section */
 	.dashboard-section {
 		margin: 2rem 0;
 		padding: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.dashboard-section h3 {
@@ -239,37 +250,39 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 
 	.menu-item {
 		padding: 1rem 1.5rem;
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 12px;
 		cursor: pointer;
 		color: #1f2937;
 		font-weight: 500;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		transition: all 0.3s ease;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.1);
 	}
 
 	.menu-item:hover {
-		background: #fef2f2;
-		color: #dc2626;
+		background: rgba(255, 255, 255, 0.15);
+		color: #34547a;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		border-color: #dc2626;
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.2);
+		border-color: rgba(255, 255, 255, 0.3);
 	}
 
 	.admin-item {
-		border-left: 4px solid #dc2626;
+		border-left: 4px solid #34547a;
 	}
 
 	/* Dashboard Access Section */
 	.dashboard-access-section {
 		margin: 2rem 0;
 		padding: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.dashboard-access-section h3 {
@@ -291,23 +304,24 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		align-items: center;
 		gap: 1rem;
 		padding: 1.5rem;
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 15px;
 		text-decoration: none;
 		color: #1f2937;
 		font-weight: 500;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		transition: all 0.3s ease;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.1);
 	}
 
 	.dashboard-link:hover {
-		background: #fef2f2;
-		border-color: #dc2626;
-		color: #dc2626;
+		background: rgba(255, 255, 255, 0.15);
+		border-color: rgba(255, 255, 255, 0.3);
+		color: #34547a;
 		transform: translateY(-3px);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.2);
 	}
 
 	.link-icon {
@@ -319,33 +333,39 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 	}
 
 	.ops-link:hover {
-		border-color: orange;
+		border-color: rgba(234, 88, 12, 0.5);
+		color: #ea580c;
 	}
 
 	.mgmt-link:hover {
-		border-color: purple;
+		border-color: rgba(124, 58, 237, 0.5);
+		color: #7c3aed;
 	}
 
 	.lsp-link:hover {
-		border-color: green;
+		border-color: rgba(22, 163, 74, 0.5);
+		color: #16a34a;
 	}
 
 	.customer-link:hover {
-		border-color: blue;
+		border-color: rgba(37, 99, 235, 0.5);
+		color: #2563eb;
 	}
 
 	.testing-link:hover {
-		border-color: #10b981;
+		border-color: rgba(16, 185, 129, 0.5);
+		color: #10b981;
 	}
 
 	/* User Management Section */
 	.user-management-section {
 		margin: 2rem 0;
 		padding: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.user-management-section h3 {
@@ -367,7 +387,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		grid-template-columns: 2fr 1fr 1fr 1fr;
 		gap: 1rem;
 		padding: 1rem 1.5rem;
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		font-weight: 600;
 		border-radius: 12px 12px 0 0;
@@ -378,18 +398,20 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		grid-template-columns: 2fr 1fr 1fr 1fr;
 		gap: 1rem;
 		padding: 1rem 1.5rem;
-		background: white;
-		border-bottom: 1px solid #f3f4f6;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 		font-size: 0.875rem;
 		transition: all 0.2s ease;
 	}
 
 	.table-row:nth-child(even) {
-		background: #f9fafb;
+		background: rgba(255, 255, 255, 0.12);
 	}
 
 	.table-row:hover {
-		background: #fef2f2;
+		background: rgba(255, 255, 255, 0.18);
+		border-color: rgba(255, 255, 255, 0.3);
 	}
 
 	.table-row:last-child {
@@ -400,25 +422,13 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		font-weight: bold;
 	}
 
-	.role-admin { color: red; }
-	.role-management { color: purple; }
-	.role-operations { color: orange; }
-	.role-lsp { color: green; }
-	.role-customer { color: blue; }
+	.role-admin { color: #dc2626; }
+	.role-management { color: #7c3aed; }
+	.role-operations { color: #ea580c; }
+	.role-lsp { color: #16a34a; }
+	.role-customer { color: #2563eb; }
 
-	/* Support Message */
-	.support-message {
-		margin: 20px 0;
-	}
 
-	/* Command Prompt */
-	.command-prompt {
-		margin-top: 30px;
-		background-color: red;
-		color: white;
-		padding: 5px 10px;
-		font-weight: bold;
-	}
 
 	/* Logout Section */
 	.logout-section {
@@ -430,20 +440,22 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		padding: 0.875rem 2rem;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		font-size: 1rem;
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 12px;
 		cursor: pointer;
 		font-weight: 500;
 		transition: all 0.2s ease;
-		box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
 	}
 
 	.logout-button:hover:not(:disabled) {
-		background: #b91c1c;
+		background: #2c4766;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.4);
 	}
 
 	.logout-button:disabled {
@@ -463,12 +475,30 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 			max-width: 100%;
 		}
 
+		.mobile-logo-section {
+			display: block;
+		}
+
+		.mobile-logo {
+			max-width: 180px;
+		}
+
 		.dashboard-links {
 			grid-template-columns: 1fr;
 		}
 
-		.ascii-header pre {
-			font-size: 10px;
+		.table-header, .table-row {
+			grid-template-columns: 1fr;
+			gap: 0.5rem;
+		}
+
+		.table-header {
+			text-align: center;
+		}
+
+		.table-row {
+			text-align: center;
+			padding: 0.75rem;
 		}
 	}
 

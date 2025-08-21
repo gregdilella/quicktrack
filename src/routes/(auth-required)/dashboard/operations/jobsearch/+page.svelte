@@ -147,6 +147,13 @@
 
 <div class="jobsearch-container">
 	<div class="main-content">
+		<!-- Mobile Logo (only visible on mobile) -->
+		<div class="mobile-logo-section">
+			<div class="mobile-logo-container">
+				<img src="/Certus Logo.png" alt="Certus Freight" class="mobile-logo" />
+			</div>
+		</div>
+
 		<!-- Page Header -->
 		<div class="page-header">
 			<div class="header-content">
@@ -351,7 +358,7 @@
 <style>
 	.jobsearch-container {
 		min-height: 100vh;
-		background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		padding: 2rem;
 	}
@@ -361,6 +368,32 @@
 		margin: 0 auto;
 	}
 
+	/* Mobile Logo Section */
+	.mobile-logo-section {
+		display: none;
+		text-align: center;
+		margin-bottom: 1.5rem;
+	}
+
+	.mobile-logo-container {
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1rem;
+		margin: 0 auto;
+		max-width: fit-content;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
+	}
+
+	.mobile-logo {
+		max-width: 200px;
+		width: 100%;
+		height: auto;
+		margin: 0;
+		display: block;
+	}
+
 	/* Page Header */
 	.page-header {
 		display: flex;
@@ -368,10 +401,11 @@
 		align-items: center;
 		margin-bottom: 2rem;
 		padding: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.header-content {
@@ -383,7 +417,7 @@
 		font-weight: 700;
 		color: #1f2937;
 		margin: 0 0 0.5rem 0;
-		background: linear-gradient(45deg, #ea580c, #dc2626);
+		background: linear-gradient(45deg, #34547a, #2c4766);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
@@ -414,14 +448,14 @@
 	}
 
 	.action-button.primary {
-		background: #ea580c;
+		background: #34547a;
 		color: white;
-		border-color: #ea580c;
+		border-color: #34547a;
 		box-shadow: 0 2px 10px rgba(234, 88, 12, 0.3);
 	}
 
 	.action-button.primary:hover {
-		background: #dc2626;
+		background: #2c4766;
 		transform: translateY(-2px);
 		box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
 	}
@@ -433,19 +467,20 @@
 	}
 
 	.action-button.secondary:hover {
-		background: #fff7ed;
-		color: #ea580c;
-		border-color: #ea580c;
+		background: rgba(52, 84, 122, 0.1);
+		color: #34547a;
+		border-color: #34547a;
 		transform: translateY(-1px);
 	}
 
 	/* Search Section */
 	.search-section {
 		margin-bottom: 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 		padding: 2rem;
 	}
 
@@ -469,13 +504,13 @@
 	}
 
 	.loading-text {
-		color: #ea580c;
+		color: #34547a;
 		font-weight: 500;
 	}
 
 	.count-text {
-		background: #fff7ed;
-		color: #ea580c;
+		background: rgba(52, 84, 122, 0.1);
+		color: #34547a;
 		padding: 0.5rem 1rem;
 		border-radius: 20px;
 		font-weight: 500;
@@ -521,7 +556,7 @@
 
 	.search-input:focus, .filter-select:focus, .date-input:focus {
 		outline: none;
-		border-color: #ea580c;
+		border-color: #34547a;
 		box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
 	}
 
@@ -551,17 +586,18 @@
 	.loading-section, .error-section, .empty-section {
 		text-align: center;
 		padding: 4rem 2rem;
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.loading-spinner {
 		width: 48px;
 		height: 48px;
 		border: 4px solid #f3f4f6;
-		border-top: 4px solid #ea580c;
+		border-top: 4px solid #34547a;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 		margin: 0 auto 1.5rem;
@@ -591,7 +627,7 @@
 	}
 
 	.retry-button {
-		background: #ea580c;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 12px;
@@ -603,16 +639,17 @@
 	}
 
 	.retry-button:hover {
-		background: #dc2626;
+		background: #2c4766;
 		transform: translateY(-2px);
 	}
 
 	/* Jobs Grid */
 	.jobs-section {
-		background: white;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 		padding: 2rem;
 	}
 
@@ -623,8 +660,9 @@
 	}
 
 	.job-card {
-		background: white;
-		border: 1px solid #e5e7eb;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(10px);
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 15px;
 		padding: 1.5rem;
 		cursor: pointer;
@@ -635,7 +673,7 @@
 	.job-card:hover {
 		transform: translateY(-3px);
 		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-		border-color: #ea580c;
+		border-color: #34547a;
 	}
 
 	.job-card-header {
@@ -738,7 +776,7 @@
 	}
 
 	.location-arrow {
-		color: #ea580c;
+		color: #34547a;
 		font-size: 1.5rem;
 		font-weight: bold;
 	}
@@ -775,7 +813,7 @@
 
 	.view-button {
 		width: 100%;
-		background: #ea580c;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 12px;
@@ -787,7 +825,7 @@
 	}
 
 	.view-button:hover {
-		background: #dc2626;
+		background: #2c4766;
 		transform: translateY(-1px);
 	}
 
@@ -795,6 +833,14 @@
 	@media (max-width: 768px) {
 		.jobsearch-container {
 			padding: 1rem;
+		}
+
+		.mobile-logo-section {
+			display: block;
+		}
+
+		.mobile-logo {
+			max-width: 180px;
 		}
 
 		.page-header {

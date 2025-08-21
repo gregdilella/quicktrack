@@ -264,3 +264,4 @@ INSERT INTO airlines (airline_name, airline_code, contact_email, phone) VALUES
 ON CONFLICT (airline_code) DO NOTHING;
 */
 
+

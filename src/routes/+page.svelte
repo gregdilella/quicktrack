@@ -48,19 +48,31 @@
 	<div class="landing-content">
 		<!-- Header -->
 		<div class="header-section">
-			<h1 class="main-title">Certus Freight</h1>
-			<p class="subtitle">Fast, reliable, and secure courier services worldwide</p>
+			<div class="logo-blur-container">
+				<img src="/Certus Logo.png" alt="Certus Freight" class="main-logo" />
+			</div>
 		</div>
 
 		<!-- Call to Action -->
 		<div class="cta-section">
-			<button 
-				class="signin-btn" 
-				on:click={navigateToSignIn}
-			>
-				Get Started
-			</button>
-			<p class="cta-text">Join thousands of satisfied customers worldwide</p>
+			<div class="glow-button-container">
+				<div class="glow-effect"></div>
+				<button 
+					class="signin-btn" 
+					on:click={navigateToSignIn}
+				>
+					Get Started
+					<svg class="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+					</svg>
+				</button>
+			</div>
+			
+			<div class="text-blur-container">
+				<p class="subtitle">Fast, reliable, and secure courier services worldwide</p>
+				<p class="cta-text">AI Powered Logistics Startup</p>
+				<p class="cta-text">We Pass Savings On to You. Full GP Transparency</p>
+			</div>
 		</div>
 
 		<!-- Features Grid -->
@@ -71,8 +83,8 @@
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
 					</svg>
 				</div>
-				<h3>Fast Delivery</h3>
-				<p>Express shipping to 200+ countries</p>
+				<h3>Time Critical Shipments</h3>
+				<p>Express shipping all over the world</p>
 			</div>
 			
 			<div class="feature-card">
@@ -139,8 +151,8 @@
 		height: 100%;
 		background: linear-gradient(
 			135deg,
-			rgba(220, 38, 38, 0.4) 0%,
-			rgba(220, 38, 38, 0.3) 50%,
+			rgba(52, 84, 122, 0.4) 0%,
+			rgba(52, 84, 122, 0.3) 50%,
 			rgba(0, 0, 0, 0.3) 100%
 		);
 		z-index: 2;
@@ -156,44 +168,124 @@
 		justify-content: center;
 		align-items: center;
 		text-align: center;
-		padding: 2rem;
+		padding: 1.5rem;
 		color: white;
+		box-sizing: border-box;
 	}
 
 	/* Header Section */
 	.header-section {
-		margin-bottom: 3rem;
+		margin-bottom: 1.5rem;
 	}
 
-	.main-title {
-		font-size: 5rem;
-		font-weight: 800;
-		margin: 0 0 1rem 0;
-		text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
-		background: linear-gradient(45deg, #ffffff, #d1d5db);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-		line-height: 1.2;
+	.logo-blur-container {
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(20px);
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 16px;
+		padding: 0.75rem;
+		margin: 0 auto;
+		max-width: fit-content;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		transition: all 0.3s ease;
+	}
+
+	.logo-blur-container:hover {
+		background: rgba(255, 255, 255, 0.12);
+		border-color: rgba(255, 255, 255, 0.25);
+		transform: translateY(-2px);
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+	}
+
+	.main-logo {
+		max-width: 220px;
+		width: 100%;
+		height: auto;
+		margin: 0;
+		display: block;
+		transition: all 0.3s ease;
+	}
+
+	.text-blur-container {
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1.25rem;
+		margin: 0 auto;
+		max-width: 600px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 	}
 
 	.subtitle {
 		font-size: 1.5rem;
-		margin: 0;
-		opacity: 0.9;
-		font-weight: 300;
+		margin: 0 0 1.5rem 0;
+		opacity: 0.95;
+		font-weight: 400;
 		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+		line-height: 1.4;
 	}
 
 	/* Call to Action */
 	.cta-section {
-		margin-bottom: 4rem;
+		margin-bottom: 2rem;
+	}
+
+	.cta-text {
+		font-size: 1.1rem;
+		opacity: 0.9;
+		margin: 0 0 0.5rem 0;
+		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+		font-weight: 500;
+		line-height: 1.4;
+	}
+
+	.cta-text:last-child {
+		margin-bottom: 0;
+	}
+
+	.glow-button-container {
+		position: relative;
+		display: inline-block;
+		margin-top: 0;
+		margin-bottom: 1.5rem;
+	}
+
+	.glow-effect {
+		position: absolute;
+		top: -12px;
+		left: -12px;
+		right: -12px;
+		bottom: -12px;
+		border-radius: 62px;
+		background: linear-gradient(45deg, #ffffff, #34547a, #5a7fb8, #ffffff, #34547a);
+		background-size: 400% 400%;
+		animation: glowShift 3s ease-in-out infinite;
+		filter: blur(16px);
+		opacity: 0.8;
+		z-index: -1;
+	}
+
+	@keyframes glowShift {
+		0%, 100% {
+			background-position: 0% 50%;
+		}
+		25% {
+			background-position: 100% 50%;
+		}
+		50% {
+			background-position: 100% 100%;
+		}
+		75% {
+			background-position: 0% 100%;
+		}
 	}
 
 	.signin-btn {
-		background: #dc2626;
+		background: rgba(255, 255, 255, 0.08);
+		backdrop-filter: blur(20px);
 		color: white;
-		border: none;
+		border: 1px solid rgba(255, 255, 255, 0.15);
 		border-radius: 50px;
 		padding: 1.25rem 3rem;
 		font-size: 1.2rem;
@@ -202,33 +294,40 @@
 		transition: all 0.3s ease;
 		text-transform: uppercase;
 		letter-spacing: 1px;
-		box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
-		margin-bottom: 1rem;
-		display: inline-block;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		position: relative;
+		z-index: 10;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 	}
 
 	.signin-btn:hover {
 		transform: translateY(-3px);
-		box-shadow: 0 8px 30px rgba(220, 38, 38, 0.6);
-		background: #b91c1c;
+		background: rgba(255, 255, 255, 0.12);
+		border-color: rgba(255, 255, 255, 0.25);
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 	}
 
 	.signin-btn:active {
 		transform: translateY(-1px);
 	}
 
-	.cta-text {
-		font-size: 1rem;
-		opacity: 0.8;
-		margin: 0;
-		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+	.arrow-icon {
+		width: 18px;
+		height: 18px;
+		transition: transform 0.3s ease;
+	}
+
+	.signin-btn:hover .arrow-icon {
+		transform: translateX(3px);
 	}
 
 	/* Features Grid */
 	.features-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-		gap: 2rem;
+		gap: 1.5rem;
 		max-width: 900px;
 		width: 100%;
 	}
@@ -237,8 +336,8 @@
 		background: rgba(255, 255, 255, 0.1);
 		backdrop-filter: blur(10px);
 		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 20px;
-		padding: 2rem;
+		border-radius: 16px;
+		padding: 1.5rem;
 		transition: all 0.3s ease;
 	}
 
@@ -308,50 +407,134 @@
 	@media (max-width: 768px) {
 		.landing-content {
 			padding: 1rem;
+			justify-content: flex-start;
+			padding-top: 1.5rem;
+			padding-bottom: 2rem;
+			min-height: 100vh;
+			height: auto;
 		}
 
-		.main-title {
-			font-size: 3rem;
+		.header-section {
+			margin-bottom: 1rem;
+			flex-shrink: 0;
+		}
+
+		.logo-blur-container {
+			padding: 0.5rem;
+		}
+
+		.main-logo {
+			max-width: 180px;
+		}
+
+		.cta-section {
+			margin-bottom: 1rem;
+			flex-shrink: 0;
+		}
+
+		.glow-button-container {
+			margin-bottom: 1rem;
+		}
+
+		.text-blur-container {
+			padding: 1.25rem;
+			margin: 0 auto;
+			max-width: 95%;
 		}
 
 		.subtitle {
-			font-size: 1.2rem;
+			font-size: 1.1rem;
+			margin-bottom: 1rem;
+		}
+
+		.cta-text {
+			font-size: 0.95rem;
+			margin-bottom: 0.4rem;
 		}
 
 		.signin-btn {
-			padding: 1rem 2rem;
-			font-size: 1rem;
+			padding: 0.875rem 1.75rem;
+			font-size: 0.95rem;
 		}
 
 		.features-grid {
 			grid-template-columns: 1fr;
-			gap: 1.5rem;
+			gap: 1rem;
+			flex-shrink: 0;
+			margin-bottom: 1rem;
 		}
 
 		.feature-card {
-			padding: 1.5rem;
-		}
-
-		.header-section {
-			margin-bottom: 2rem;
-		}
-
-		.cta-section {
-			margin-bottom: 2rem;
+			padding: 1.25rem;
 		}
 	}
 
 	@media (max-width: 480px) {
-		.main-title {
-			font-size: 2.5rem;
+		.landing-content {
+			padding: 0.75rem;
+			padding-top: 1rem;
+			padding-bottom: 2rem;
+			height: auto;
+			min-height: 100vh;
+		}
+
+		.header-section {
+			margin-bottom: 0.75rem;
+		}
+
+		.logo-blur-container {
+			padding: 0.4rem;
+		}
+
+		.main-logo {
+			max-width: 140px;
+		}
+
+		.cta-section {
+			margin-bottom: 0.75rem;
+		}
+
+		.glow-button-container {
+			margin-bottom: 0.75rem;
+		}
+
+		.text-blur-container {
+			padding: 1rem;
+			margin: 0 auto;
+			max-width: 98%;
 		}
 
 		.subtitle {
 			font-size: 1rem;
+			margin-bottom: 0.75rem;
+		}
+
+		.cta-text {
+			font-size: 0.85rem;
+			margin-bottom: 0.3rem;
+		}
+
+		.signin-btn {
+			padding: 0.75rem 1.5rem;
+			font-size: 0.9rem;
+		}
+
+		.features-grid {
+			gap: 0.75rem;
+			margin-bottom: 1rem;
 		}
 
 		.feature-card {
 			padding: 1rem;
+		}
+
+		.feature-card h3 {
+			font-size: 1.25rem;
+			margin-bottom: 0.4rem;
+		}
+
+		.feature-card p {
+			font-size: 0.9rem;
 		}
 	}
 

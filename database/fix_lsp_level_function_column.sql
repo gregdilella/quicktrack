@@ -196,3 +196,4 @@ WHERE table_name = 'lsp_level' AND column_name = 'function';
 
 SELECT COUNT(*) as total_valid_lsps FROM lsps WHERE vendor_name IS NOT NULL;
 
+

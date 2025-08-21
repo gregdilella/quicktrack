@@ -112,10 +112,8 @@
 	<!-- Left Panel - Logo and Branding -->
 	<div class="left-panel">
 		<div class="brand-content">
-			<h1 class="brand-logo">CERtrack</h1>
-			<p class="brand-subtitle">International Courier System</p>
-			<div class="brand-icon">
-				<img src="/ChatGPT Image Jul 14, 2025, 06_29_52 PM.png" alt="CERTrack Logo" class="logo-img"/>
+			<div class="logo-blur-container">
+				<img src="/CertusLogoWhite.png" alt="Certus Freight" class="brand-logo-img" />
 			</div>
 		</div>
 	</div>
@@ -126,7 +124,7 @@
 			{#if !showUserInfo}
 				<div class="signin-header">
 					<h2>Welcome Back</h2>
-					<p>Sign in to your CERtrack account</p>
+					<p>Sign in to your Certus Freight account</p>
 				</div>
 				
 				<form class="signin-form" on:submit|preventDefault={handleSignupOrLogin}>
@@ -183,7 +181,7 @@
 					</button>
 					
 					<p class="signin-note">
-						New to CERtrack? You'll be automatically registered with a new account.
+						New to Certus Freight? You'll be automatically registered with a new account.
 					</p>
 				</form>
 			{:else}
@@ -195,7 +193,7 @@
 					</div>
 					
 					<h3>Authentication Successful!</h3>
-					<p>Welcome to CERtrack International Courier System</p>
+					<p>Welcome to Certus Freight</p>
 					
 					{#if user && userProfile}
 						<div class="user-info-card">
@@ -255,7 +253,7 @@
 	/* Left Panel - Branding */
 	.left-panel {
 		width: 50%;
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		display: flex;
 		align-items: center;
@@ -269,32 +267,32 @@
 		z-index: 10;
 	}
 
-	.brand-logo {
-		font-size: 3.5rem;
-		font-weight: 700;
-		margin: 0 0 1rem 0;
-		background: linear-gradient(45deg, #ffffff, #fecaca);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
+	.logo-blur-container {
+		background: rgba(255, 255, 255, 0.18);
+		backdrop-filter: blur(20px);
+		border: 1px solid rgba(255, 255, 255, 0.25);
+		border-radius: 20px;
+		padding: 1.5rem;
+		margin: 0 auto;
+		max-width: fit-content;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		transition: all 0.3s ease;
 	}
 
-	.brand-subtitle {
-		font-size: 1.25rem;
-		margin: 0 0 3rem 0;
-		opacity: 0.9;
-		font-weight: 300;
+	.logo-blur-container:hover {
+		background: rgba(255, 255, 255, 0.25);
+		border-color: rgba(255, 255, 255, 0.35);
+		transform: translateY(-2px);
+		box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
 	}
 
-	.brand-icon {
-		display: flex;
-		justify-content: center;
-	}
-
-	.logo-img {
-		width: 80px;
-		height: 80px;
-		opacity: 0.8;
+	.brand-logo-img {
+		max-width: 300px;
+		width: 100%;
+		height: auto;
+		margin: 0;
+		display: block;
+		transition: all 0.3s ease;
 	}
 
 	/* Right Panel - Sign In Form */
@@ -360,8 +358,8 @@
 
 	.form-input:focus {
 		outline: none;
-		border-color: #dc2626;
-		box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+		border-color: #34547a;
+		box-shadow: 0 0 0 3px rgba(52, 84, 122, 0.15);
 	}
 
 	.form-input:disabled {
@@ -384,7 +382,7 @@
 
 	/* Sign In Button */
 	.signin-button {
-		background: #dc2626 !important;
+		background: #34547a !important;
 		color: white;
 		border: none;
 		border-radius: 12px;
@@ -398,28 +396,29 @@
 		justify-content: center;
 		gap: 0.5rem;
 		margin-top: 0.5rem;
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 	}
 
 	.signin-button:hover:not(:disabled) {
 		transform: translateY(-2px);
-		box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
-		background: #dc2626 !important;
+		box-shadow: 0 8px 25px rgba(52, 84, 122, 0.4);
+		background: #2c4766 !important;
 	}
 
 	.signin-button:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
 		transform: none;
-		background: #dc2626 !important;
+		background: #34547a !important;
 	}
 
 	.signin-button:focus {
 		outline: none;
-		background: #dc2626 !important;
+		background: #34547a !important;
 	}
 
 	.signin-button:active {
-		background: #dc2626 !important;
+		background: #2c4766 !important;
 	}
 
 	.loading-spinner {
@@ -519,7 +518,7 @@
 	.progress-fill {
 		width: 0%;
 		height: 100%;
-		background: #dc2626;
+		background: #34547a;
 		border-radius: 3px;
 		animation: progress 3s ease-in-out forwards;
 	}
@@ -573,9 +572,12 @@
 			padding: 1rem;
 		}
 
-		.brand-logo {
-			font-size: 2.5rem;
-			text-align: center;
+		.logo-blur-container {
+			padding: 1rem;
+		}
+
+		.brand-logo-img {
+			max-width: 220px;
 		}
 
 		.brand-content {
@@ -601,9 +603,7 @@
 			padding: 0 1rem;
 		}
 
-		.brand-icon {
-			margin-top: 1rem;
-		}
+
 	}
 
 	/* Global Styles */

@@ -123,7 +123,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 <style>
 	.operations-container {
 		min-height: 100vh;
-		background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		padding: 2rem;
 	}
@@ -133,43 +133,67 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		margin: 0 auto;
 	}
 
-	.ascii-header {
-		margin-bottom: 20px;
+	/* Mobile Logo Section */
+	.mobile-logo-section {
+		display: none;
+		text-align: center;
+		margin-bottom: 1.5rem;
 	}
 
-	.ascii-header pre {
+	.mobile-logo-container {
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1rem;
+		margin: 0 auto;
+		max-width: fit-content;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
+	}
+
+	.mobile-logo {
+		max-width: 200px;
+		width: 100%;
+		height: auto;
 		margin: 0;
-		font-size: 12px;
-		line-height: 1;
-	}
-
-	.red-text {
-		color: red;
-		font-weight: bold;
+		display: block;
 	}
 
 	.blue-text {
-		color: blue;
+		color: #34547a;
 		font-weight: bold;
 	}
 
 	.orange-text {
-		color: orange;
+		color: #16a34a;
 		font-weight: bold;
 	}
 
 	.system-title {
-		margin: 20px 0;
-		text-align: left;
+		margin: 2rem 0;
+		text-align: center;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		border-radius: 16px;
+		padding: 1.5rem;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.user-info {
-		margin: 20px 0;
+		margin: 2rem 0;
+		background: rgba(255, 255, 255, 0.1);
+		backdrop-filter: blur(15px);
+		border: 1px solid rgba(255, 255, 255, 0.2);
+		padding: 1.5rem;
+		border-radius: 16px;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
 	}
 
 	.user-info p,
 	.support-message p {
-		margin: 5px 0;
+		margin: 0.5rem 0;
+		font-size: 0.95rem;
 	}
 
 	.dashboard-section {
