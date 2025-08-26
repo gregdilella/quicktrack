@@ -201,19 +201,20 @@ export async function getUserDashboardRoute(): Promise<string> {
             return '/dashboard/customer'
         }
 
-        // Route based on user role
-        switch (userProfile.role) {
-            case 'Admin':
+        // Normalize role and route based on user role (case-insensitive)
+        const normalizedRole = String(userProfile.role).toLowerCase()
+        switch (normalizedRole) {
+            case 'admin':
                 return '/dashboard/admin'
-            case 'Management':
+            case 'management':
                 return '/dashboard/management'
-            case 'Operations':
+            case 'operations':
                 return '/dashboard/operations'
-            case 'LSP':
+            case 'lsp':
                 return '/dashboard/lsp'
-            case 'Customer':
+            case 'customer':
                 return '/dashboard/customer'
-            case 'Not-Assigned':
+            case 'not-assigned':
                 return '/waiting-for-assignment'
             default:
                 return '/dashboard/customer'

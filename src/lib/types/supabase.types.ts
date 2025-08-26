@@ -208,6 +208,47 @@ export type Database = {
         }
         Relationships: []
       }
+      file_uploads: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          description: string | null
+          file_name: string | null
+          id: string
+          jobnumber: string
+          r2_key: string
+          size_bytes: number | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          id?: string
+          jobnumber: string
+          r2_key: string
+          size_bytes?: number | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          id?: string
+          jobnumber?: string
+          r2_key?: string
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_uploads_jobnumber_fkey"
+            columns: ["jobnumber"]
+            isOneToOne: false
+            referencedRelation: "jobsfile"
+            referencedColumns: ["jobnumber"]
+          },
+        ]
+      }
       flights: {
         Row: {
           cost: number | null
@@ -577,6 +618,38 @@ export type Database = {
           vendor_name?: string
         }
         Relationships: []
+      }
+      quotes: {
+        Row: {
+          charge: number | null
+          chargecode: string | null
+          created_at: string | null
+          id: number
+          jobnumber: string
+        }
+        Insert: {
+          charge?: number | null
+          chargecode?: string | null
+          created_at?: string | null
+          id?: number
+          jobnumber: string
+        }
+        Update: {
+          charge?: number | null
+          chargecode?: string | null
+          created_at?: string | null
+          id?: number
+          jobnumber?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_jobnumber_fkey"
+            columns: ["jobnumber"]
+            isOneToOne: false
+            referencedRelation: "jobsfile"
+            referencedColumns: ["jobnumber"]
+          },
+        ]
       }
       timetable: {
         Row: {

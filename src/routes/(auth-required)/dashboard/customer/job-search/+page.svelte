@@ -354,7 +354,7 @@
 		font-size: 2.5rem;
 		font-weight: 700;
 		margin: 0 0 1rem 0;
-		color: #dc2626;
+		color: #34547a;
 	}
 
 	.page-header p {
@@ -404,7 +404,7 @@
 	}
 
 	.search-button {
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 8px;
@@ -421,7 +421,7 @@
 	}
 
 	.search-button:hover:not(:disabled) {
-		background: #b91c1c;
+		background: #5a7fb8;
 		transform: translateY(-1px);
 	}
 
@@ -467,8 +467,8 @@
 
 	.filter-group select:focus {
 		outline: none;
-		border-color: #dc2626;
-		box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+		border-color: #34547a;
+		box-shadow: 0 0 0 3px rgba(52, 84, 122, 0.1);
 	}
 
 	.filter-actions {
@@ -549,7 +549,7 @@
 		width: 40px;
 		height: 40px;
 		border: 4px solid #f3f4f6;
-		border-top: 4px solid #dc2626;
+		border-top: 4px solid #34547a;
 	}
 
 	@keyframes spin {
@@ -583,7 +583,7 @@
 	}
 
 	.create-job-btn {
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		padding: 0.875rem 2rem;
 		border-radius: 8px;
@@ -594,7 +594,7 @@
 	}
 
 	.create-job-btn:hover {
-		background: #b91c1c;
+		background: #5a7fb8;
 		transform: translateY(-1px);
 	}
 
@@ -617,13 +617,13 @@
 	.job-card:hover {
 		transform: translateY(-2px);
 		box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-		border-color: #dc2626;
+		border-color: #34547a;
 	}
 
 	.job-card:focus {
 		outline: none;
-		border-color: #dc2626;
-		box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+		border-color: #34547a;
+		box-shadow: 0 0 0 3px rgba(52, 84, 122, 0.1);
 	}
 
 	.job-header {
@@ -681,7 +681,7 @@
 	}
 
 	.view-details-btn {
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 8px;
@@ -696,7 +696,7 @@
 	}
 
 	.view-details-btn:hover {
-		background: #b91c1c;
+		background: #5a7fb8;
 		transform: translateY(-1px);
 	}
 

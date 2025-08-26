@@ -65,18 +65,10 @@
 		loading = false
 	}
 
-	// Get personalized greeting based on time of day
-	function getGreeting(): string {
-		const hour = new Date().getHours()
-		if (hour < 12) return 'Good morning'
-		if (hour < 17) return 'Good afternoon'
-		return 'Good evening'
-	}
-
 	// Get customer display name with fallback
 	function getCustomerDisplayName(): string {
 		if (userProfile?.role === 'Admin') return 'Netjets' // Default for admin as requested
-		return customer?.name || 'Valued Customer'
+		return customer?.name || 'Netjets' // Default to Netjets when customer name is null
 	}
 </script>
 
@@ -88,8 +80,8 @@
 				<h1 class="main-title">Welcome</h1>
 				<p class="subtitle">Loading your dashboard...</p>
 			{:else}
-				<h1 class="main-title">{getGreeting()}, {getCustomerDisplayName()}!</h1>
-				<p class="subtitle">Your CERTrack Customer Portal</p>
+				<h1 class="main-title">Welcome, {getCustomerDisplayName()}!</h1>
+				<p class="subtitle">Certus Freight Customer Portal</p>
 			{/if}
 		</div>
 		
@@ -315,7 +307,7 @@
 		font-weight: 700;
 		margin: 0 0 0.5rem 0;
 		color: #1f2937;
-		background: linear-gradient(45deg, #dc2626, #b91c1c);
+		background: linear-gradient(45deg, #34547a, #5a7fb8);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
@@ -342,7 +334,7 @@
 	.user-avatar {
 		width: 48px;
 		height: 48px;
-		background: #dc2626;
+		background: #34547a;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -373,7 +365,7 @@
 	}
 
 	.logout-btn {
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 12px;
@@ -385,9 +377,9 @@
 	}
 
 	.logout-btn:hover:not(:disabled) {
-		background: #b91c1c;
+		background: #5a7fb8;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 	}
 
 	.logout-btn:disabled {
@@ -501,13 +493,13 @@
 	.action-card:hover {
 		transform: translateY(-5px);
 		box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-		border-color: #dc2626;
+		border-color: #34547a;
 	}
 
 	.action-icon {
 		width: 64px;
 		height: 64px;
-		background: linear-gradient(45deg, #dc2626, #b91c1c);
+		background: linear-gradient(45deg, #34547a, #5a7fb8);
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -535,7 +527,7 @@
 	}
 
 	.action-btn {
-		background: #dc2626;
+		background: #34547a;
 		color: white;
 		border: none;
 		border-radius: 12px;
@@ -548,9 +540,9 @@
 	}
 
 	.action-btn:hover {
-		background: #b91c1c;
+		background: #5a7fb8;
 		transform: translateY(-2px);
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
 	}
 
 	/* Services Section */
@@ -581,18 +573,18 @@
 	.service-item:hover {
 		transform: translateY(-3px);
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		border-color: #dc2626;
+		border-color: #34547a;
 	}
 
 	.service-icon {
 		width: 48px;
 		height: 48px;
-		background: rgba(220, 38, 38, 0.1);
+		background: rgba(52, 84, 122, 0.1);
 		border-radius: 12px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		color: #dc2626;
+		color: #34547a;
 		flex-shrink: 0;
 	}
 
@@ -684,10 +676,10 @@
 	}
 
 	.admin-card {
-		background: linear-gradient(135deg, #dc2626, #b91c1c);
+		background: linear-gradient(135deg, #34547a, #5a7fb8);
 		padding: 2rem;
 		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+		box-shadow: 0 4px 20px rgba(52, 84, 122, 0.3);
 		color: white;
 		display: flex;
 		align-items: center;
@@ -711,7 +703,7 @@
 
 	.admin-btn {
 		background: white;
-		color: #dc2626;
+		color: #34547a;
 		border: none;
 		border-radius: 12px;
 		padding: 0.875rem 2rem;

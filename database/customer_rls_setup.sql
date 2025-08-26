@@ -150,3 +150,4 @@ COMMENT ON POLICY "jobsfile_customer_insert" ON jobsfile IS 'Customers can creat
 COMMENT ON FUNCTION get_current_user_customer() IS 'Returns current users customer information for auto-population';
 
 
+

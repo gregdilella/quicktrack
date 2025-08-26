@@ -115,8 +115,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 			throw redirect(302, '/waiting-for-assignment')
 		}
 
-		// Admin users can access any dashboard - no redirection needed
-		if (userRole !== 'Admin') {
+		// Admin users can access any dashboard - no redirection needed (case-insensitive)
+		if (String(userRole).toLowerCase() !== 'admin') {
 			// Non-admin users: Check if they're accessing their correct dashboard
 			const correctDashboard = getRoleDashboard(userRole)
 			
@@ -164,16 +164,17 @@ export const handle: Handle = async ({ event, resolve }) => {
  * Get the correct dashboard route for a user role
  */
 function getRoleDashboard(role: string): string {
-	switch (role) {
-		case 'Admin':
+	const normalizedRole = String(role).toLowerCase()
+	switch (normalizedRole) {
+		case 'admin':
 			return '/dashboard/admin'
-		case 'Management':
+		case 'management':
 			return '/dashboard/management'
-		case 'Operations':
+		case 'operations':
 			return '/dashboard/operations'
-		case 'LSP':
+		case 'lsp':
 			return '/dashboard/lsp'
-		case 'Customer':
+		case 'customer':
 		default:
 			return '/dashboard/customer'
 	}

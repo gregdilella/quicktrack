@@ -8,6 +8,7 @@
 	import type { User } from '@supabase/supabase-js'
 	import TabSystem from '$lib/components/TabSystem.svelte'
 	import JobTabContent from '$lib/components/JobTabContent.svelte'
+import JobFiles from '$lib/components/JobFiles.svelte'
 
 	let user: User | null = null
 	let loading = true
@@ -262,7 +263,7 @@
 			<span class="breadcrumb-separator">›</span>
 			<a href="/dashboard/operations/jobsearch" class="breadcrumb-link">Job Search</a>
 			<span class="breadcrumb-separator">›</span>
-			<span class="breadcrumb-current">Job {jobno}</span>
+			<span class="breadcrumb-current"><span class="text-blue-600">Job {jobno}</span></span>
 		</div>
 		
 		<div class="header-actions">
@@ -340,6 +341,14 @@
 				</div>
 				<div class="job-status">
 					<span class="status-badge status-{getStatusClass(getJobStatus())}">{getJobStatus()}</span>
+					<div class="mt-3 status-badge">
+						<button
+							class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500 text-red-600 bg-white/90 hover:bg-red-50 hover:border-red-600 shadow-sm ml-2"
+							on:click={() => goto(`/dashboard/operations/jobs/${jobno}/file_uploads`)}
+						>
+							Upload Files
+						</button>
+					</div>
 				</div>
 			</div>
 
@@ -360,6 +369,7 @@
 						on:commodityUpdated={handleCommodityUpdate}
 						on:timelineUpdated={handleTimelineUpdate}
 					/>
+					
 				</TabSystem>
 			</div>
 		</div>
@@ -369,7 +379,7 @@
 <style>
 	.job-details-container {
 		min-height: 100vh;
-		background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+		background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 		padding: 2rem;
 	}
@@ -571,7 +581,7 @@
 		align-items: flex-start;
 		padding: 2rem;
 		border-bottom: 1px solid #f3f4f6;
-		background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 	}
 
 	.job-title-section {

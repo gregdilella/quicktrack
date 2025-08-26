@@ -26,7 +26,9 @@ async function getAmadeusAccessToken(): Promise<string> {
     return accessTokenCache.token;
   }
 
-  console.log('Requesting new Amadeus access token for flight search...');
+  console.log('\n' + '🛫'.repeat(40));
+  console.log('🔐 REQUESTING AMADEUS ACCESS TOKEN');
+  console.log('🛫'.repeat(40));
 
   const clientId = env.AMADEUS_CLIENT_ID;
   const clientSecret = env.AMADEUS_CLIENT_SECRET;
@@ -63,7 +65,8 @@ async function getAmadeusAccessToken(): Promise<string> {
       expiresAt: now + expiresIn - (5 * 60 * 1000), // 5 minutes buffer
     };
 
-    console.log('Amadeus access token obtained successfully');
+    console.log('✅ Amadeus access token obtained successfully');
+    console.log('🛫'.repeat(40) + '\n');
     return tokenData.access_token;
 
   } catch (err: any) {
@@ -163,7 +166,10 @@ async function searchFlightOffers(params: {
     }
 
     const data = await response.json();
-    console.log(`Found ${data.data?.length || 0} flight offers`);
+    console.log(`\n🎯 FLIGHT SEARCH RESULTS`);
+    console.log('-'.repeat(40));
+    console.log(`✈️  Found ${data.data?.length || 0} flight offers`);
+    console.log('✈️'.repeat(40) + '\n');
     
     return data;
 
@@ -218,6 +224,44 @@ function processFlightOffers(flightData: any) {
     const itinerary = offer.itineraries[0];
     const segments = itinerary.segments;
     
+    // Extract aircraft information from segments
+    const aircraftTypes = segments
+      .map((seg: any) => seg.aircraft?.code)
+      .filter((code: string) => code) // Remove undefined/null values
+      .map((code: string) => {
+        // Convert aircraft codes to more readable names
+        const aircraftMap: { [key: string]: string } = {
+          '737': 'Boeing 737',
+          '738': 'Boeing 737-800',
+          '739': 'Boeing 737-900',
+          '73G': 'Boeing 737-700',
+          '73H': 'Boeing 737-800',
+          '32A': 'Airbus A320',
+          '32S': 'Airbus A320',
+          '321': 'Airbus A321',
+          '319': 'Airbus A319',
+          '320': 'Airbus A320',
+          '330': 'Airbus A330',
+          '340': 'Airbus A340',
+          '350': 'Airbus A350',
+          '380': 'Airbus A380',
+          '777': 'Boeing 777',
+          '787': 'Boeing 787',
+          '747': 'Boeing 747',
+          '757': 'Boeing 757',
+          '767': 'Boeing 767',
+          'E90': 'Embraer E190',
+          'CRJ': 'Bombardier CRJ',
+          'DH4': 'De Havilland Dash 8'
+        };
+        
+        // Return mapped name or original code if not found
+        return aircraftMap[code] || code;
+      });
+    
+    // Get unique aircraft types
+    const uniqueAircraft = [...new Set(aircraftTypes)];
+    
     return {
       ...offer,
       enhanced: {
@@ -226,6 +270,7 @@ function processFlightOffers(flightData: any) {
         totalDurationMinutes: parseDurationToMinutes(itinerary.duration),
         stops: segments.length - 1,
         airlines: [...new Set(segments.map((seg: any) => seg.carrierCode))],
+        aircraft: uniqueAircraft.length > 0 ? uniqueAircraft.join(', ') : null,
         departureTime: segments[0].departure.at,
         arrivalTime: segments[segments.length - 1].arrival.at,
         route: segments.map((seg: any) => `${seg.departure.iataCode}-${seg.arrival.iataCode}`).join(' → ')
@@ -288,19 +333,15 @@ export const GET: RequestHandler = async ({ url }) => {
       throw error(400, 'Adults must be between 1 and 9');
     }
 
-    console.log('Flight search request parameters:', {
-      originLocationCode,
-      destinationLocationCode,
-      departureDate,
-      departureTime,
-      adults,
-      children,
-      infants,
-      travelClass,
-      nonStop,
-      currencyCode,
-      max
-    });
+    console.log('\n' + '✈️'.repeat(40));
+    console.log('🛫 AMADEUS FLIGHT SEARCH REQUEST');
+    console.log('✈️'.repeat(40));
+    console.log(`📍 Route: ${originLocationCode} → ${destinationLocationCode}`);
+    console.log(`📅 Date: ${departureDate}`);
+    console.log(`👥 Passengers: ${adults} adults, ${children} children, ${infants} infants`);
+    console.log(`🎫 Class: ${travelClass} | Non-Stop: ${nonStop}`);
+    console.log(`💰 Currency: ${currencyCode} | Max Results: ${max}`);
+    console.log('✈️'.repeat(40));
 
     // Call Amadeus Flight Offers Search API
     const flightData = await searchFlightOffers({

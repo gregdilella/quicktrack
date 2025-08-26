@@ -31,7 +31,7 @@
 		font-size: 2.5rem;
 		font-weight: 700;
 		margin: 0 0 1rem 0;
-		color: #dc2626;
+		color: #34547a;
 	}
 
 	.page-header p {

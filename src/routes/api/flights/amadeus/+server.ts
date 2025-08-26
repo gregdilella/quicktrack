@@ -129,20 +129,39 @@ async function searchFlightInspirations(params: {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Amadeus API error:', response.status, errorData);
+      console.error('❌ Amadeus API error:', response.status, errorData);
+      console.error('Request URL:', `${AMADEUS_BASE_URL}${INSPIRATION_ENDPOINT}?${searchParams.toString()}`);
       
       let errorMessage = `Amadeus API Error: ${response.status} ${response.statusText}`;
+      let errorDetails: any = { 
+        status: response.status, 
+        statusText: response.statusText,
+        url: `${AMADEUS_BASE_URL}${INSPIRATION_ENDPOINT}?${searchParams.toString()}`
+      };
       
       try {
         const errorJson = JSON.parse(errorData);
+        errorDetails = { ...errorDetails, ...errorJson };
+        
         if (errorJson.errors && errorJson.errors.length > 0) {
-          errorMessage = errorJson.errors[0].title || errorMessage;
+          const firstError = errorJson.errors[0];
+          errorMessage = firstError.title || firstError.detail || errorMessage;
+          
+          // Provide specific guidance for common errors
+          if (firstError.code === 'RESOURCE_NOT_FOUND' || firstError.title?.includes('not found')) {
+            errorMessage += '. This might be due to: invalid airport code, unsupported route, or limited test data availability.';
+          } else if (firstError.code === 'INVALID_FORMAT') {
+            errorMessage += '. Please check the format of your parameters (date should be YYYY-MM-DD, airport codes should be 3-letter IATA codes).';
+          }
         }
       } catch (parseError) {
-        // Use default error message
+        errorDetails.rawError = errorData;
+        console.error('Failed to parse error response:', parseError);
       }
       
-      throw new Error(errorMessage);
+      const enhancedError = new Error(errorMessage);
+      (enhancedError as any).details = errorDetails;
+      throw enhancedError;
     }
 
     const data = await response.json();
@@ -232,7 +251,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     });
 
   } catch (err: any) {
-    console.error('Error in Amadeus flights API:', err);
+    console.error('💥 Error in Amadeus flights API:', err);
     
     // Handle specific error types
     if (err?.status) {
@@ -247,6 +266,18 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
       throw error(401, 'Amadeus API authentication failed. Please check credentials.');
     }
     
-    throw error(500, err.message || 'Failed to fetch Amadeus flight data');
+    // Enhanced error response with details
+    const errorMessage = err.message || 'Failed to fetch Amadeus flight data';
+    const errorDetails = err.details || {};
+    
+    console.error('Error details:', errorDetails);
+    
+    // Return more detailed error information in development
+    throw error(500, {
+      message: errorMessage,
+      details: errorDetails,
+      timestamp: new Date().toISOString(),
+      endpoint: 'flight-inspirations'
+    });
   }
 }; 
