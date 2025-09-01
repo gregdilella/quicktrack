@@ -28,7 +28,7 @@ export interface NetjetsQuoteBreakdown {
   MD: number
   AH: number
   NFT: number
-  DG: number
+  DG: numbers
   TFM: number
   SSC: number
   FS: number

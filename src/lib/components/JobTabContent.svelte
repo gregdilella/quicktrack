@@ -135,14 +135,16 @@
 	async function loadWhoSalesman() {
 		try {
 			const salesId = jobData?.customers?.salesman_id
+			console.log('Loading salesman for sales ID:', salesId)
 			if (!salesId) { whoSalesman = null; return }
 			const { data, error } = await supabase
 				.from('salesman')
-				.select('salesman_id, name, fin_cono')
-				.eq('salesman_id', salesId)
+				.select('id, salesman_id, name, fin_cono')
+				.eq('id', salesId)  // Query by 'id' since that's what the foreign key references
 				.single()
-			if (!error) {
-				whoSalesman = data
+			console.log('Salesman query result:', { data, error })
+			if (!error && data) {
+				whoSalesman = { salesman_id: data.salesman_id || data.id, name: data.name, fin_cono: data.fin_cono }
 			}
 		} catch (err) {
 			console.error('Error loading salesman for WHO tab:', err)
@@ -393,7 +395,14 @@
 			saving = true
 			saveError = ''
 			
+			// Use jobno for the foreign key constraint (this matches the database reference)
 			const jobIdentifier = jobData.jobno || jobData.jobnumber
+			
+			console.log('Saving timeline for job:', { 
+				jobno: jobData.jobno, 
+				jobnumber: jobData.jobnumber, 
+				using: jobIdentifier 
+			})
 			
 			// Check if timetable record exists for this job
 			const { data: existingRecord } = await supabase
@@ -450,6 +459,11 @@
 			
 			// Dispatch event to parent component
 			dispatch('timelineUpdated', { timelineData: data?.[0] })
+			
+			// Also trigger a browser event for the operations table to listen to
+			window.dispatchEvent(new CustomEvent('jobTimelineUpdated', {
+				detail: { jobno: jobIdentifier, timelineData: data?.[0] }
+			}))
 			
 		} catch (err) {
 			console.error('Error in saveTimelineInfo:', err)
@@ -1339,16 +1353,40 @@
 						<span class="date-time">{new Date().toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' })} {new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</span>
 					</div>
 					<div class="location-content">
-						<input type="text" bind:value={jobData.shipper_name} placeholder="Company Name" class="location-input" />
-						<input type="text" bind:value={jobData.shipper_address1} placeholder="Address 1" class="location-input" />
-						<input type="text" bind:value={jobData.shipper_address2} placeholder="Address 2" class="location-input" />
-						<div class="city-state-zip">
-							<input type="text" bind:value={jobData.shipper_city} placeholder="City" class="city-input" />
-							<input type="text" bind:value={jobData.shipper_state} placeholder="ST" class="state-input" />
-							<input type="text" bind:value={jobData.shipper_zip} placeholder="ZIP" class="zip-input" />
+						<div class="field-group">
+							<label class="blue-text">Company Name</label>
+							<input type="text" bind:value={jobData.shipper_name} class="location-input" />
 						</div>
-						<input type="tel" bind:value={jobData.shipper_phone} placeholder="Phone" class="location-input" />
-						<input type="text" bind:value={jobData.shipper_contact} placeholder="Contact" class="location-input" />
+						<div class="field-group">
+							<label class="blue-text">Address 1</label>
+							<input type="text" bind:value={jobData.shipper_address1} class="location-input" />
+						</div>
+						<div class="field-group">
+							<label class="blue-text">Address 2</label>
+							<input type="text" bind:value={jobData.shipper_address2} class="location-input" />
+						</div>
+						<div class="city-state-zip">
+							<div class="field-group">
+								<label class="blue-text">City</label>
+								<input type="text" bind:value={jobData.shipper_city} class="city-input" />
+							</div>
+							<div class="field-group">
+								<label class="blue-text">State</label>
+								<input type="text" bind:value={jobData.shipper_state} class="state-input" />
+							</div>
+							<div class="field-group">
+								<label class="blue-text">ZIP</label>
+								<input type="text" bind:value={jobData.shipper_zip} class="zip-input" />
+							</div>
+						</div>
+						<div class="field-group">
+							<label class="blue-text">Phone</label>
+							<input type="tel" bind:value={jobData.shipper_phone} class="location-input" />
+						</div>
+						<div class="field-group">
+							<label class="blue-text">Contact</label>
+							<input type="text" bind:value={jobData.shipper_contact} class="location-input" />
+						</div>
 					</div>
 				</div>
 
@@ -1359,16 +1397,40 @@
 						<span class="date-time">{new Date().toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' })} {new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}</span>
 					</div>
 					<div class="location-content">
-						<input type="text" bind:value={jobData.consignee_name} placeholder="Company Name" class="location-input" />
-						<input type="text" bind:value={jobData.consignee_address1} placeholder="Address 1" class="location-input" />
-						<input type="text" bind:value={jobData.consignee_address2} placeholder="Address 2" class="location-input" />
-						<div class="city-state-zip">
-							<input type="text" bind:value={jobData.consignee_city} placeholder="City" class="city-input" />
-							<input type="text" bind:value={jobData.consignee_state} placeholder="ST" class="state-input" />
-							<input type="text" bind:value={jobData.consignee_zip} placeholder="ZIP" class="zip-input" />
+						<div class="field-group">
+							<label class="blue-text">Company Name</label>
+							<input type="text" bind:value={jobData.consignee_name} class="location-input" />
 						</div>
-						<input type="tel" bind:value={jobData.consignee_phone} placeholder="Phone" class="location-input" />
-						<input type="text" bind:value={jobData.consignee_contact} placeholder="Contact" class="location-input" />
+						<div class="field-group">
+							<label class="blue-text">Address 1</label>
+							<input type="text" bind:value={jobData.consignee_address1} class="location-input" />
+						</div>
+						<div class="field-group">
+							<label class="blue-text">Address 2</label>
+							<input type="text" bind:value={jobData.consignee_address2} class="location-input" />
+						</div>
+						<div class="city-state-zip">
+							<div class="field-group">
+								<label class="blue-text">City</label>
+								<input type="text" bind:value={jobData.consignee_city} class="city-input" />
+							</div>
+							<div class="field-group">
+								<label class="blue-text">State</label>
+								<input type="text" bind:value={jobData.consignee_state} class="state-input" />
+							</div>
+							<div class="field-group">
+								<label class="blue-text">ZIP</label>
+								<input type="text" bind:value={jobData.consignee_zip} class="zip-input" />
+							</div>
+						</div>
+						<div class="field-group">
+							<label class="blue-text">Phone</label>
+							<input type="tel" bind:value={jobData.consignee_phone} class="location-input" />
+						</div>
+						<div class="field-group">
+							<label class="blue-text">Contact</label>
+							<input type="text" bind:value={jobData.consignee_contact} class="location-input" />
+						</div>
 					</div>
 				</div>
 			</div>
@@ -2066,8 +2128,9 @@
 	}
 
 	.blue-text {
-		color: #1d4ed8;
-		font-weight: 600;
+		color: #1d4ed8 !important;
+		font-weight: 600 !important;
+		display: inline-block;
 	}
 
 	/* Form Grid Layouts */
@@ -2276,10 +2339,13 @@
 
 	.field-group label {
 		font-size: 0.75rem;
-		color: #1d4ed8;
-		font-weight: 700;
+		color: #1d4ed8 !important;
+		font-weight: 700 !important;
 		text-transform: uppercase;
 		letter-spacing: 0.5px;
+		margin-bottom: 0.25rem;
+		display: block;
+		line-height: 1.2;
 	}
 
 	.field-input {

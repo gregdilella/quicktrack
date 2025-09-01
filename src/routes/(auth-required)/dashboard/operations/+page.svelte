@@ -4,12 +4,18 @@
 	import { goto } from '$app/navigation'
 	import { getCurrentUser, signOut } from '$lib/auth'
 	import { getCurrentUserProfile } from '$lib/userService'
+	import { getActiveJobsWithTimeline, groupJobsByStage, TIMELINE_STAGES_GROUPED, formatTimestamp } from '$lib/services/operationsTableService'
 	import type { User } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
+	import type { JobWithTimeline } from '$lib/services/operationsTableService'
+	import * as Table from "$lib/components/ui/table"
 	
 	let user: User | null = null
 	let userProfile: UserProfile | null = null
 	let loading = false
+	let jobs: JobWithTimeline[] = []
+	let groupedJobs: Record<string, JobWithTimeline[]> = {}
+	let dataLoading = true
 
 	onMount(async () => {
 		user = await getCurrentUser()
@@ -20,7 +26,34 @@
 				console.error('Error loading user profile:', error)
 			}
 		}
+		await loadOperationsData()
+		
+		// Listen for timeline updates from job edit pages
+		const handleTimelineUpdate = (event: CustomEvent) => {
+			console.log('Timeline updated for job:', event.detail.jobno)
+			// Refresh the operations data to reflect changes
+			loadOperationsData()
+		}
+		
+		window.addEventListener('jobTimelineUpdated', handleTimelineUpdate as EventListener)
+		
+		// Cleanup event listener on component destroy
+		return () => {
+			window.removeEventListener('jobTimelineUpdated', handleTimelineUpdate as EventListener)
+		}
 	})
+
+	async function loadOperationsData() {
+		try {
+			dataLoading = true
+			jobs = await getActiveJobsWithTimeline()
+			groupedJobs = groupJobsByStage(jobs)
+		} catch (error) {
+			console.error('Error loading operations data:', error)
+		} finally {
+			dataLoading = false
+		}
+	}
 
 	async function handleSignOut() {
 		loading = true
@@ -31,6 +64,10 @@
 			goto('/')
 		}
 		loading = false
+	}
+
+	function viewJob(jobno: string) {
+		goto(`/dashboard/operations/jobs/${jobno}`)
 	}
 </script>
 
@@ -48,72 +85,188 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 </pre>
 		</div>
 
-		<!-- System Title -->
-		<div class="system-title">
-			<span class="red-text">INTERNATIONAL COURIER - OPERATIONS CENTER</span>
-		</div>
 
-		<!-- User Information -->
-		{#if user && userProfile}
-			<div class="user-info">
-				<p class="blue-text">Status: <span class="orange-text">OPERATIONS ACCESS</span></p>
-				<p class="blue-text">Email: {user.email?.toUpperCase()}</p>
-				<p class="blue-text">Role: {userProfile.role}</p>
-				{#if userProfile.role === 'Admin'}
-					<div class="admin-nav">
-						<a href="/dashboard/admin" class="admin-link">⬅ RETURN TO ADMIN PANEL</a>
-					</div>
-				{/if}
+
+		<!-- Operations Table -->
+		<div class="operations-table-section">
+			<div class="section-header">
+				<h2>Active Jobs Progress Tracking</h2>
+				<button onclick={loadOperationsData} disabled={dataLoading} class="refresh-btn">
+					{dataLoading ? 'Loading...' : 'Refresh'}
+				</button>
 			</div>
-		{/if}
 
-		<!-- Operations Navigation Menu -->
-		<div class="dashboard-section">
-			<h3 class="blue-text">--- OPERATIONS MENU ---</h3>
-			<div class="dashboard-menu">
-							<a href="/dashboard/operations/add-new-job" class="menu-item ops-item">► ADD NEW JOB</a>
-			<a href="/dashboard/operations/jobsearch" class="menu-item ops-item">► JOBSEARCH</a>
-			<a href="/dashboard/operations/flight-search" class="menu-item ops-item">► FLIGHT SEARCH</a>
-			</div>
-		</div>
+			{#if dataLoading}
+				<div class="loading-state">
+					<p>Loading active jobs...</p>
+				</div>
+			{:else if jobs.length === 0}
+				<div class="empty-state">
+					<p>No active jobs found</p>
+				</div>
+			{:else}
+				<div class="table-container">
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head class="row-header">Dispatch</Table.Head>
+								{#each TIMELINE_STAGES_GROUPED.dispatch as stage}
+									<Table.Head class="stage-header">{stage.label}</Table.Head>
+								{/each}
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							<Table.Row>
+								<Table.Cell class="row-label">Dispatch</Table.Cell>
+								{#each TIMELINE_STAGES_GROUPED.dispatch as stage}
+									<Table.Cell class="job-cell">
+										{#if groupedJobs[stage.key]}
+											{#each groupedJobs[stage.key] as job}
+												<div class="job-item">
+													<button 
+														class="job-button"
+														onclick={() => viewJob(job.jobsfile.jobno || job.jobsfile.jobnumber)}
+													>
+														{job.jobsfile.jobno || job.jobsfile.jobnumber}
+													</button>
+													{#if stage.key === 'ready' && job.jobsfile.ready_date}
+														<div class="job-time">
+															{new Date(job.jobsfile.ready_date).toLocaleDateString()}
+															{#if job.jobsfile.ready_time}
+																{job.jobsfile.ready_time}
+															{/if}
+														</div>
+													{:else if job.timetable && (job.timetable as any)[stage.field]}
+														<div class="job-time">
+															{formatTimestamp((job.timetable as any)[stage.field])}
+														</div>
+													{/if}
+												</div>
+											{/each}
+										{/if}
+									</Table.Cell>
+								{/each}
+							</Table.Row>
+						</Table.Body>
+					</Table.Root>
 
-		<!-- Quick Stats -->
-		<div class="stats-section">
-			<h3 class="blue-text">--- REAL-TIME STATUS ---</h3>
-			<div class="stats-grid">
-				<div class="stat-box">
-					<div class="stat-value">247</div>
-					<div class="stat-label">ACTIVE SHIPMENTS</div>
-				</div>
-				<div class="stat-box">
-					<div class="stat-value">89</div>
-					<div class="stat-label">COURIERS ON DUTY</div>
-				</div>
-				<div class="stat-box">
-					<div class="stat-value">12</div>
-					<div class="stat-label">PENDING DISPATCHES</div>
-				</div>
-				<div class="stat-box">
-					<div class="stat-value">97.2%</div>
-					<div class="stat-label">ON-TIME DELIVERY</div>
-				</div>
-			</div>
-		</div>
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head class="row-header">Pickup Process</Table.Head>
+								{#each TIMELINE_STAGES_GROUPED.pickup as stage}
+									<Table.Head class="stage-header">{stage.label}</Table.Head>
+								{/each}
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							<Table.Row>
+								<Table.Cell class="row-label">Pickup</Table.Cell>
+								{#each TIMELINE_STAGES_GROUPED.pickup as stage}
+									<Table.Cell class="job-cell">
+										{#if groupedJobs[stage.key]}
+											{#each groupedJobs[stage.key] as job}
+												<div class="job-item">
+													<button 
+														class="job-button"
+														onclick={() => viewJob(job.jobsfile.jobno || job.jobsfile.jobnumber)}
+													>
+														{job.jobsfile.jobno || job.jobsfile.jobnumber}
+													</button>
+													{#if job.timetable && (job.timetable as any)[stage.field]}
+														<div class="job-time">
+															{formatTimestamp((job.timetable as any)[stage.field])}
+														</div>
+													{/if}
+												</div>
+											{/each}
+										{/if}
+									</Table.Cell>
+								{/each}
+							</Table.Row>
+						</Table.Body>
+					</Table.Root>
 
-		<!-- Support Message -->
-		<div class="support-message">
-			<p class="blue-text">Operations Control: Monitor all courier activities</p>
-			<p class="blue-text">Emergency contact: OPS-EMERGENCY-001</p>
-		</div>
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head class="row-header">Airport & Flight</Table.Head>
+								{#each TIMELINE_STAGES_GROUPED.airport as stage}
+									<Table.Head class="stage-header">{stage.label}</Table.Head>
+								{/each}
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							<Table.Row>
+								<Table.Cell class="row-label">Airport</Table.Cell>
+								{#each TIMELINE_STAGES_GROUPED.airport as stage}
+									<Table.Cell class="job-cell">
+										{#if groupedJobs[stage.key]}
+											{#each groupedJobs[stage.key] as job}
+												<div class="job-item">
+													<button 
+														class="job-button"
+														onclick={() => viewJob(job.jobsfile.jobno || job.jobsfile.jobnumber)}
+													>
+														{job.jobsfile.jobno || job.jobsfile.jobnumber}
+													</button>
+													{#if job.timetable && (job.timetable as any)[stage.field]}
+														<div class="job-time">
+															{formatTimestamp((job.timetable as any)[stage.field])}
+														</div>
+													{/if}
+												</div>
+											{/each}
+										{/if}
+									</Table.Cell>
+								{/each}
+							</Table.Row>
+						</Table.Body>
+					</Table.Root>
 
-		<!-- Command Prompt -->
-		<div class="command-prompt">
-			<span class="red-text">([OPS] Operations Terminal - Live Tracking Active)</span>
+					<Table.Root>
+						<Table.Header>
+							<Table.Row>
+								<Table.Head class="row-header">Delivery Process</Table.Head>
+								{#each TIMELINE_STAGES_GROUPED.delivery as stage}
+									<Table.Head class="stage-header">{stage.label}</Table.Head>
+								{/each}
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							<Table.Row>
+								<Table.Cell class="row-label">Delivery</Table.Cell>
+								{#each TIMELINE_STAGES_GROUPED.delivery as stage}
+									<Table.Cell class="job-cell">
+										{#if groupedJobs[stage.key]}
+											{#each groupedJobs[stage.key] as job}
+												<div class="job-item">
+													<button 
+														class="job-button"
+														onclick={() => viewJob(job.jobsfile.jobno || job.jobsfile.jobnumber)}
+													>
+														{job.jobsfile.jobno || job.jobsfile.jobnumber}
+													</button>
+													{#if job.timetable && (job.timetable as any)[stage.field]}
+														<div class="job-time">
+															{formatTimestamp((job.timetable as any)[stage.field])}
+														</div>
+													{/if}
+												</div>
+											{/each}
+										{/if}
+									</Table.Cell>
+								{/each}
+							</Table.Row>
+						</Table.Body>
+					</Table.Root>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Logout Button -->
 		<div class="logout-section">
-			<button on:click={handleSignOut} disabled={loading} class="logout-button">
+			<button onclick={handleSignOut} disabled={loading} class="logout-button">
 				{loading ? 'SIGNING OUT...' : 'LOGOUT'}
 			</button>
 		</div>
@@ -133,31 +286,7 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		margin: 0 auto;
 	}
 
-	/* Mobile Logo Section */
-	.mobile-logo-section {
-		display: none;
-		text-align: center;
-		margin-bottom: 1.5rem;
-	}
 
-	.mobile-logo-container {
-		background: rgba(255, 255, 255, 0.1);
-		backdrop-filter: blur(15px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 16px;
-		padding: 1rem;
-		margin: 0 auto;
-		max-width: fit-content;
-		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
-	}
-
-	.mobile-logo {
-		max-width: 200px;
-		width: 100%;
-		height: auto;
-		margin: 0;
-		display: block;
-	}
 
 	.blue-text {
 		color: #34547a;
@@ -169,34 +298,10 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		font-weight: bold;
 	}
 
-	.system-title {
-		margin: 2rem 0;
-		text-align: center;
-		background: rgba(255, 255, 255, 0.1);
-		backdrop-filter: blur(15px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 16px;
-		padding: 1.5rem;
-		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
-	}
 
-	.user-info {
-		margin: 2rem 0;
-		background: rgba(255, 255, 255, 0.1);
-		backdrop-filter: blur(15px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		padding: 1.5rem;
-		border-radius: 16px;
-		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.15);
-	}
 
-	.user-info p,
-	.support-message p {
-		margin: 0.5rem 0;
-		font-size: 0.95rem;
-	}
-
-	.dashboard-section {
+	/* Operations Table Styles */
+	.operations-table-section {
 		margin: 2rem 0;
 		padding: 2rem;
 		background: white;
@@ -205,136 +310,153 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 		border: 1px solid #e5e7eb;
 	}
 
-	.dashboard-section h3 {
-		margin: 0 0 1.5rem 0;
-		text-align: center;
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: #1f2937;
-	}
-
-	.dashboard-menu {
+	.section-header {
 		display: flex;
-		flex-direction: column;
-		gap: 1rem;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 2rem;
 	}
 
-	.menu-item {
-		display: block;
-		padding: 1rem 1.5rem;
-		background: white;
-		border: 1px solid #e5e7eb;
-		border-radius: 12px;
-		cursor: pointer;
-		color: #1f2937;
-		font-weight: 500;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		text-decoration: none;
-		transition: all 0.3s ease;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-	}
-
-	.menu-item:hover {
-		background: #fff7ed;
-		color: #ea580c;
-		transform: translateY(-2px);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		border-color: #ea580c;
-	}
-
-	.ops-item {
-		border-left: 4px solid #ea580c;
-	}
-
-	.stats-section {
-		margin: 2rem 0;
-		padding: 2rem;
-		background: white;
-		border-radius: 20px;
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
-	}
-
-	.stats-section h3 {
-		margin: 0 0 1.5rem 0;
-		text-align: center;
-		font-size: 1.5rem;
+	.section-header h2 {
+		margin: 0;
+		font-size: 1.75rem;
 		font-weight: 600;
-		color: #1f2937;
+		color: #34547a;
 	}
 
-	.stats-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-		gap: 1.5rem;
-	}
-
-	.stat-box {
-		background: white;
-		border: 1px solid #e5e7eb;
-		border-radius: 15px;
-		padding: 1.5rem;
-		text-align: center;
-		transition: all 0.3s ease;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-	}
-
-	.stat-box:hover {
-		transform: translateY(-3px);
-		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-		border-color: #ea580c;
-	}
-
-	.stat-value {
-		font-size: 2rem;
-		font-weight: 700;
-		color: #ea580c;
-		margin-bottom: 0.5rem;
-	}
-
-	.stat-label {
-		font-size: 0.875rem;
-		color: #6b7280;
-		font-weight: 500;
-	}
-
-	.admin-nav {
-		margin-top: 10px;
-		text-align: center;
-	}
-
-	.admin-link {
-		display: inline-block;
-		padding: 0.75rem 1.5rem;
-		background: #dc2626;
+	.refresh-btn {
+		padding: 0.5rem 1rem;
+		background: #34547a;
 		color: white;
-		text-decoration: none;
-		font-size: 0.875rem;
+		border: none;
+		border-radius: 8px;
+		cursor: pointer;
 		font-weight: 500;
-		border: 1px solid #dc2626;
-		border-radius: 12px;
 		transition: all 0.2s ease;
-		box-shadow: 0 2px 10px rgba(220, 38, 38, 0.3);
 	}
 
-	.admin-link:hover {
-		background: #b91c1c;
-		border-color: #b91c1c;
-		transform: translateY(-2px);
-		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);
+	.refresh-btn:hover:not(:disabled) {
+		background: #2a4362;
+		transform: translateY(-1px);
 	}
 
-	.support-message {
-		margin: 20px 0;
+	.refresh-btn:disabled {
+		background: #9ca3af;
+		cursor: not-allowed;
+		transform: none;
 	}
 
-	.command-prompt {
-		margin-top: 30px;
-		background-color: red;
+	.loading-state, .empty-state {
+		text-align: center;
+		padding: 3rem;
+		color: #6b7280;
+		font-size: 1.1rem;
+	}
+
+	.table-container {
+		overflow-x: auto;
+		width: 100%;
+	}
+
+	:global(.operations-table-section table) {
+		width: 100% !important;
+		table-layout: fixed !important;
+		margin-bottom: 1.5rem !important;
+		border-radius: 12px;
+		border: 1px solid #e5e7eb;
+		overflow: hidden;
+	}
+
+	:global(.operations-table-section table:last-child) {
+		margin-bottom: 0 !important;
+	}
+
+	:global(.operations-table-section .stage-header) {
+		background: #34547a !important;
+		color: white !important;
+		font-weight: 600 !important;
+		text-align: center !important;
+		padding: 1rem !important;
+		border-bottom: 2px solid #2a4362 !important;
+		min-width: 150px;
+	}
+
+	:global(.operations-table-section .job-cell) {
+		vertical-align: top !important;
+		padding: 1rem !important;
+		border-right: 1px solid #e5e7eb !important;
+		background: #f8fafc !important;
+		min-height: 120px;
+	}
+
+	:global(.operations-table-section .job-cell:last-child) {
+		border-right: none !important;
+	}
+
+	:global(.operations-table-section .row-header) {
+		background: #2a4362 !important;
+		color: white !important;
+		font-weight: 700 !important;
+		text-align: center !important;
+		padding: 1rem !important;
+		border-bottom: 2px solid #1f3a56 !important;
+		font-size: 1rem !important;
+	}
+
+	:global(.operations-table-section .row-label) {
+		background: #f1f5f9 !important;
+		color: #34547a !important;
+		font-weight: 600 !important;
+		text-align: center !important;
+		padding: 1rem !important;
+		border-right: 1px solid #e5e7eb !important;
+		vertical-align: middle !important;
+		font-size: 0.875rem !important;
+	}
+
+	.job-item {
+		margin-bottom: 0.75rem;
+		padding: 0.5rem;
+		background: white;
+		border-radius: 8px;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
+	}
+
+	.job-item:last-child {
+		margin-bottom: 0;
+	}
+
+	.job-button {
+		display: block;
+		width: 100%;
+		padding: 0.5rem;
+		background: #34547a;
 		color: white;
-		padding: 5px 10px;
-		font-weight: bold;
+		border: none;
+		border-radius: 6px;
+		cursor: pointer;
+		font-weight: 500;
+		font-size: 0.875rem;
+		transition: all 0.2s ease;
+		margin-bottom: 0.25rem;
 	}
+
+	.job-button:hover {
+		background: #2a4362;
+		transform: translateY(-1px);
+	}
+
+	.job-time {
+		font-size: 0.75rem;
+		color: #6b7280;
+		text-align: center;
+		line-height: 1.2;
+	}
+
+
+
+
 
 	.logout-section {
 		margin-top: 20px;
@@ -376,10 +498,6 @@ CCCCCC EEEEEEE RR   RR   TT     UUUUU   SSSSS
 
 		.main-content {
 			max-width: 100%;
-		}
-
-		.stats-grid {
-			grid-template-columns: 1fr;
 		}
 
 		.ascii-header pre {

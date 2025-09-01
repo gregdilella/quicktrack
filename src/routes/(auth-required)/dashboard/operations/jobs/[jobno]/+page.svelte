@@ -62,12 +62,14 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 			// Load salesman info if linked from customer
 			salesman = null
 			if (job?.customers?.salesman_id) {
+				console.log('Loading salesman for customer salesman_id:', job.customers.salesman_id)
 				const { data: sm, error: sErr } = await supabase
 					.from('salesman')
-					.select('salesman_id, name, email, fin_cono')
-					.eq('salesman_id', job.customers.salesman_id)
+					.select('id, salesman_id, name, email, fin_cono')
+					.eq('id', job.customers.salesman_id)  // Query by 'id' since that's what the foreign key references
 					.single()
-				if (!sErr) {
+				console.log('Salesman lookup result:', { data: sm, error: sErr })
+				if (!sErr && sm) {
 					salesman = sm
 				}
 			}
