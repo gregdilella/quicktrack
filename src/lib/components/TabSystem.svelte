@@ -6,6 +6,8 @@
 	export let tabs: Array<{id: string, label: string}> = [
 		{id: 'who', label: 'Who'},
 		{id: 'what', label: 'What'},
+		{id: 'packaging', label: 'Packaging'},
+		{id: 'quote', label: 'Quote'},
 		{id: 'where', label: 'Where'},
 		{id: 'how', label: 'How'},
 		{id: 'when', label: 'When'}

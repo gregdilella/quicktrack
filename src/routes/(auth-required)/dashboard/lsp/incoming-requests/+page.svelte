@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Incoming Requests - CERTrack</title>
+	<title>Incoming Requests - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

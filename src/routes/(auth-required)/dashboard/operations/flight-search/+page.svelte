@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Flight Search - CERTrack</title>
+	<title>Flight Search - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

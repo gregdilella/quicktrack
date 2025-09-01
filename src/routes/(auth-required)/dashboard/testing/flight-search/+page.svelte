@@ -315,7 +315,6 @@
 							<div class="flight-card direct-flight">
 								<div class="flight-header">
 									<h4>Direct Flight</h4>
-									<span class="price">{formatPrice(flight.price.total, flight.price.currency)}</span>
 								</div>
 								<div class="flight-details">
 									<div class="route"><strong>{flight.enhanced?.route || `${searchParams.origin} → ${searchParams.destination}`}</strong></div>
@@ -344,7 +343,6 @@
 							<div class="flight-card connecting-flight">
 								<div class="flight-header">
 									<h4>{flight.enhanced?.stops || 1} Stop(s)</h4>
-									<span class="price">{formatPrice(flight.price.total, flight.price.currency)}</span>
 								</div>
 								<div class="flight-details">
 									<div class="route"><strong>{flight.enhanced?.route || `${searchParams.origin} → ${searchParams.destination}`}</strong></div>

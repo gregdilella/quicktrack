@@ -43,6 +43,13 @@
 			color: '#8b5cf6'
 		},
 		{
+			title: 'Salesmen',
+			description: 'Search and view sales representatives',
+			icon: '🧑‍💼',
+			href: '/dashboard/management/salesman-search',
+			color: '#0ea5e9'
+		},
+		{
 			title: 'Customers',
 			description: 'Search and view customer information',
 			icon: '👥',
@@ -62,6 +69,13 @@
 			icon: '✈️',
 			href: '/dashboard/management/airline-search',
 			color: '#2563eb'
+		},
+		{
+			title: 'Packaging',
+			description: 'Search packaging types',
+			icon: '📦',
+			href: '/dashboard/management/packaging-search',
+			color: '#22c55e'
 		},
 		{
 			title: 'Jobs',

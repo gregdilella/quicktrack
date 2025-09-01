@@ -10,9 +10,17 @@ export type JobsFile = Database['public']['Tables']['jobsfile']['Row'];
  */
 export async function getCurrentUserCustomer(): Promise<Customer | null> {
 	try {
+		// Get current authenticated user first
+		const { data: { user } } = await supabase.auth.getUser();
+		if (!user) {
+			console.error('No authenticated user found');
+			return null;
+		}
+
 		const { data: userProfile, error: userError } = await supabase
 			.from('user_table')
 			.select('customer_id')
+			.eq('user_id', user.id)
 			.single();
 
 		if (userError) {
@@ -115,9 +123,15 @@ export async function getCustomerJob(jobNumber: string): Promise<JobsFile | null
  * Create a new job for the current customer
  * Customer info will be auto-populated by the database trigger
  */
-export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ success: boolean; jobNumber?: string; error?: string }> {
+export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ success: boolean; jobNumber?: string; jobno?: string; error?: string }> {
 	try {
-		// Generate a job number if not provided
+		// Get current user's customer info
+		const customer = await getCurrentUserCustomer();
+		if (!customer) {
+			return { success: false, error: 'Customer information not found' };
+		}
+
+		// Generate a 7-digit job number starting with 3000000
 		const { data: jobNumber, error: jobNumberError } = await supabase
 			.rpc('generate_job_number');
 
@@ -126,12 +140,24 @@ export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ s
 			return { success: false, error: 'Failed to generate job number' };
 		}
 
+		// Generate jobno from job_number + job_type (default to 'M' if not specified)
+		const jobType = jobData.job_type || 'Email'; // Default to Email which uses 'M'
+		const typeCode = jobType === 'Call' ? 'C' : 'M';
+		const jobno = jobNumber + typeCode;
+
+		// Get current user for created_by
+		const { data: { user } } = await supabase.auth.getUser();
+
 		const { data: newJob, error } = await supabase
 			.from('jobsfile')
 			.insert({
 				...jobData,
 				jobnumber: jobNumber,
+				jobno: jobno,
+				customer_id: customer.id,
+				customer_name: customer.name,
 				status: 'New',
+				created_by: user?.id || null,
 				created_at: new Date().toISOString()
 			})
 			.select()
@@ -142,7 +168,7 @@ export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ s
 			return { success: false, error: error.message };
 		}
 
-		return { success: true, jobNumber: newJob.jobnumber };
+		return { success: true, jobNumber: newJob.jobnumber, jobno: newJob.jobno };
 	} catch (error) {
 		console.error('Error in createCustomerJob:', error);
 		return { success: false, error: 'Unexpected error occurred' };

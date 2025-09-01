@@ -161,7 +161,6 @@ export type Database = {
         Row: {
           account_number: string | null
           address1: string | null
-          address2: string | null
           billing_contact: string | null
           city: string | null
           contact_email: string | null
@@ -171,13 +170,13 @@ export type Database = {
           notes: string | null
           payment_terms: string | null
           phone: string | null
+          salesman_id: string | null
           state: string | null
           zip: string | null
         }
         Insert: {
           account_number?: string | null
           address1?: string | null
-          address2?: string | null
           billing_contact?: string | null
           city?: string | null
           contact_email?: string | null
@@ -187,13 +186,13 @@ export type Database = {
           notes?: string | null
           payment_terms?: string | null
           phone?: string | null
+          salesman_id?: string | null
           state?: string | null
           zip?: string | null
         }
         Update: {
           account_number?: string | null
           address1?: string | null
-          address2?: string | null
           billing_contact?: string | null
           city?: string | null
           contact_email?: string | null
@@ -203,10 +202,19 @@ export type Database = {
           notes?: string | null
           payment_terms?: string | null
           phone?: string | null
+          salesman_id?: string | null
           state?: string | null
           zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_salesman_fkey"
+            columns: ["salesman_id"]
+            isOneToOne: false
+            referencedRelation: "salesman"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       file_uploads: {
         Row: {
@@ -321,6 +329,7 @@ export type Database = {
           job_type: string | null
           jobno: string | null
           jobnumber: string
+          packaging_id: string | null
           pieces: number | null
           po_number: string | null
           ready_date: string | null
@@ -373,6 +382,7 @@ export type Database = {
           job_type?: string | null
           jobno?: string | null
           jobnumber: string
+          packaging_id?: string | null
           pieces?: number | null
           po_number?: string | null
           ready_date?: string | null
@@ -425,6 +435,7 @@ export type Database = {
           job_type?: string | null
           jobno?: string | null
           jobnumber?: string
+          packaging_id?: string | null
           pieces?: number | null
           po_number?: string | null
           ready_date?: string | null
@@ -453,6 +464,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobsfile_packaging_fkey"
+            columns: ["packaging_id"]
+            isOneToOne: false
+            referencedRelation: "packaging"
             referencedColumns: ["id"]
           },
           {
@@ -619,6 +637,33 @@ export type Database = {
         }
         Relationships: []
       }
+      packaging: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          temperature: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          temperature?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          temperature?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           charge: number | null
@@ -650,6 +695,27 @@ export type Database = {
             referencedColumns: ["jobnumber"]
           },
         ]
+      }
+      salesman: {
+        Row: {
+          email: string | null
+          fin_cono: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          email?: string | null
+          fin_cono?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          email?: string | null
+          fin_cono?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       timetable: {
         Row: {

@@ -196,7 +196,7 @@
 </script>
 
 <svelte:head>
-	<title>Amadeus API Debug - CERTrack</title>
+	<title>Amadeus API Debug - Certus Freight</title>
 </svelte:head>
 
 <div class="debug-container">

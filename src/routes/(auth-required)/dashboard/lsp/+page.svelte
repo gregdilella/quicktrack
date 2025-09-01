@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>LSP Dashboard - CERTrack</title>
+	<title>LSP Dashboard - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

@@ -59,7 +59,7 @@
 			<div class="sidebar-top">
 				<!-- Logo -->
 				<div class="sidebar-logo">
-					<h2>CERTrack</h2>
+					<h2>Certus Freight</h2>
 				</div>
 				
 				<!-- User Info -->
@@ -147,7 +147,7 @@
 						</svg>
 					</div>
 					
-					<h1 class="waiting-title">Welcome to CERTrack!</h1>
+					<h1 class="waiting-title">Welcome to Certus Freight!</h1>
 					<p class="waiting-subtitle">Your account has been created successfully</p>
 					
 					{#if userProfile}

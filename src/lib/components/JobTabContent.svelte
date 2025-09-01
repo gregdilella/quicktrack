@@ -75,6 +75,103 @@
 		destination_airport: '',
 		notes: ''
 	}
+
+	// Packaging state
+	let availablePackaging: { id: string; name: string; type?: string | null; temperature?: string | null }[] = []
+	let selectedPackagingId: string = ''
+
+	// Quote state
+	let quoteItems: { id: number; chargecode: string; charge: number; created_at: string }[] = []
+	let loadingQuote = false
+
+	async function loadPackaging() {
+		try {
+			const { data, error } = await supabase
+				.from('packaging')
+				.select('id, name, type, temperature')
+				.order('name', { ascending: true })
+			if (error) {
+				console.error('Error loading packaging:', error)
+				return
+			}
+			availablePackaging = data || []
+			// initialize from jobData if present
+			selectedPackagingId = jobData.packaging_id || ''
+		} catch (err) {
+			console.error('Error in loadPackaging:', err)
+		}
+	}
+
+	async function savePackagingSelection() {
+		if (!jobData.jobno && !jobData.jobnumber) return
+		try {
+			saving = true
+			saveError = ''
+			const jobIdentifier = jobData.jobno || jobData.jobnumber
+			const { data, error } = await supabase
+				.from('jobsfile')
+				.update({ packaging_id: selectedPackagingId || null, updated_at: new Date().toISOString() })
+				.eq('jobno', jobIdentifier)
+				.select()
+			if (error) {
+				console.error('Error saving packaging selection:', error)
+				saveError = `Failed to save: ${error.message}`
+				return
+			}
+			jobData.packaging_id = selectedPackagingId || null
+			saveMessage = 'Packaging selection saved!'
+			setTimeout(() => { saveMessage = '' }, 2000)
+		} catch (err) {
+			console.error('Error in savePackagingSelection:', err)
+			saveError = 'An unexpected error occurred while saving'
+		} finally {
+			saving = false
+		}
+	}
+
+	// Salesman (derived from customer.salesman_id)
+	let whoSalesman: { salesman_id: string; name: string; fin_cono?: string | null } | null = null
+
+	async function loadWhoSalesman() {
+		try {
+			const salesId = jobData?.customers?.salesman_id
+			if (!salesId) { whoSalesman = null; return }
+			const { data, error } = await supabase
+				.from('salesman')
+				.select('salesman_id, name, fin_cono')
+				.eq('salesman_id', salesId)
+				.single()
+			if (!error) {
+				whoSalesman = data
+			}
+		} catch (err) {
+			console.error('Error loading salesman for WHO tab:', err)
+		}
+	}
+
+	async function loadQuoteItems() {
+		if (!jobData.jobno && !jobData.jobnumber) return
+		try {
+			loadingQuote = true
+			const jobIdentifier = jobData.jobno || jobData.jobnumber
+			const { data, error } = await supabase
+				.from('quotes')
+				.select('id, chargecode, charge, created_at')
+				.eq('jobnumber', jobIdentifier)
+				.order('chargecode', { ascending: true })
+			
+			if (error) {
+				console.error('Error loading quote items:', error)
+				return
+			}
+			
+			quoteItems = data || []
+		} catch (err) {
+			console.error('Error in loadQuoteItems:', err)
+		} finally {
+			loadingQuote = false
+		}
+	}
 	
 	function generateJobNumber(): string {
 		const timestamp = Date.now().toString().slice(-6)
@@ -481,6 +578,7 @@
 		if (jobData.jobnumber) {
 			await loadJobAssignments()
 		}
+		await loadPackaging()
 	})
 
 	/**
@@ -936,6 +1034,14 @@
 			saveError = 'Failed to remove cost';
 		}
 	}
+
+	$: if (activeTab === 'who') {
+		loadWhoSalesman()
+	}
+
+	$: if (activeTab === 'quote') {
+		loadQuoteItems()
+	}
 </script>
 
 <div class="tab-panel">
@@ -1045,6 +1151,15 @@
 					}}
 					placeholder="Enter email address"
 				/>
+			</div>
+			<div class="form-group">
+				<label class="blue-text">SALESMAN (derived):</label>
+				<div class="form-input" style="display:flex; align-items:center; gap:8px;">
+					<span>{whoSalesman?.name || 'None'}</span>
+					{#if whoSalesman?.fin_cono}
+						<span class="text-gray-500" style="font-size:0.85rem;">FIN CONO: {whoSalesman.fin_cono}</span>
+					{/if}
+				</div>
 			</div>
 		</div>
 		
@@ -1177,8 +1292,8 @@
 			<!-- Row 1: Job Info (Job, BOL, PO#) -->
 			<div class="row-box">
 				<div class="field-group">
-					<label class="blue-text">Job</label>
-					<input type="text" bind:value={jobData.job_number} class="field-input" readonly />
+					<label class="blue-text">Job No</label>
+					<input type="text" bind:value={jobData.jobno} class="field-input" readonly />
 				</div>
 				<div class="field-group">
 					<label class="blue-text">BOL</label>
@@ -1655,6 +1770,81 @@
 			</div>
 		</div>
 
+		</div>
+	{/if}
+
+	<!-- PACKAGING Tab - Packaging Selection -->
+	{#if activeTab === 'packaging'}
+		<div class="tab-content">
+			<h3 class="blue-text">--- PACKAGING ---</h3>
+			<div class="save-status">
+				{#if saving}
+					<div class="save-indicator saving">
+						<span class="spinner"></span>
+						Saving packaging selection...
+					</div>
+				{:else if saveMessage}
+					<div class="save-indicator success">
+						✅ {saveMessage}
+					</div>
+				{:else if saveError}
+					<div class="save-indicator error">
+						❌ {saveError}
+					</div>
+				{/if}
+			</div>
+
+			<div class="form-grid">
+				<div class="form-group">
+					<label class="blue-text">SELECT PACKAGING (optional)</label>
+					<select bind:value={selectedPackagingId} class="form-input" on:change={savePackagingSelection}>
+						<option value="">None</option>
+						{#each availablePackaging as p}
+							<option value={p.id}>{p.name}{p.type ? ` - ${p.type}` : ''}{p.temperature ? ` (${p.temperature})` : ''}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- QUOTE Tab - Quote Breakdown -->
+	{#if activeTab === 'quote'}
+		<div class="tab-content">
+			<h3 class="blue-text">--- QUOTE BREAKDOWN ---</h3>
+			
+			{#if loadingQuote}
+				<div class="loading-state">
+					<div class="loading-spinner"></div>
+					<p>Loading quote...</p>
+				</div>
+			{:else if quoteItems.length === 0}
+				<div class="empty-state">
+					<div class="empty-icon">💰</div>
+					<h3>No quote available</h3>
+					<p>This job doesn't have a saved quote yet</p>
+				</div>
+			{:else}
+				<div class="quote-breakdown">
+					<div class="quote-header">
+						<h4>Cost Breakdown</h4>
+						<p class="quote-date">Generated: {new Date(quoteItems[0]?.created_at || '').toLocaleDateString()}</p>
+					</div>
+					
+					<div class="quote-items">
+						{#each quoteItems as item}
+							<div class="quote-item" class:total={item.chargecode === 'TOTAL'}>
+								<span class="charge-code">{item.chargecode}</span>
+								<span class="charge-amount">${item.charge.toFixed(2)}</span>
+							</div>
+						{/each}
+					</div>
+					
+					<div class="quote-disclaimer">
+						*Transport costs may not include incidentals like driver waiting time
+					</div>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
@@ -3058,6 +3248,117 @@
 		font-style: italic;
 	}
 
+	/* Quote Breakdown Styles */
+	.quote-breakdown {
+		background: white;
+		border-radius: 16px;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+		border: 1px solid #e5e7eb;
+		overflow: hidden;
+	}
+
+	.quote-header {
+		background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+		padding: 1.5rem;
+		border-bottom: 1px solid #e5e7eb;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.quote-header h4 {
+		margin: 0;
+		font-size: 1.25rem;
+		color: #1f2937;
+		font-weight: 600;
+	}
+
+	.quote-date {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin: 0;
+	}
+
+	.quote-items {
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.quote-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.75rem;
+		background: linear-gradient(135deg, #ffffff, #f8fafc);
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		transition: all 0.2s ease;
+	}
+
+	.quote-item:hover {
+		border-color: #ea580c;
+		box-shadow: 0 2px 8px rgba(234, 88, 12, 0.1);
+	}
+
+	.quote-item.total {
+		background: linear-gradient(135deg, #ea580c, #dc2626);
+		color: white;
+		font-weight: 700;
+		border-color: #ea580c;
+		margin-top: 0.5rem;
+		box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
+	}
+
+	.charge-code {
+		font-weight: 600;
+		font-size: 0.875rem;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.charge-amount {
+		font-weight: 700;
+		font-size: 1rem;
+		font-family: 'Courier New', monospace;
+	}
+
+	.quote-disclaimer {
+		padding: 1rem 1.5rem;
+		background: #f9fafb;
+		border-top: 1px solid #e5e7eb;
+		font-size: 0.75rem;
+		color: #6b7280;
+		font-style: italic;
+		text-align: center;
+	}
+
+	.loading-state, .empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 4rem 2rem;
+		text-align: center;
+	}
+
+	.empty-icon {
+		font-size: 4rem;
+		margin-bottom: 1rem;
+	}
+
+	.empty-state h3 {
+		color: #1f2937;
+		margin: 0 0 0.5rem 0;
+		font-size: 1.5rem;
+	}
+
+	.empty-state p {
+		color: #6b7280;
+		margin: 0;
+	}
+
 	/* Mobile responsiveness for management sections */
 	@media (max-width: 768px) {
 		.form-row {
@@ -3086,6 +3387,12 @@
 
 		.assignment-actions {
 			justify-content: center;
+		}
+
+		.quote-header {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.5rem;
 		}
 	}
 </style> 

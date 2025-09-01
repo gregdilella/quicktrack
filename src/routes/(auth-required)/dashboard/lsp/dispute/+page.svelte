@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Dispute - CERTrack</title>
+	<title>Dispute - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Customer P&L - CERTrack</title>
+	<title>Customer P&L - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

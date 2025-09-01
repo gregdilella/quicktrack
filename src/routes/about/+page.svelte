@@ -4,16 +4,16 @@
 </script>
 
 <svelte:head>
-	<title>About - CERTrack International Courier System</title>
-	<meta name="description" content="Learn about CERTrack's international courier services and logistics solutions." />
+	<title>About - Certus Freight International Courier System</title>
+	<meta name="description" content="Learn about Certus Freight's international courier services and logistics solutions." />
 </svelte:head>
 
 <div class="landing-container">
 	<header class="landing-header">
 		<div class="header-content">
 			<div class="logo-section">
-				<img src="/ChatGPT Image Jul 14, 2025, 06_29_52 PM.png" alt="CERTrack Logo" class="header-logo"/>
-				<h1 class="company-name">CERTrack</h1>
+				<img src="/ChatGPT Image Jul 14, 2025, 06_29_52 PM.png" alt="Certus Freight Logo" class="header-logo"/>
+				<h1 class="company-name">Certus Freight</h1>
 			</div>
 			<nav class="header-nav">
 				<a href="/" class="nav-link">Home</a>
@@ -26,7 +26,7 @@
 	<main class="landing-main">
 		<section class="hero-section">
 			<div class="hero-content">
-				<h2 class="hero-title">About CERTrack</h2>
+				<h2 class="hero-title">About Certus Freight</h2>
 				<p class="hero-subtitle">Your trusted partner in international logistics and courier services</p>
 			</div>
 		</section>
@@ -68,7 +68,7 @@
 					<div class="about-card">
 						<h3 class="card-title">Contact Information</h3>
 						<div class="contact-info">
-							<p><strong>Email:</strong> info@certrack.com</p>
+							<p><strong>Email:</strong> info@Certus Freight.com</p>
 							<p><strong>Phone:</strong> +1 (555) 123-4567</p>
 							<p><strong>Address:</strong> 123 Logistics Ave, Shipping City, SC 12345</p>
 						</div>
@@ -80,7 +80,7 @@
 
 	<footer class="landing-footer">
 		<div class="footer-content">
-			<p>&copy; 2024 CERTrack International Courier System. All rights reserved.</p>
+			<p>&copy; 2024 Certus Freight International Courier System. All rights reserved.</p>
 			<div class="footer-links">
 				<a href="/about" class="footer-link">About</a>
 				<a href="/" class="footer-link">Sign In</a>

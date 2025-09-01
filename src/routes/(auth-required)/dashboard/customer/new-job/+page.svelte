@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Create New Job - CERTrack</title>
+	<title>Create New Job - Certus Freight</title>
 </svelte:head>
 
 <script lang="ts">
@@ -8,8 +8,9 @@
 	import { createCustomerJob, getCurrentUserCustomer } from '$lib/services/customerService';
 	import { customerJobSchema, type CustomerJobFormData } from '$lib/validation/schemas';
 	import type { Customer } from '$lib/services/customerService';
-	import { validateAddress, buildAddressString, findNearestAirportWithRoute, findMultipleAirportsWithRoutes, type ValidatedAddress } from '$lib/services/googleMapsService';
+	import { validateAddress, buildAddressString, findNearestAirportWithRoute, findMultipleAirportsWithRoutes, type ValidatedAddress, type AirportRouteInfo } from '$lib/services/googleMapsService';
 	import AddressMap from '$lib/components/AddressMap.svelte';
+	import { computeNetjetsQuote, buildNetjetsInputFromJobForm, type NetjetsQuoteBreakdown } from '$lib/Quoting/netjets';
 	
 	let customer = $state<Customer | null>(null);
 	let loading = $state(false);
@@ -24,6 +25,7 @@
 	let shipperValidatedAddress = $state<ValidatedAddress | null>(null);
 	let consigneeValidatedAddress = $state<ValidatedAddress | null>(null);
 	let addressValidationErrors = $state<Record<string, string>>({});
+	let addressesValidated = $state(false);
 
 	// Flight search state
 	let searchingFlights = $state(false);
@@ -31,6 +33,11 @@
 	let flightSearchError = $state('');
 	let originAirport = $state(''); // Shipper's nearest airport
 	let destinationAirport = $state(''); // Consignee's nearest airport
+	let shipperAirportRoute = $state<AirportRouteInfo | null>(null);
+	let consigneeAirportRoute = $state<AirportRouteInfo | null>(null);
+	let earliestReadyToFlyISO = $state('');
+	let recommendedFlightId = $state<string | null>(null);
+	let estimatedDeliveryISO = $state<string | null>(null);
 
 	// Address search helpers (Svelte 5 runes)
 	let shipperSearchQuery = $state('');
@@ -169,7 +176,7 @@
 			const result = await createCustomerJob(formData as CustomerJobFormData);
 			
 			if (result.success) {
-				successMessage = `Job ${result.jobNumber} created successfully!`;
+				successMessage = `Job ${result.jobno || result.jobNumber} created successfully!`;
 				// Redirect to job search after 2 seconds
 				setTimeout(() => {
 					goto('/dashboard/customer/job-search');
@@ -208,7 +215,167 @@
 		flightSearchError = '';
 		originAirport = '';
 		destinationAirport = '';
+		shipperAirportRoute = null;
+		consigneeAirportRoute = null;
+		earliestReadyToFlyISO = '';
+		recommendedFlightId = null;
+		estimatedDeliveryISO = null;
+		addressesValidated = false;
 	}
+
+	// --- Helpers for timing calculations ---
+	function addMinutes(date: Date, minutes: number): Date {
+		const d = new Date(date);
+		d.setMinutes(d.getMinutes() + minutes);
+		return d;
+	}
+
+	function combineDateAndTime(dateStr: string, timeStr: string): Date {
+		return new Date(`${dateStr}T${timeStr || '00:00'}:00`);
+	}
+
+	function formatISO(dt: Date): string {
+		return dt.toISOString();
+	}
+
+	function getHHmm(dt: Date): string {
+		const hh = dt.getHours().toString().padStart(2, '0');
+		const mm = dt.getMinutes().toString().padStart(2, '0');
+		return `${hh}:${mm}`;
+	}
+
+	function nextNDates(startDate: string, n: number): string[] {
+		const dates: string[] = [];
+		const base = new Date(`${startDate}T00:00:00`);
+		for (let i = 0; i < n; i++) {
+			const d = new Date(base);
+			d.setDate(base.getDate() + i);
+			dates.push(d.toISOString().slice(0, 10));
+		}
+		return dates;
+	}
+
+	function filterOutRegionalAircraft(flights: any[]): any[] {
+		return flights.filter((flight: any) => {
+			const aircraft = flight.enhanced?.aircraft;
+			if (!aircraft) return true;
+			const aircraftList = aircraft.split(', ');
+			return !aircraftList.some((plane: string) => {
+				const cleanPlane = plane.trim().toUpperCase();
+				return (
+					cleanPlane.startsWith('E') ||
+					cleanPlane.startsWith('CR') ||
+					cleanPlane.includes('DE HAVILLAND') ||
+					cleanPlane.includes('DASH') ||
+					cleanPlane.startsWith('DH')
+				);
+			});
+		});
+	}
+
+	async function searchFlightsForDates(origin: string, destination: string, baseDate: string, earliestISO: string | null) {
+		const dates = nextNDates(baseDate, 2); // base day + next day
+		const earliest = earliestISO ? new Date(earliestISO) : null;
+
+		const fetches = dates.map((d, idx) => {
+			const params = new URLSearchParams({
+				origin,
+				destination,
+				departureDate: d,
+				adults: '1',
+				children: '0',
+				infants: '0',
+				nonStop: 'false',
+				currency: 'USD',
+				max: '50'
+			});
+			if (idx === 0 && earliest) {
+				params.set('departureTime', getHHmm(earliest));
+			}
+			return fetch(`/api/flights/search?${params.toString()}`).then(async (r) => {
+				const data = await r.json();
+				return { ok: r.ok, data };
+			});
+		});
+
+		const results = await Promise.all(fetches);
+
+		const merged = {
+			summary: { totalOffers: 0, directFlights: 0, connectingFlights: 0 },
+			flights: { direct: [], connecting: [], all: [] } as any,
+			byDate: [] as any[]
+		};
+
+		for (const { ok, data } of results) {
+			if (!ok || !data?.flights) continue;
+			data.flights.direct = filterOutRegionalAircraft(data.flights.direct || []);
+			data.flights.connecting = filterOutRegionalAircraft(data.flights.connecting || []);
+			data.flights.all = filterOutRegionalAircraft(data.flights.all || []);
+
+			merged.flights.direct = [...merged.flights.direct, ...data.flights.direct];
+			merged.flights.connecting = [...merged.flights.connecting, ...data.flights.connecting];
+			merged.flights.all = [...merged.flights.all, ...data.flights.all];
+			merged.summary.totalOffers += data.flights.all.length;
+			merged.summary.directFlights += data.flights.direct.length;
+			merged.summary.connectingFlights += data.flights.connecting.length;
+			merged.byDate.push({ date: data.searchCriteria?.departureDate, flights: data.flights });
+		}
+
+		merged.flights.all.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
+		merged.flights.direct.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
+		merged.flights.connecting.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
+
+		return merged;
+	}
+
+	function computeRecommendedFlightAndETA(mergedFlights: any, earliestISO: string, destDriveMins: number) {
+		const earliest = new Date(earliestISO);
+		const all = (mergedFlights?.flights?.all || []).filter((f: any) => {
+			// Only consider flights on or after the ready date (same day or later)
+			if (!f?.enhanced?.departureTime) return false;
+			const dep = new Date(f.enhanced.departureTime);
+			const readyDay = new Date(earliest);
+			readyDay.setHours(0,0,0,0);
+			const depDay = new Date(dep);
+			depDay.setHours(0,0,0,0);
+			return depDay.getTime() >= readyDay.getTime();
+		});
+		const candidate = all.find((f: any) => {
+			if (!f?.enhanced?.departureTime) return false;
+			return new Date(f.enhanced.departureTime) >= earliest;
+		});
+		if (!candidate) return { flightId: null, etaISO: null };
+		const arrival = new Date(candidate.enhanced.arrivalTime);
+		const eta = addMinutes(addMinutes(arrival, 90), destDriveMins || 0);
+		return { flightId: candidate.id || null, etaISO: formatISO(eta) };
+	}
+
+	// --- Netjets Quote calculation ---
+	function poundsFromForm(): number {
+		const w = Number(formData.weight || 0);
+		if (!w || isNaN(w)) return 0;
+		return (formData.weight_unit === 'kg') ? w * 2.20462 : w;
+	}
+
+	// Compute Netjets quote reactively using $derived
+	let netjetsQuote = $derived.by(() => {
+		try {
+			const quoteInput = {
+				...buildNetjetsInputFromJobForm({
+					...formData,
+					shipper_miles: shipperAirportRoute?.distance_miles || 0,
+					consignee_miles: consigneeAirportRoute?.distance_miles || 0,
+					weight: poundsFromForm(),
+					shipper_state: formData.shipper_state,
+					consignee_state: formData.consignee_state,
+					shipper_city: formData.shipper_city
+				})
+			};
+			return computeNetjetsQuote(quoteInput);
+		} catch (e) {
+			return null;
+		}
+	});
 
 	/**
 	 * Validates both addresses and searches for flights between nearest airports
@@ -250,6 +417,7 @@
 		originAirport = '';
 		destinationAirport = '';
 		addressValidationErrors = {};
+		addressesValidated = false;
 
 		try {
 			console.log('🔍 Validating both addresses and finding airports...');
@@ -311,6 +479,8 @@
 
 			originAirport = shipperAirportResult.airport.iata_code || '';
 			destinationAirport = consigneeAirportResult.airport.iata_code || '';
+			shipperAirportRoute = shipperAirportResult;
+			consigneeAirportRoute = consigneeAirportResult;
 
 			if (!originAirport) {
 				throw new Error('Shipper airport found but no IATA code available');
@@ -321,6 +491,8 @@
 			}
 
 			console.log(`✈️ Origin airport: ${originAirport}, Destination airport: ${destinationAirport}`);
+			// Mark addresses as validated so maps section can render
+			addressesValidated = true;
 
 			// Check Ready Date
 			const departureDate = formData.ready_date;
@@ -336,64 +508,34 @@
 				throw new Error('Ready Date must be in the future. Please update the Ready Date.');
 			}
 
-			// Search for flights between the two airports
-			const params = new URLSearchParams({
-				origin: originAirport,
-				destination: destinationAirport,
-				departureDate: departureDate,
-				adults: '1',
-				children: '0',
-				infants: '0',
-				nonStop: 'false',
-				currency: 'USD',
-				max: '20'
-			});
+			// Compute earliest feasible departure: ready + drive to origin + 90 min
+			const baseReady = combineDateAndTime(formData.ready_date as string, formData.ready_time as string);
+			const driveToOriginMins = shipperAirportRoute?.duration_minutes || 0;
+			const earliest = addMinutes(addMinutes(baseReady, driveToOriginMins), 90);
+			earliestReadyToFlyISO = earliest.toISOString();
 
-			console.log(`🛫 Searching flights: ${originAirport} → ${destinationAirport}`);
-			
-			const response = await fetch(`/api/flights/search?${params.toString()}`);
-			const data = await response.json();
+			// Multi-day search (base day + next day), enforce earliest time on day 0
+			console.log(`🛫 Searching flights (2 days): ${originAirport} → ${destinationAirport}`);
+			const merged = await searchFlightsForDates(originAirport, destinationAirport, departureDate, earliestReadyToFlyISO);
+			flightResults = {
+				...merged,
+				summary: {
+					...merged.summary,
+					searchTime: new Date().toISOString()
+				}
+			};
 
-			if (!response.ok) {
-				throw new Error(data.message || 'Flight search failed');
-			}
+			console.log(`✅ Found ${flightResults.summary?.totalOffers || 0} flights over 2 days (after filtering)`);
 
-			// Filter out flights with small regional aircraft
-			if (data.flights) {
-				const filterFlights = (flights: any[]) => {
-					return flights.filter((flight: any) => {
-						const aircraft = flight.enhanced?.aircraft;
-						if (!aircraft) return true;
-						
-						const aircraftList = aircraft.split(', ');
-						return !aircraftList.some((plane: string) => {
-							const cleanPlane = plane.trim().toUpperCase();
-							return (
-								cleanPlane.startsWith('E') ||      // Embraer (ERJ, E170, E190, etc.)
-								cleanPlane.startsWith('CR') ||     // Bombardier CRJ series
-								cleanPlane.includes('DE HAVILLAND') || // De Havilland aircraft
-								cleanPlane.includes('DASH') ||     // Dash 8, etc.
-								cleanPlane.startsWith('DH')        // De Havilland codes (DH4, etc.)
-							);
-						});
-					});
-				};
+			// Pick recommended flight and compute ETA at consignee
+			const destDriveMins = consigneeAirportRoute?.duration_minutes || 0;
+			const { flightId, etaISO } = computeRecommendedFlightAndETA(flightResults, earliestReadyToFlyISO, destDriveMins);
+			recommendedFlightId = flightId;
+			estimatedDeliveryISO = etaISO;
 
-				data.flights.direct = filterFlights(data.flights.direct || []);
-				data.flights.connecting = filterFlights(data.flights.connecting || []);
-				data.flights.all = filterFlights(data.flights.all || []);
-				
-				data.summary.directFlights = data.flights.direct.length;
-				data.summary.connectingFlights = data.flights.connecting.length;
-				data.summary.totalOffers = data.flights.all.length;
-			}
-
-			flightResults = data;
-			console.log(`✅ Found ${data.summary?.totalOffers || 0} flights (after filtering)`);
-
-			// If no flights found, try alternative airports
-			if (data.summary?.totalOffers === 0) {
-				console.log('🔄 No flights found with primary airports, trying alternatives...');
+			// If still no flights, try alternative airports
+			if ((flightResults.summary?.totalOffers || 0) === 0) {
+				console.log('🔄 No flights found with primary airports (2-day search), trying alternatives for base date...');
 				await tryAlternativeAirports(shipperValidated, consigneeValidated, departureDate);
 			}
 
@@ -518,13 +660,38 @@
 	}
 
 	// Format date/time
-	function formatDateTime(dateString: string): string {
+	function formatDateTime(dateString?: string): string {
+		if (!dateString) return 'N/A';
 		return new Date(dateString).toLocaleString('en-US', {
 			month: 'short',
 			day: 'numeric',
 			hour: '2-digit',
 			minute: '2-digit'
 		});
+	}
+
+	function selectFeaturedFlights(all: any[]) {
+		if (!Array.isArray(all)) return { earliest: null, fastest: null, cheapest: null };
+		// Same-day-or-later filter is already applied upstream for recommendation
+		const sortedByDeparture = [...all].sort((a, b) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
+		const earliest = sortedByDeparture[0] || null;
+		const fastest = [...all].sort((a, b) => (a.enhanced?.totalDurationMinutes || 1e9) - (b.enhanced?.totalDurationMinutes || 1e9))[0] || null;
+		const cheapest = [...all].sort((a, b) => parseFloat(a.price?.total || '1e9') - parseFloat(b.price?.total || '1e9'))[0] || null;
+		return { earliest, fastest, cheapest };
+	}
+
+	function filterFlightsFromReadyDate(all: any[], baseDate: string) {
+		if (!Array.isArray(all) || !baseDate) return all || [];
+		const readyDay = new Date(`${baseDate}T00:00:00`);
+		readyDay.setHours(0, 0, 0, 0);
+		return all
+			.filter((f: any) => {
+				const dep = new Date(f?.enhanced?.departureTime || 0);
+				const depDay = new Date(dep);
+				depDay.setHours(0, 0, 0, 0);
+				return depDay.getTime() >= readyDay.getTime();
+			})
+			.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
 	}
 </script>
 
@@ -936,8 +1103,12 @@
 					</div>
 					</div>
 				</div>
+				</div>
+			</div>
+			
+			<!-- Address Validation & Flight Search Section -->
+			<div class="form-section">
 				
-				<!-- Address Validation & Flight Search Button -->
 				<div class="validation-button-container">
 					<button 
 						type="button" 
@@ -969,9 +1140,12 @@
 						</div>
 					{/if}
 				</div>
-				
-				<!-- Address Maps Display (Below Both Forms) -->
-				{#if shipperValidatedAddress || consigneeValidatedAddress}
+			</div>
+			
+			<!-- Address Locations Section -->
+			{#if addressesValidated && (shipperValidatedAddress || consigneeValidatedAddress)}
+				<div class="form-section">
+					<h2>Address Locations</h2>
 					<div class="maps-container">
 						<h3>📍 Address Locations</h3>
 						<div class="maps-grid">
@@ -1000,8 +1174,8 @@
 							{/if}
 						</div>
 					</div>
-				{/if}
-			</div>
+				</div>
+			{/if}
 
 			<!-- Flight Information Section -->
 			{#if originAirport || destinationAirport || searchingFlights || flightResults || flightSearchError}
@@ -1033,16 +1207,62 @@
 								</div>
 							</div>
 
+							{#if shipperAirportRoute}
+								<div class="flight-stats" style="margin-top: 0.5rem;">
+									<span><strong>Drive to origin airport:</strong> {Math.round(shipperAirportRoute.duration_minutes)} min</span>
+									{#if earliestReadyToFlyISO}
+										<span class="earliest-box"><strong>Earliest ready to fly:</strong> {formatDateTime(earliestReadyToFlyISO)}</span>
+									{/if}
+									{#if estimatedDeliveryISO}
+										<span><strong>Estimated delivery:</strong> {formatDateTime(estimatedDeliveryISO)}</span>
+									{/if}
+								</div>
+							{/if}
+
+							<!-- Earliest Available Flights Table -->
+							<div class="flight-category">
+								<h4>🌟 Earliest Available Flights (starting {formData.ready_date})</h4>
+								<div class="earliest-flights">
+																<table class="earliest-table">
+								<thead>
+									<tr>
+										<th>Departs</th>
+										<th>Arrives</th>
+										<th>Airlines</th>
+										<th>Stops</th>
+									</tr>
+								</thead>
+										<tbody>
+											{#key flightResults}
+												{#each [
+													selectFeaturedFlights(filterFlightsFromReadyDate(flightResults.flights?.all || [], formData.ready_date || '')).earliest,
+													selectFeaturedFlights(filterFlightsFromReadyDate(flightResults.flights?.all || [], formData.ready_date || '')).fastest,
+													selectFeaturedFlights(filterFlightsFromReadyDate(flightResults.flights?.all || [], formData.ready_date || '')).cheapest
+												] as f}
+													{#if f}
+														<tr class="{recommendedFlightId && f.id === recommendedFlightId ? 'recommended-row' : ''}">
+															<td>{formatDateTime(f.enhanced?.departureTime)}</td>
+															<td>{formatDateTime(f.enhanced?.arrivalTime)}</td>
+															<td>{(f.enhanced?.airlines || []).join(', ')}</td>
+															<td>{f.enhanced?.stops || 0}</td>
+														</tr>
+													{/if}
+												{/each}
+											{/key}
+										</tbody>
+									</table>
+								</div>
+							</div>
+
 							<!-- Direct Flights -->
 							{#if flightResults.flights?.direct?.length > 0}
 								<div class="flight-category">
 									<h4>🛫 Direct Flights ({flightResults.flights.direct.length})</h4>
 									<div class="flights-grid">
 										{#each flightResults.flights.direct.slice(0, 3) as flight}
-											<div class="flight-card direct-flight">
+											<div class="flight-card direct-flight {recommendedFlightId && flight.id === recommendedFlightId ? 'recommended' : ''}">
 												<div class="flight-header">
 													<span class="flight-type">Direct</span>
-													<span class="flight-price">{formatPrice(flight.price.total, flight.price.currency)}</span>
 												</div>
 												<div class="flight-details">
 													<div class="flight-time">
@@ -1075,10 +1295,9 @@
 									<h4>🔄 Connecting Flights ({flightResults.flights.connecting.length})</h4>
 									<div class="flights-grid">
 										{#each flightResults.flights.connecting.slice(0, 3) as flight}
-											<div class="flight-card connecting-flight">
+											<div class="flight-card connecting-flight {recommendedFlightId && flight.id === recommendedFlightId ? 'recommended' : ''}">
 												<div class="flight-header">
 													<span class="flight-type">{flight.enhanced?.stops || 1} Stop(s)</span>
-													<span class="flight-price">{formatPrice(flight.price.total, flight.price.currency)}</span>
 												</div>
 												<div class="flight-details">
 													<div class="flight-time">
@@ -1111,6 +1330,13 @@
 									<p>Try changing the Ready Date, using different addresses, or check again later.</p>
 								</div>
 							{/if}
+
+							{#if estimatedDeliveryISO}
+								<div class="flight-category">
+									<h4>📦 Estimated Delivery</h4>
+									<p><strong>Estimated delivery time:</strong> {formatDateTime(estimatedDeliveryISO)}</p>
+								</div>
+							{/if}
 						</div>
 					{/if}
 				</div>
@@ -1118,12 +1344,120 @@
 
 			<!-- Additional Information Section removed as requested -->
 
+			<!-- Quote Section -->
+			{#if netjetsQuote && (shipperAirportRoute || consigneeAirportRoute)}
+				<div class="form-section">
+					<h2>Quote</h2>
+					<div class="flight-results">
+						<table class="earliest-table">
+							<thead>
+								<tr>
+									<th>Item</th>
+									<th>Calculation</th>
+									<th>Amount</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#if netjetsQuote.NF > 0}
+									<tr>
+										<td>Network Fee (NF)</td>
+										<td>Weight-based: {poundsFromForm().toFixed(1)} lbs</td>
+										<td>{formatPrice(netjetsQuote.NF)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.MP > 0}
+									<tr>
+										<td>Pickup Mileage (MP)</td>
+										<td>{Math.round(shipperAirportRoute?.distance_miles || 0)} mi</td>
+										<td>{formatPrice(netjetsQuote.MP)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.MD > 0}
+									<tr>
+										<td>Delivery Mileage (MD)</td>
+										<td>{Math.round(consigneeAirportRoute?.distance_miles || 0)} mi</td>
+										<td>{formatPrice(netjetsQuote.MD)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.PP > 0}
+									<tr>
+										<td>Per Piece (PP)</td>
+										<td>{formData.pieces} pieces</td>
+										<td>{formatPrice(netjetsQuote.PP)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.NCUS > 0}
+									<tr>
+										<td>Non-Continental US (NCUS)</td>
+										<td>AK/HI/PR surcharge</td>
+										<td>{formatPrice(netjetsQuote.NCUS)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.AH > 0}
+									<tr>
+										<td>After Hours (AH)</td>
+										<td>Outside 8 AM - 6 PM</td>
+										<td>{formatPrice(netjetsQuote.AH)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.NFT > 0}
+									<tr>
+										<td>Network Freight Transfer (NFT)</td>
+										<td>Multiple MAWBs</td>
+										<td>{formatPrice(netjetsQuote.NFT)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.DG > 0}
+									<tr>
+										<td>Dangerous Goods (DG)</td>
+										<td>Hazmat surcharge</td>
+										<td>{formatPrice(netjetsQuote.DG)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.TFM > 0}
+									<tr>
+										<td>Transport Fee Mileage (TFM)</td>
+										<td>ATD mileage</td>
+										<td>{formatPrice(netjetsQuote.TFM)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.SSC > 0}
+									<tr>
+										<td>Security Surcharge (SSC)</td>
+										<td>6% of base</td>
+										<td>{formatPrice(netjetsQuote.SSC)}</td>
+									</tr>
+								{/if}
+								{#if netjetsQuote.FS > 0}
+									<tr>
+										<td>Fuel Surcharge (FS)</td>
+										<td>10% of base</td>
+										<td>{formatPrice(netjetsQuote.FS)}</td>
+									</tr>
+								{/if}
+								<tr>
+									<td colspan="2" style="text-align:right; font-weight:700;">Total</td>
+									<td style="font-weight:700;">{formatPrice(netjetsQuote.total)}</td>
+								</tr>
+							</tbody>
+						</table>
+						<div class="quote-disclaimer">
+							*These are transport costs and may not include incidentals like driver waiting time.
+						</div>
+					</div>
+				</div>
+			{/if}
+
 			<!-- Form Actions -->
 			<div class="form-actions">
 				<button type="button" class="btn secondary" onclick={() => goto('/dashboard/customer')}>
 					Cancel
 				</button>
-				<button type="submit" class="btn primary" disabled={submitting}>
+				<button 
+					type="submit" 
+					class="btn primary" 
+					disabled={submitting || !addressesValidated || !flightResults || !!flightSearchError || (flightResults?.summary?.totalOffers || 0) === 0}
+				>
 					{#if submitting}
 						<div class="btn-spinner"></div>
 						Creating Job...
@@ -1132,6 +1466,21 @@
 					{/if}
 				</button>
 			</div>
+			
+			<!-- Button Status Message -->
+			{#if !submitting && (!addressesValidated || !flightResults || !!flightSearchError || (flightResults?.summary?.totalOffers || 0) === 0)}
+				<div class="button-status-message">
+					{#if !addressesValidated}
+						💡 Please validate addresses and search for flights first
+					{:else if flightSearchError}
+						⚠️ Flight search error - please try again
+					{:else if !flightResults}
+						✈️ Flight search required before creating job
+					{:else if (flightResults?.summary?.totalOffers || 0) === 0}
+						❌ No flights found - try different dates or airports
+					{/if}
+				</div>
+			{/if}
 		</form>
 	{/if}
 </div>
@@ -1463,6 +1812,18 @@
 		max-width: 500px;
 	}
 
+	.button-status-message {
+		background: #fef3c7;
+		border: 1px solid #fbbf24;
+		border-radius: 8px;
+		padding: 0.75rem 1rem;
+		font-size: 0.875rem;
+		color: #92400e;
+		text-align: center;
+		margin-top: 0.75rem;
+		font-weight: 500;
+	}
+
 	/* Maps Container */
 	.maps-container {
 		margin-top: 2rem;
@@ -1616,11 +1977,7 @@
 		font-size: 0.875rem;
 	}
 
-	.flight-price {
-		font-weight: 700;
-		color: #059669;
-		font-size: 1rem;
-	}
+
 
 	.flight-details {
 		font-size: 0.8rem;
@@ -1648,6 +2005,98 @@
 
 	.no-flights p {
 		margin: 0.5rem 0;
+	}
+
+	/* Earliest table + highlight */
+	.earliest-table {
+		width: 100%;
+		border-collapse: collapse;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.earliest-table th,
+	.earliest-table td {
+		padding: 0.75rem;
+		border-bottom: 1px solid #f3f4f6;
+		font-size: 0.875rem;
+		color: #374151;
+	}
+
+	.earliest-table thead th {
+		background: #f8fafc;
+		font-weight: 600;
+	}
+
+	.recommended-row {
+		outline: 2px solid #3b82f6;
+		outline-offset: -2px;
+		background: #eff6ff;
+	}
+
+	.earliest-box {
+		padding: 0.25rem 0.5rem;
+		border: 2px solid #3b82f6;
+		border-radius: 6px;
+		color: #1e3a8a;
+		background: #eff6ff;
+	}
+
+	/* Highlight recommended flight cards */
+	.flight-card.recommended {
+		box-shadow: 0 0 0 2px #3b82f6 inset;
+		background: #eff6ff;
+	}
+
+	/* Earliest Available Flights Table */
+	.earliest-flights {
+		overflow-x: auto;
+		border-radius: 8px;
+		overflow: hidden;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.earliest-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.875rem;
+		color: #374151;
+	}
+
+	.earliest-table th,
+	.earliest-table td {
+		padding: 0.75rem 1rem;
+		text-align: left;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.earliest-table th {
+		background-color: #f9fafb;
+		font-weight: 600;
+		color: #1f2937;
+	}
+
+	.earliest-table tr:last-child td {
+		border-bottom: none;
+	}
+
+	.quote-disclaimer {
+		margin-top: 1rem;
+		padding: 0.75rem;
+		background: #f9fafb;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		color: #6b7280;
+		font-style: italic;
+		text-align: center;
+	}
+
+	.earliest-table tr.recommended-row {
+		background-color: #f0f9eb; /* Light green background for recommended flights */
+		font-weight: 600;
 	}
 
 	/* Responsive Design */

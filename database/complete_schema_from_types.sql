@@ -1,5 +1,5 @@
 -- =====================================================
--- COMPLETE CERTRACK DATABASE SCHEMA
+-- COMPLETE Certus Freight DATABASE SCHEMA
 -- Generated from supabase.types.ts
 -- =====================================================
 

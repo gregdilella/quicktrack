@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Accrual - CERTrack</title>
+	<title>Accrual - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

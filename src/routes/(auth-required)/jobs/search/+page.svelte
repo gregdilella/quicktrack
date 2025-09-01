@@ -171,7 +171,7 @@
 </script>
 
 <svelte:head>
-	<title>Job Search - CERTrack</title>
+	<title>Job Search - Certus Freight</title>
 </svelte:head>
 
 <div class="search-page-container">

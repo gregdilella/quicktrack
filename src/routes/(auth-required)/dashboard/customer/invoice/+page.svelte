@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Invoice - CERTrack</title>
+	<title>Invoice - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

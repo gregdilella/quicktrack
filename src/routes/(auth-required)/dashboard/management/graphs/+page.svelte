@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Tableau Graphs - CERTrack</title>
+	<title>Tableau Graphs - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

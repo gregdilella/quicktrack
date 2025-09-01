@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Confirm Times - CERTrack</title>
+	<title>Confirm Times - Certus Freight</title>
 </svelte:head>
 
 <div class="page-container">

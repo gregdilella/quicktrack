@@ -241,31 +241,79 @@ export const GET: RequestHandler = async ({ url }) => {
 						
 						// STRICT FILTER: Only allow major international/commercial airports
 						const isMajorAirport = name.includes('international airport') ||
-											   // Known major airports by name
-											   name.includes('trudeau') ||
-											   name.includes('pierre elliott') ||
-											   name.includes('pearson') ||
-											   name.includes('vancouver international') ||
-											   name.includes('calgary international') ||
-											   name.includes('ottawa international') ||
-											   name.includes('halifax international') ||
-											   name.includes('newark liberty') ||
-											   name.includes('kennedy international') ||
-											   name.includes('laguardia') ||
-											   name.includes('los angeles international') ||
-											   name.includes("o'hare") ||
-											   name.includes('miami international') ||
-											   name.includes('san francisco international') ||
-											   name.includes('seattle tacoma') ||
-											   name.includes('denver international') ||
-											   name.includes('phoenix sky harbor') ||
-											   name.includes('dallas fort worth') ||
-											   name.includes('houston intercontinental') ||
-											   name.includes('atlanta international') ||
-											   name.includes('boston logan') ||
-											   name.includes('baltimore washington') ||
-											   name.includes('reagan national') ||
-											   name.includes('dulles international');
+							   // Known major airports by name
+							   name.includes('trudeau') ||
+							   name.includes('pierre elliott') ||
+							   name.includes('pearson') ||
+							   name.includes('vancouver international') ||
+							   name.includes('calgary international') ||
+							   name.includes('ottawa international') ||
+							   name.includes('halifax international') ||
+							   name.includes('newark liberty') ||
+							   name.includes('kennedy international') ||
+							   name.includes('laguardia') ||
+							   name.includes('los angeles international') ||
+							   name.includes("o'hare") ||
+							   name.includes('miami international') ||
+							   name.includes('san francisco international') ||
+							   name.includes('seattle tacoma') ||
+							   name.includes('denver international') ||
+							   name.includes('phoenix sky harbor') ||
+							   name.includes('dallas fort worth') ||
+							   name.includes('houston intercontinental') ||
+							   name.includes('atlanta international') ||
+							   name.includes('boston logan') ||
+							   name.includes('baltimore washington') ||
+							   name.includes('reagan national') ||
+							   name.includes('dulles international') ||
+							   // UK & Europe
+							   name.includes('heathrow') ||
+							   name.includes('gatwick') ||
+							   name.includes('charles de gaulle') ||
+							   name.includes('orly') ||
+							   name.includes('schiphol') ||
+							   name.includes('frankfurt') ||
+							   name.includes('munich') ||
+							   name.includes('berlin brandenburg') ||
+							   name.includes('düsseldorf') || name.includes('dusseldorf') ||
+							   name.includes('hamburg') ||
+							   name.includes('zurich') ||
+							   name.includes('geneva') ||
+							   name.includes('vienna') ||
+							   name.includes('brussels') ||
+							   name.includes('copenhagen') ||
+							   name.includes('oslo') ||
+							   name.includes('arlanda') ||
+							   name.includes('helsinki') ||
+							   name.includes('dublin') ||
+							   name.includes('barajas') || name.includes('madrid') ||
+							   name.includes('el prat') || name.includes('barcelona') ||
+							   name.includes('lisbon') || name.includes('humberto delgado') ||
+							   name.includes('porto') ||
+							   name.includes('athens') ||
+							   name.includes('fiumicino') || name.includes('rome') ||
+							   name.includes('malpensa') || name.includes('linate') ||
+							   name.includes('istanbul') || name.includes('sabiha gokcen') ||
+							   name.includes('sheremetyevo') || name.includes('domodedovo') ||
+							   name.includes('prague') ||
+							   name.includes('budapest') ||
+							   name.includes('chopin') || name.includes('warsaw') ||
+							   name.includes('bucharest') || name.includes('otopeni') ||
+							   name.includes('sofia') ||
+							   // Middle East
+							   name.includes('dubai') ||
+							   name.includes('abu dhabi') ||
+							   name.includes('hamad international') || name.includes('doha') ||
+							   name.includes('king khalid') || name.includes('riyadh') ||
+							   name.includes('king abdulaziz') || name.includes('jeddah') ||
+							   name.includes('muscat') ||
+							   name.includes('bahrain international') ||
+							   name.includes('kuwait international') ||
+							   name.includes('queen alia') || name.includes('amman') ||
+							   name.includes('rafic hariri') || name.includes('beirut') ||
+							   name.includes('ben gurion') || name.includes('tel aviv') ||
+							   name.includes('cairo international') || name.includes('cairo') ||
+							   name.includes('larnaca');
 						
 						// Exclude ALL non-commercial facilities
 						const isExcluded = types.includes('travel_agency') ||
@@ -422,33 +470,167 @@ export const GET: RequestHandler = async ({ url }) => {
 								iataCode = 'YUL';
 								icaoCode = 'CYUL';
 							}
-							// Toronto Pearson
-							else if (lowerName.includes('pearson') || 
-								lowerName.includes('toronto pearson') ||
-								lowerName.includes('lester b. pearson') ||
-								lowerName.includes('yyz')) {
-								iataCode = 'YYZ';
-								icaoCode = 'CYYZ';
+							// UK Airports - London Heathrow
+							else if (lowerName.includes('heathrow') || lowerName.includes('lhr')) {
+								iataCode = 'LHR'; icaoCode = 'EGLL';
 							}
-							// Vancouver International
-							else if ((lowerName.includes('vancouver') && lowerName.includes('international')) || lowerName.includes('yvr')) {
-								iataCode = 'YVR';
-								icaoCode = 'CYVR';
+							// UK Airports - London Gatwick
+							else if (lowerName.includes('gatwick') || lowerName.includes('lgw')) {
+								iataCode = 'LGW'; icaoCode = 'EGKK';
 							}
-							// Calgary International
-							else if ((lowerName.includes('calgary') && lowerName.includes('international')) || lowerName.includes('yyc')) {
-								iataCode = 'YYC';
-								icaoCode = 'CYYC';
+							// France - Paris Charles de Gaulle / Orly
+							else if (lowerName.includes('charles de gaulle') || lowerName.includes('cdg')) {
+								iataCode = 'CDG'; icaoCode = 'LFPG';
 							}
-							// Ottawa International
-							else if ((lowerName.includes('ottawa') && lowerName.includes('international')) || lowerName.includes('yow')) {
-								iataCode = 'YOW';
-								icaoCode = 'CYOW';
+							else if (lowerName.includes('orly') || lowerName.includes('ory')) {
+								iataCode = 'ORY'; icaoCode = 'LFPO';
 							}
-							// Halifax International
-							else if ((lowerName.includes('halifax') && lowerName.includes('international')) || lowerName.includes('yhz')) {
-								iataCode = 'YHZ';
-								icaoCode = 'CYHZ';
+							// Netherlands - Amsterdam Schiphol
+							else if (lowerName.includes('schiphol') || lowerName.includes('ams')) {
+								iataCode = 'AMS'; icaoCode = 'EHAM';
+							}
+							// Germany - Frankfurt, Munich, Berlin Brandenburg, Dusseldorf, Hamburg
+							else if (lowerName.includes('frankfurt') || lowerName.includes('fra')) {
+								iataCode = 'FRA'; icaoCode = 'EDDF';
+							}
+							else if (lowerName.includes('munich') || lowerName.includes('muc')) {
+								iataCode = 'MUC'; icaoCode = 'EDDM';
+							}
+							else if (lowerName.includes('berlin brandenburg') || lowerName.includes('ber')) {
+								iataCode = 'BER'; icaoCode = 'EDDB';
+							}
+							else if (lowerName.includes('düsseldorf') || lowerName.includes('dusseldorf') || lowerName.includes('dus')) {
+								iataCode = 'DUS'; icaoCode = 'EDDL';
+							}
+							else if (lowerName.includes('hamburg') || lowerName.includes('ham')) {
+								iataCode = 'HAM'; icaoCode = 'EDDH';
+							}
+							// Switzerland - Zurich, Geneva
+							else if (lowerName.includes('zurich') || lowerName.includes('zrh')) {
+								iataCode = 'ZRH'; icaoCode = 'LSZH';
+							}
+							else if (lowerName.includes('geneva') || lowerName.includes('gva')) {
+								iataCode = 'GVA'; icaoCode = 'LSGG';
+							}
+							// Austria - Vienna
+							else if (lowerName.includes('vienna') || lowerName.includes('vie')) {
+								iataCode = 'VIE'; icaoCode = 'LOWW';
+							}
+							// Belgium - Brussels
+							else if (lowerName.includes('brussels') || lowerName.includes('bru')) {
+								iataCode = 'BRU'; icaoCode = 'EBBR';
+							}
+							// Nordics - Copenhagen, Oslo, Stockholm Arlanda, Helsinki
+							else if (lowerName.includes('copenhagen') || lowerName.includes('cph')) {
+								iataCode = 'CPH'; icaoCode = 'EKCH';
+							}
+							else if (lowerName.includes('oslo') || lowerName.includes('osl')) {
+								iataCode = 'OSL'; icaoCode = 'ENGM';
+							}
+							else if (lowerName.includes('arlanda') || lowerName.includes('arn')) {
+								iataCode = 'ARN'; icaoCode = 'ESSA';
+							}
+							else if (lowerName.includes('helsinki') || lowerName.includes('hel')) {
+								iataCode = 'HEL'; icaoCode = 'EFHK';
+							}
+							// Ireland - Dublin
+							else if (lowerName.includes('dublin') || lowerName.includes('dub')) {
+								iataCode = 'DUB'; icaoCode = 'EIDW';
+							}
+							// Spain - Madrid Barajas, Barcelona El Prat
+							else if (lowerName.includes('barajas') || lowerName.includes('madrid') || lowerName.includes('mad')) {
+								iataCode = 'MAD'; icaoCode = 'LEMD';
+							}
+							else if (lowerName.includes('el prat') || lowerName.includes('barcelona') || lowerName.includes('bcn')) {
+								iataCode = 'BCN'; icaoCode = 'LEBL';
+							}
+							// Portugal - Lisbon, Porto
+							else if (lowerName.includes('humberto delgado') || lowerName.includes('lisbon') || lowerName.includes('lis')) {
+								iataCode = 'LIS'; icaoCode = 'LPPT';
+							}
+							else if (lowerName.includes('porto') || lowerName.includes('opo')) {
+								iataCode = 'OPO'; icaoCode = 'LPPR';
+							}
+							// Greece - Athens
+							else if (lowerName.includes('athens') || lowerName.includes('ath')) {
+								iataCode = 'ATH'; icaoCode = 'LGAV';
+							}
+							// Italy - Rome Fiumicino, Milan Malpensa, Linate
+							else if (lowerName.includes('fiumicino') || lowerName.includes('rome') || lowerName.includes('fco')) {
+								iataCode = 'FCO'; icaoCode = 'LIRF';
+							}
+							else if (lowerName.includes('malpensa') || lowerName.includes('mxp')) {
+								iataCode = 'MXP'; icaoCode = 'LIMC';
+							}
+							else if (lowerName.includes('linate') || lowerName.includes('lin')) {
+								iataCode = 'LIN'; icaoCode = 'LIML';
+							}
+							// Turkey - Istanbul, Sabiha Gokcen
+							else if (lowerName.includes('istanbul') || lowerName.includes('ist')) {
+								iataCode = 'IST'; icaoCode = 'LTFM';
+							}
+							else if (lowerName.includes('sabiha gokcen') || lowerName.includes('saw')) {
+								iataCode = 'SAW'; icaoCode = 'LTFJ';
+							}
+							// Poland - Warsaw Chopin
+							else if (lowerName.includes('chopin') || lowerName.includes('warsaw') || lowerName.includes('waw')) {
+								iataCode = 'WAW'; icaoCode = 'EPWA';
+							}
+							// Czechia - Prague
+							else if (lowerName.includes('prague') || lowerName.includes('prg')) {
+								iataCode = 'PRG'; icaoCode = 'LKPR';
+							}
+							// Hungary - Budapest
+							else if (lowerName.includes('budapest') || lowerName.includes('bts') || lowerName.includes('bud')) {
+								iataCode = 'BUD'; icaoCode = 'LHBP';
+							}
+							// Romania - Bucharest Otopeni
+							else if (lowerName.includes('otopeni') || lowerName.includes('bucharest') || lowerName.includes('otp')) {
+								iataCode = 'OTP'; icaoCode = 'LROP';
+							}
+							// Bulgaria - Sofia
+							else if (lowerName.includes('sofia') || lowerName.includes('sof')) {
+								iataCode = 'SOF'; icaoCode = 'LBSF';
+							}
+							// Middle East - Dubai, Abu Dhabi, Doha, Riyadh, Jeddah, Muscat, Bahrain, Kuwait, Amman, Beirut, Tel Aviv, Cairo, Larnaca
+							else if (lowerName.includes('dubai') || lowerName.includes('dxb')) {
+								iataCode = 'DXB'; icaoCode = 'OMDB';
+							}
+							else if (lowerName.includes('abu dhabi') || lowerName.includes('auh')) {
+								iataCode = 'AUH'; icaoCode = 'OMAA';
+							}
+							else if (lowerName.includes('hamad international') || lowerName.includes('doha') || lowerName.includes('doh')) {
+								iataCode = 'DOH'; icaoCode = 'OTBD';
+							}
+							else if (lowerName.includes('king khalid') || lowerName.includes('riyadh') || lowerName.includes('ruh')) {
+								iataCode = 'RUH'; icaoCode = 'OERK';
+							}
+							else if (lowerName.includes('king abdulaziz') || lowerName.includes('jeddah') || lowerName.includes('jed')) {
+								iataCode = 'JED'; icaoCode = 'OEJN';
+							}
+							else if (lowerName.includes('muscat') || lowerName.includes('mct')) {
+								iataCode = 'MCT'; icaoCode = 'OOMS';
+							}
+							else if (lowerName.includes('bahrain') || lowerName.includes('bah')) {
+								iataCode = 'BAH'; icaoCode = 'OBBI';
+							}
+							else if (lowerName.includes('kuwait') || lowerName.includes('kwi')) {
+								iataCode = 'KWI'; icaoCode = 'OKBK';
+							}
+							else if (lowerName.includes('queen alia') || lowerName.includes('amman') || lowerName.includes('amm')) {
+								iataCode = 'AMM'; icaoCode = 'OJAI';
+							}
+							else if (lowerName.includes('rafic hariri') || lowerName.includes('beirut') || lowerName.includes('bey')) {
+								iataCode = 'BEY'; icaoCode = 'OLBA';
+							}
+							else if (lowerName.includes('ben gurion') || lowerName.includes('tel aviv') || lowerName.includes('tlv')) {
+								iataCode = 'TLV'; icaoCode = 'LLBG';
+							}
+							else if (lowerName.includes('cairo') || lowerName.includes('cai')) {
+								iataCode = 'CAI'; icaoCode = 'HECA';
+							}
+							else if (lowerName.includes('larnaca') || lowerName.includes('lca')) {
+								iataCode = 'LCA'; icaoCode = 'LCLK';
 							}
 							
 							// Calculate distance from origin

@@ -4,11 +4,15 @@
 	import { goto } from '$app/navigation'
 	import { getCurrentUser, requireAuth } from '$lib/auth'
 	import { jobSchema, type JobFormData, validateForm } from '$lib/validation/schemas'
+	import { computeNetjetsQuote, buildNetjetsInputFromJobForm, saveQuoteToDatabase } from '$lib/Quoting/netjets'
 	
 	let loading = false
 	let message = ''
 	let success = false
 	let validationErrors: Record<string, string> = {}
+
+	// Quote preview state
+	let quotePreview: ReturnType<typeof computeNetjetsQuote> | null = null
 	
 	// Helper function to get today's date in YYYY-MM-DD format
 	function getTodaysDate(): string {
@@ -117,6 +121,16 @@
 	
 	// Reactive statement to update jobno whenever job_number or job_type changes
 	$: jobData.jobno = generateJobno(jobData.job_number, jobData.job_type)
+
+	// Reactive: compute quote preview as the user fills the form (Netjets only for now)
+	$: {
+		try {
+			const input = buildNetjetsInputFromJobForm(jobData)
+			quotePreview = computeNetjetsQuote(input)
+		} catch (e) {
+			quotePreview = null
+		}
+	}
 	
 	// Helper function to clean up job data for database insertion
 	function cleanJobDataForDB(data: JobFormData) {
@@ -451,6 +465,36 @@
 			</div>
 		</div>
 
+		<!-- Quote Preview (Netjets) -->
+		<div class="row-box">
+			<div class="field-group" style="min-width:280px;">
+				<label class="blue-text">Quote Preview (Netjets)</label>
+				{#if quotePreview}
+					<div class="quote-grid">
+						<div>NF: ${quotePreview.NF.toFixed(2)}</div>
+						<div>PP: ${quotePreview.PP.toFixed(2)}</div>
+						<div>NCUS: ${quotePreview.NCUS.toFixed(2)}</div>
+						<div>MP: ${quotePreview.MP.toFixed(2)}</div>
+						<div>WT: ${quotePreview.WT.toFixed(2)}</div>
+						<div>MD: ${quotePreview.MD.toFixed(2)}</div>
+						<div>AH: ${quotePreview.AH.toFixed(2)}</div>
+						<div>NFT: ${quotePreview.NFT.toFixed(2)}</div>
+						<div>DG: ${quotePreview.DG.toFixed(2)}</div>
+						<div>TFM: ${quotePreview.TFM.toFixed(2)}</div>
+						<div>SSC: ${quotePreview.SSC.toFixed(2)}</div>
+						<div>FS: ${quotePreview.FS.toFixed(2)}</div>
+						<div class="quote-total">Subtotal: ${quotePreview.subtotal.toFixed(2)}</div>
+						<div class="quote-total">Total: ${quotePreview.total.toFixed(2)}</div>
+					</div>
+					<div class="quote-disclaimer">
+						*These are transport costs and may not include incidentals like driver waiting time.
+					</div>
+				{:else}
+					<div class="quote-grid">Fill the form to preview</div>
+				{/if}
+			</div>
+		</div>
+
 		<!-- Create Job Button -->
 		<div class="action-row">
 			<button class="create-job-btn" on:click={createNewJob} disabled={loading}>
@@ -705,6 +749,40 @@
 		display: block;
 	}
 
+	/* Quote Preview Styles */
+	.quote-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 4px;
+		font-size: 10px;
+		font-family: 'Courier New', monospace;
+		background: white;
+		border: 1px solid #ccc;
+		padding: 8px;
+		border-radius: 4px;
+		max-height: 150px;
+		overflow-y: auto;
+	}
+
+	.quote-total {
+		font-weight: bold;
+		color: #dc2626;
+		grid-column: 1 / -1;
+		text-align: center;
+		border-top: 1px solid #ccc;
+		padding-top: 4px;
+		margin-top: 4px;
+	}
+
+	.quote-disclaimer {
+		font-size: 9px;
+		color: #666;
+		font-style: italic;
+		margin-top: 6px;
+		text-align: center;
+		line-height: 1.2;
+	}
+
 	/* Responsive Design */
 	@media (max-width: 768px) {
 		.row-box {
@@ -723,6 +801,11 @@
 		
 		.location-input {
 			font-size: 10px;
+		}
+		
+		.quote-grid {
+			grid-template-columns: 1fr;
+			font-size: 9px;
 		}
 	}
 </style> 

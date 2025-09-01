@@ -14,6 +14,7 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 	let loading = true
 	let job: any = null
 	let timeline: any = null
+	let salesman: any = null
 	let error = ''
 	let activeTab = 'where'
 	let saving = false
@@ -44,7 +45,8 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 						name,
 						account_number,
 						contact_email,
-						phone
+						phone,
+						salesman_id
 					)
 				`)
 				.eq('jobno', jobno)
@@ -57,6 +59,18 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 			}
 
 			job = data
+			// Load salesman info if linked from customer
+			salesman = null
+			if (job?.customers?.salesman_id) {
+				const { data: sm, error: sErr } = await supabase
+					.from('salesman')
+					.select('salesman_id, name, email, fin_cono')
+					.eq('salesman_id', job.customers.salesman_id)
+					.single()
+				if (!sErr) {
+					salesman = sm
+				}
+			}
 			
 			// Also fetch timeline data to determine status
 			await fetchTimeline()
@@ -253,7 +267,7 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 </script>
 
 <svelte:head>
-	<title>Job {jobno} - Operations - CERTrack</title>
+	<title>Job {jobno} - Operations - Certus Freight</title>
 </svelte:head>
 
 <div class="job-details-container">
@@ -309,6 +323,7 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 			<div class="job-header">
 				<div class="job-title-section">
 					<h1 class="job-title">Job {job.jobno}</h1>
+					<div class="jobno-badge">JOB NO: {job.jobno}</div>
 					<div class="job-meta">
 						{#if job.shipper_name}
 							<span class="job-info">From: <strong>{job.shipper_name}</strong></span>
@@ -336,6 +351,12 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 						{/if}
 						{#if job.customers?.phone || job.customer_phone}
 							<span class="customer-info-item">Phone: <strong>{job.customers?.phone || job.customer_phone}</strong></span>
+						{/if}
+						{#if salesman}
+							<span class="customer-info-item">Salesman: <strong>{salesman.name}</strong></span>
+							{#if salesman.fin_cono}
+								<span class="customer-info-item">FIN CONO: <strong>{salesman.fin_cono}</strong></span>
+							{/if}
 						{/if}
 					</div>
 				</div>
@@ -597,6 +618,19 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
+	}
+
+	.jobno-badge {
+		display: inline-block;
+		margin-top: 0.25rem;
+		padding: 0.25rem 0.75rem;
+		border: 1px solid #ea580c;
+		color: #ea580c;
+		background: #ffffff;
+		border-radius: 9999px;
+		font-size: 0.85rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
 	}
 
 	.job-meta {

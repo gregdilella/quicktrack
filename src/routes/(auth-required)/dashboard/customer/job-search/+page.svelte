@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Job Search - CERTrack</title>
+	<title>Job Search - Certus Freight</title>
 </svelte:head>
 
 <script lang="ts">
@@ -267,7 +267,7 @@
 						<div class="job-card" on:click={() => viewJobDetails(job.jobnumber)} on:keydown={(e) => e.key === 'Enter' && viewJobDetails(job.jobnumber)} tabindex="0" role="button">
 							<div class="job-header">
 								<div class="job-number">
-									<strong>{job.jobnumber}</strong>
+									<strong>{job.jobno}</strong>
 								</div>
 								<div class="job-status" style="background-color: {getStatusColor(job.status)};">
 									{job.status || 'Unknown'}

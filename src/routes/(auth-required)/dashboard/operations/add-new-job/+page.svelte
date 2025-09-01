@@ -397,8 +397,8 @@
 					<!-- Job Information -->
 					<div class="form-row">
 						<div class="form-group">
-							<label>Job Number</label>
-							<input type="text" value={jobData.job_number || 'Auto-generated'} class="form-input" readonly />
+							<label>Job No</label>
+							<input type="text" value={jobData.jobno || 'Auto-generated'} class="form-input" readonly />
 						</div>
 						<div class="form-group">
 							<label>BOL Number</label>

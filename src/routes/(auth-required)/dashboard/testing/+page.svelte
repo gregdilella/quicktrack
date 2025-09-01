@@ -171,7 +171,7 @@
 </script>
 
 <svelte:head>
-	<title>Flight API Testing - CERTrack</title>
+	<title>Flight API Testing - Certus Freight</title>
 </svelte:head>
 
 <div class="testing-container">

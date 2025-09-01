@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>Job Details - CERTrack</title>
+	<title>Job Details - Certus Freight</title>
 </svelte:head>
 
 <script lang="ts">
@@ -8,10 +8,13 @@
 	import { goto } from '$app/navigation';
 	import { getCustomerJob } from '$lib/services/customerService';
 	import type { JobsFile } from '$lib/services/customerService';
+	import { supabase } from '$lib/supabase';
 
 	let job: JobsFile | null = null;
 	let loading = true;
 	let error = '';
+	let quoteItems: { id: number; chargecode: string; charge: number; created_at: string }[] = [];
+	let loadingQuote = false;
 
 	$: jobNumber = $page.params.jobno;
 
@@ -29,12 +32,38 @@
 			job = await getCustomerJob(jobNumber);
 			if (!job) {
 				error = 'Job not found or you do not have permission to view this job.';
+			} else {
+				// Load quote after job is loaded
+				await loadQuoteItems();
 			}
 		} catch (err) {
 			console.error('Error loading job details:', err);
 			error = 'Failed to load job details. Please try again.';
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function loadQuoteItems() {
+		if (!job?.jobnumber) return;
+		try {
+			loadingQuote = true;
+			const { data, error: quoteError } = await supabase
+				.from('quotes')
+				.select('id, chargecode, charge, created_at')
+				.eq('jobnumber', job.jobnumber)
+				.order('chargecode', { ascending: true });
+			
+			if (quoteError) {
+				console.error('Error loading quote items:', quoteError);
+				return;
+			}
+			
+			quoteItems = data || [];
+		} catch (err) {
+			console.error('Error in loadQuoteItems:', err);
+		} finally {
+			loadingQuote = false;
 		}
 	}
 
@@ -315,6 +344,43 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- Quote Section -->
+			<div class="details-section">
+				<h2>Quote Breakdown</h2>
+				{#if loadingQuote}
+					<div class="quote-loading">
+						<div class="spinner"></div>
+						<p>Loading quote...</p>
+					</div>
+				{:else if quoteItems.length === 0}
+					<div class="no-quote">
+						<p>No quote available for this job.</p>
+					</div>
+				{:else}
+					<div class="quote-table-container">
+						<table class="quote-table">
+							<thead>
+								<tr>
+									<th>Charge Code</th>
+									<th>Amount</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each quoteItems as item}
+									<tr class:total-row={item.chargecode === 'TOTAL'}>
+										<td class="charge-code">{item.chargecode}</td>
+										<td class="charge-amount">${item.charge.toFixed(2)}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+						<div class="quote-disclaimer">
+							*These are transport costs and may not include incidentals like driver waiting time.
+						</div>
+					</div>
+				{/if}
+			</div>
 		</div>
 	{/if}
 </div>
@@ -584,6 +650,89 @@
 		margin: 0;
 		line-height: 1.6;
 		color: #374151;
+	}
+
+	/* Quote Styles */
+	.quote-loading, .no-quote {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 2rem;
+		text-align: center;
+		color: #6b7280;
+	}
+
+	.quote-table-container {
+		overflow-x: auto;
+	}
+
+	.quote-table {
+		width: 100%;
+		border-collapse: collapse;
+		background: white;
+		border-radius: 8px;
+		overflow: hidden;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.quote-table th {
+		background: #f8fafc;
+		padding: 1rem;
+		text-align: left;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #374151;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		border-bottom: 2px solid #e5e7eb;
+	}
+
+	.quote-table td {
+		padding: 0.75rem 1rem;
+		border-bottom: 1px solid #f3f4f6;
+		font-size: 0.875rem;
+	}
+
+	.charge-code {
+		font-weight: 600;
+		color: #1f2937;
+		text-transform: uppercase;
+	}
+
+	.charge-amount {
+		font-weight: 700;
+		color: #059669;
+		font-family: 'Courier New', monospace;
+		text-align: right;
+	}
+
+	.total-row {
+		background: #f0fdf4;
+		border-top: 2px solid #22c55e;
+	}
+
+	.total-row .charge-code {
+		color: #166534;
+		font-weight: 700;
+	}
+
+	.total-row .charge-amount {
+		color: #166534;
+		font-size: 1.1rem;
+		font-weight: 700;
+	}
+
+	.quote-disclaimer {
+		margin-top: 1rem;
+		padding: 0.75rem;
+		background: #f9fafb;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		font-size: 0.75rem;
+		color: #6b7280;
+		font-style: italic;
+		text-align: center;
 	}
 
 	/* Responsive Design */

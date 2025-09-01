@@ -43,6 +43,13 @@
 			color: '#16a34a'
 		},
 		{
+			title: 'Salesman',
+			description: 'Add a new sales representative',
+			icon: '🧑‍💼',
+			href: '/dashboard/management/add-new-salesman',
+			color: '#0ea5e9'
+		},
+		{
 			title: 'LSP',
 			description: 'Add a new logistics service provider',
 			icon: '🚚',
@@ -55,6 +62,14 @@
 			icon: '✈️',
 			href: '/dashboard/management/add-new-airline',
 			color: '#2563eb'
+		}
+		,
+		{
+			title: 'Packaging',
+			description: 'Add a new packaging type',
+			icon: '📦',
+			href: '/dashboard/management/add-new-packaging',
+			color: '#22c55e'
 		}
 	]
 </script>

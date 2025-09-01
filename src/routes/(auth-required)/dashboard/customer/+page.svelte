@@ -187,7 +187,7 @@
 				</div>
 				<h3>Get Quote</h3>
 				<p>Request pricing for your shipment</p>
-				<a href="/dashboard/customer/quote" class="action-btn">Get Quote</a>
+				<a href="/dashboard/customer/new-job" class="action-btn">Get Quote</a>
 			</div>
 		</div>
 	</div>
@@ -246,7 +246,7 @@
 					</svg>
 				</div>
 				<div class="activity-content">
-					<p class="activity-title">Welcome to CERTrack!</p>
+					<p class="activity-title">Welcome to Certus Freight!</p>
 					<p class="activity-time">Just now</p>
 				</div>
 			</div>

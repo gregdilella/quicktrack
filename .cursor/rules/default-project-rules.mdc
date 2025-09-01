@@ -15,6 +15,7 @@ alwaysApply: true
 
 - Never use gradients.
 - Always use tailwind classes instead of `<style>` blocks.
+- Use shadcn for any forms or tables or buttons that you use.
 
 # Project Organization
 

@@ -42,7 +42,6 @@
 		customer: [
 			{ label: 'New Job', href: '/dashboard/customer/new-job' },
 			{ label: 'Job Search', href: '/dashboard/customer/job-search' },
-			{ label: 'Quote', href: '/dashboard/customer/quote' },
 			{ label: 'Invoice', href: '/dashboard/customer/invoice' }
 		]
 	};
