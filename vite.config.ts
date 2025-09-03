@@ -13,6 +13,14 @@ export default defineConfig(({ mode }) => {
 			'import.meta.env.PUBLIC_SUPABASE_URL': JSON.stringify(env.PUBLIC_SUPABASE_URL),
 			'import.meta.env.PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(env.PUBLIC_SUPABASE_ANON_KEY)
 		},
-		server: { fs: { allow: ['..'] } }
+		server: { fs: { allow: ['..'] } },
+		ssr: {
+			noExternal: ['bits-ui', 'lucide-svelte', '@internationalized/date'],
+			external: ['@internationalized/date']
+		},
+		optimizeDeps: {
+			include: ['bits-ui', 'lucide-svelte', '@internationalized/date'],
+			exclude: ['@internationalized/date']
+		}
 	};
 });

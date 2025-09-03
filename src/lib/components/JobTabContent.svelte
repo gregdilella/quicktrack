@@ -3,6 +3,7 @@
 	import { supabase } from '$lib/supabase'
 	import { createEventDispatcher } from 'svelte'
 	import { onMount } from 'svelte'
+	import DateTimePicker from '$lib/components/ui/DateTimePicker.svelte'
 		import { 
 		getAirlines, 
 		getLSPs, 
@@ -152,24 +153,56 @@
 	}
 
 	async function loadQuoteItems() {
-		if (!jobData.jobno && !jobData.jobnumber) return
+		if (!jobData.jobno && !jobData.jobnumber) {
+			console.log('No job identifier for loading quotes');
+			return;
+		}
+		
 		try {
 			loadingQuote = true
-			const jobIdentifier = jobData.jobno || jobData.jobnumber
-			const { data, error } = await supabase
+			// Quotes table references jobsfile(jobnumber), so we need to use the jobnumber field
+			const jobIdentifier = jobData.jobnumber || jobData.jobno
+			console.log('Loading quotes for job:', jobIdentifier);
+			console.log('Available job identifiers:', { 
+				jobno: jobData.jobno, 
+				jobnumber: jobData.jobnumber,
+				job_number: jobData.job_number 
+			});
+			
+			// Try querying with the primary identifier first
+			let { data, error } = await supabase
 				.from('quotes')
 				.select('id, chargecode, charge, created_at')
 				.eq('jobnumber', jobIdentifier)
 				.order('chargecode', { ascending: true })
 			
+			console.log('Quote query result:', { data, error, jobIdentifier });
+			
+			// If no results and we tried with jobno, also try with jobnumber
+			if ((!data || data.length === 0) && jobData.jobno && jobData.jobnumber && jobIdentifier === jobData.jobno) {
+				console.log('No quotes found with jobno, trying jobnumber:', jobData.jobnumber);
+				const fallbackResult = await supabase
+					.from('quotes')
+					.select('id, chargecode, charge, created_at')
+					.eq('jobnumber', jobData.jobnumber)
+					.order('chargecode', { ascending: true });
+				
+				data = fallbackResult.data;
+				error = fallbackResult.error;
+				console.log('Fallback query result:', { data, error, jobnumber: jobData.jobnumber });
+			}
+			
 			if (error) {
 				console.error('Error loading quote items:', error)
+				saveError = `Failed to load quotes: ${error.message}`;
 				return
 			}
 			
 			quoteItems = data || []
+			console.log('Final loaded quote items:', quoteItems.length, quoteItems);
 		} catch (err) {
 			console.error('Error in loadQuoteItems:', err)
+			saveError = 'Failed to load quote data';
 		} finally {
 			loadingQuote = false
 		}
@@ -385,13 +418,21 @@
 	 * Auto-save timetable information to database
 	 * This function will be called whenever WHEN tab fields are updated
 	 */
+	let isSavingTimeline = false;
 	async function saveTimelineInfo() {
 		if (!jobData.jobno && !jobData.jobnumber) {
 			console.warn('No job number available for saving timeline info')
 			return
 		}
 		
+		// Prevent concurrent saves
+		if (isSavingTimeline) {
+			console.log('Save already in progress, skipping');
+			return;
+		}
+		
 		try {
+			isSavingTimeline = true;
 			saving = true
 			saveError = ''
 			
@@ -411,10 +452,9 @@
 				.eq('jobnumber', jobIdentifier)
 				.single()
 			
-			// Prepare the timeline data
+			// Prepare the timeline data (excluding jobcreated which should not be updated)
 			const timelineData = {
 				jobnumber: jobIdentifier,
-				jobcreated: jobData.jobcreated ? new Date(jobData.jobcreated).toISOString() : null,
 				pdriver_dispatched: jobData.pdriver_dispatched ? new Date(jobData.pdriver_dispatched).toISOString() : null,
 				pdriver_arrived: jobData.pdriver_arrived ? new Date(jobData.pdriver_arrived).toISOString() : null,
 				pdriver_pickup: jobData.pdriver_pickup ? new Date(jobData.pdriver_pickup).toISOString() : null,
@@ -470,18 +510,27 @@
 			saveError = 'An unexpected error occurred while saving'
 		} finally {
 			saving = false
+			isSavingTimeline = false
 		}
 	}
 
 	/**
 	 * Load timetable information from database
 	 */
+	let isLoadingTimeline = false;
 	async function loadTimelineInfo() {
 		if (!jobData.jobno && !jobData.jobnumber) {
 			return
 		}
 		
+		// Prevent concurrent loads
+		if (isLoadingTimeline) {
+			console.log('Timeline load already in progress, skipping');
+			return;
+		}
+		
 		try {
+			isLoadingTimeline = true;
 			const jobIdentifier = jobData.jobno || jobData.jobnumber
 			
 			const { data, error } = await supabase
@@ -490,8 +539,15 @@
 				.eq('jobnumber', jobIdentifier)
 				.single()
 			
-			if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-				console.error('Error loading timeline info:', error)
+			if (error) {
+				if (error.code === 'PGRST116') {
+					// Record not found - this is normal for new jobs
+					console.log('No timeline record found for job:', jobIdentifier);
+				} else {
+					// Other error - log it but don't retry
+					console.error('Error loading timeline info:', error);
+					saveError = 'Unable to load timeline data. Please refresh the page.';
+				}
 				return
 			}
 			
@@ -515,6 +571,9 @@
 			
 		} catch (err) {
 			console.error('Error loading timeline info:', err)
+			saveError = 'Unable to load timeline data. Please refresh the page.';
+		} finally {
+			isLoadingTimeline = false;
 		}
 	}
 
@@ -540,9 +599,26 @@
 		}, 1000) // Wait 1 second after user stops typing
 	}
 
-	// Load timeline info when component mounts or job data changes
-	$: if ((jobData.jobno || jobData.jobnumber) && activeTab === 'when') {
-		loadTimelineInfo()
+
+
+	/**
+	 * Helper function to format datetime for display
+	 */
+	function formatDateTime(dateTimeString: string | null): string {
+		if (!dateTimeString) return 'Not set'
+		try {
+			const date = new Date(dateTimeString)
+			return date.toLocaleString()
+		} catch {
+			return 'Invalid date'
+		}
+	}
+
+	// Load timeline info only once when component mounts or when switching to 'when' tab
+	let hasLoadedTimeline = false;
+	$: if ((jobData.jobno || jobData.jobnumber) && activeTab === 'when' && !hasLoadedTimeline) {
+		hasLoadedTimeline = true;
+		loadTimelineInfo();
 	}
 
 	/**
@@ -877,19 +953,7 @@
 		})
 	}
 
-	/**
-	 * Format date and time for display
-	 */
-	function formatDateTime(dateString: string | null): string {
-		if (!dateString) return 'N/A'
-		return new Date(dateString).toLocaleString('en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		})
-	}
+
 
 	// Watch for jobData changes to reload assignments
 	$: {
@@ -1089,7 +1153,7 @@
 					type="text" 
 					value={jobData.customers?.account_number || jobData.customer_account || ''}
 					class="form-input customer-field" 
-					on:input={(e) => {
+					oninput={(e) => {
 						const target = e.target as HTMLInputElement
 						if (jobData.customers) {
 							jobData.customers.account_number = target.value
@@ -1108,7 +1172,7 @@
 					value={jobData.customers?.name || jobData.customer_name || ''}
 					required 
 					class="form-input customer-field" 
-					on:input={(e) => {
+					oninput={(e) => {
 						const target = e.target as HTMLInputElement
 						if (jobData.customers) {
 							jobData.customers.name = target.value
@@ -1126,7 +1190,7 @@
 					type="text" 
 					bind:value={jobData.customer_contact} 
 					class="form-input customer-field" 
-					on:input={debouncedSave}
+					oninput={debouncedSave}
 					placeholder="Enter contact person name (job-specific)"
 				/>
 			</div>
@@ -1136,7 +1200,7 @@
 					type="tel" 
 					value={jobData.customers?.phone || jobData.customer_phone || ''}
 					class="form-input customer-field" 
-					on:input={(e) => {
+					oninput={(e) => {
 						const target = e.target as HTMLInputElement
 						if (jobData.customers) {
 							jobData.customers.phone = target.value
@@ -1154,7 +1218,7 @@
 					type="email" 
 					value={jobData.customers?.contact_email || jobData.customer_email || ''}
 					class="form-input customer-field" 
-					on:input={(e) => {
+					oninput={(e) => {
 						const target = e.target as HTMLInputElement
 						if (jobData.customers) {
 							jobData.customers.contact_email = target.value
@@ -1212,7 +1276,7 @@
 					bind:value={jobData.commodity} 
 					required 
 					class="form-input commodity-field" 
-					on:input={debouncedCommoditySave}
+					oninput={debouncedCommoditySave}
 					placeholder="Enter commodity type"
 				/>
 			</div>
@@ -1222,7 +1286,7 @@
 					type="text" 
 					bind:value={jobData.commodity_code} 
 					class="form-input commodity-field" 
-					on:input={debouncedCommoditySave}
+					oninput={debouncedCommoditySave}
 					placeholder="Enter commodity code"
 				/>
 			</div>
@@ -1233,7 +1297,7 @@
 					bind:value={jobData.pieces} 
 					required 
 					class="form-input commodity-field" 
-					on:input={debouncedCommoditySave}
+					oninput={debouncedCommoditySave}
 					placeholder="Number of pieces"
 					min="1"
 				/>
@@ -1246,7 +1310,7 @@
 						bind:value={jobData.weight} 
 						required 
 						class="form-input commodity-field" 
-						on:input={debouncedCommoditySave}
+						oninput={debouncedCommoditySave}
 						placeholder="Weight"
 						min="0"
 						step="0.01"
@@ -1254,7 +1318,7 @@
 					<select 
 						bind:value={jobData.weight_unit} 
 						class="form-input weight-unit commodity-field"
-						on:change={debouncedCommoditySave}
+						onchange={debouncedCommoditySave}
 					>
 						<option value="lbs">LBS</option>
 						<option value="kg">KG</option>
@@ -1268,7 +1332,7 @@
 					bind:value={jobData.dimensions} 
 					placeholder="L x W x H (inches)" 
 					class="form-input commodity-field" 
-					on:input={debouncedCommoditySave}
+					oninput={debouncedCommoditySave}
 				/>
 			</div>
 			<div class="form-group">
@@ -1277,7 +1341,7 @@
 					type="number" 
 					bind:value={jobData.declared_value} 
 					class="form-input commodity-field" 
-					on:input={debouncedCommoditySave}
+					oninput={debouncedCommoditySave}
 					placeholder="Declared value ($)"
 					min="0"
 					step="0.01"
@@ -1289,7 +1353,7 @@
 					bind:value={jobData.description} 
 					class="form-input form-textarea commodity-field" 
 					rows="3"
-					on:input={debouncedCommoditySave}
+					oninput={debouncedCommoditySave}
 					placeholder="Detailed description of the commodity..."
 				></textarea>
 			</div>
@@ -1468,7 +1532,7 @@
 					bind:value={jobData.service_type} 
 					required 
 					class="form-input transport-field"
-					on:change={debouncedTransportSave}
+					onchange={debouncedTransportSave}
 				>
 					<option value="">Select Service Type</option>
 					<option value="ground">Ground Transportation</option>
@@ -1484,7 +1548,7 @@
 				<select 
 					bind:value={jobData.transport_mode} 
 					class="form-input transport-field"
-					on:change={debouncedTransportSave}
+					onchange={debouncedTransportSave}
 				>
 					<option value="">Select Mode</option>
 					<option value="truck">Truck</option>
@@ -1499,7 +1563,7 @@
 				<select 
 					bind:value={jobData.equipment_type} 
 					class="form-input transport-field"
-					on:change={debouncedTransportSave}
+					onchange={debouncedTransportSave}
 				>
 					<option value="">Select Equipment</option>
 					<option value="van">Dry Van</option>
@@ -1514,7 +1578,7 @@
 				<select 
 					bind:value={jobData.vehicle_type} 
 					class="form-input transport-field"
-					on:change={debouncedTransportSave}
+					onchange={debouncedTransportSave}
 				>
 					<option value="">Select Vehicle</option>
 					<option value="car">Car</option>
@@ -1528,7 +1592,7 @@
 					bind:value={jobData.special_instructions} 
 					class="form-input form-textarea transport-field" 
 					rows="3"
-					on:input={debouncedTransportSave}
+					oninput={debouncedTransportSave}
 					placeholder="Enter any special handling instructions or requirements..."
 				></textarea>
 			</div>
@@ -1538,7 +1602,7 @@
 		<div class="management-section">
 			<div class="section-header">
 				<h4 class="blue-text">--- LSP ASSIGNMENTS ---</h4>
-				<button on:click={refreshAssignments} class="refresh-button">
+				<button onclick={refreshAssignments} class="refresh-button">
 					<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
 					</svg>
@@ -1573,7 +1637,7 @@
 					<div class="form-field">
 						<label class="field-label">&nbsp;</label>
 						<button 
-							on:click={addLSPToJob} 
+							onclick={addLSPToJob} 
 							disabled={!newLSP.lsp_id || !newLSP.function}
 							class="add-button"
 						>
@@ -1606,8 +1670,8 @@
 								{/if}
 							</div>
 							<div class="assignment-actions">
-								<button on:click={() => updateLSPAssignmentStatus(row.id, 'Completed')} class="action-btn complete">Complete</button>
-								<button on:click={() => removeLSPAssignment(row.id)} class="action-btn remove">Remove</button>
+								<button onclick={() => updateLSPAssignmentStatus(row.id, 'Completed')} class="action-btn complete">Complete</button>
+								<button onclick={() => removeLSPAssignment(row.id)} class="action-btn remove">Remove</button>
 							</div>
 						</div>
 						
@@ -1638,7 +1702,7 @@
 									class="cost-input"
 								/>
 								<button 
-									on:click={() => addCostToLSP(row)} 
+									onclick={() => addCostToLSP(row)} 
 									class="add-cost-btn"
 									disabled={!newCost.cost || !newCost.description || !newCost.ledgercode}
 								>
@@ -1657,7 +1721,7 @@
 												<small class="cost-ledger">Ledger: {cost.ledgercode}</small>
 											</div>
 											<button 
-												on:click={() => removeCostFromLSP(cost.id, row.id)} 
+												onclick={() => removeCostFromLSP(cost.id, row.id)} 
 												class="remove-cost-btn"
 											>
 												×
@@ -1731,7 +1795,7 @@
 					<div class="form-field">
 						<label class="field-label">&nbsp;</label>
 						<button 
-							on:click={addAWBToJob} 
+							onclick={addAWBToJob} 
 							disabled={!newAWB.awb_number || !newAWB.airline_id}
 							class="add-button"
 						>
@@ -1817,9 +1881,9 @@
 							{/if}
 						</div>
 						<div class="assignment-actions">
-							<button on:click={() => updateAWBStatusHandler(awb.id, 'In Transit')} class="action-btn transit">In Transit</button>
-							<button on:click={() => updateAWBStatusHandler(awb.id, 'Delivered')} class="action-btn complete">Delivered</button>
-							<button on:click={() => removeAWBHandler(awb.id)} class="action-btn remove">Remove</button>
+							<button onclick={() => updateAWBStatusHandler(awb.id, 'In Transit')} class="action-btn transit">In Transit</button>
+							<button onclick={() => updateAWBStatusHandler(awb.id, 'Delivered')} class="action-btn complete">Delivered</button>
+							<button onclick={() => removeAWBHandler(awb.id)} class="action-btn remove">Remove</button>
 						</div>
 					</div>
 				{/each}
@@ -1859,7 +1923,7 @@
 			<div class="form-grid">
 				<div class="form-group">
 					<label class="blue-text">SELECT PACKAGING (optional)</label>
-					<select bind:value={selectedPackagingId} class="form-input" on:change={savePackagingSelection}>
+					<select bind:value={selectedPackagingId} class="form-input" onchange={savePackagingSelection}>
 						<option value="">None</option>
 						{#each availablePackaging as p}
 							<option value={p.id}>{p.name}{p.type ? ` - ${p.type}` : ''}{p.temperature ? ` (${p.temperature})` : ''}</option>
@@ -1933,141 +1997,204 @@
 			{/if}
 		</div>
 		
-		<div class="timeline-grid">
-			<!-- Basic Scheduling -->
-			<div class="timeline-section">
-				<h4 class="section-title">Basic Scheduling</h4>
-				<div class="form-group">
-					<label class="blue-text">READY DATE:</label>
-					<input 
-						type="date" 
-						bind:value={jobData.ready_date} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
+		<div class="space-y-6">
+			<!-- Job Created (Read-Only) -->
+			<div class="bg-gray-50 p-4 rounded-lg border">
+				<h4 class="font-semibold text-gray-700 mb-2">Job Created (System Generated)</h4>
+				<div class="text-sm text-gray-600">
+					{#if jobData.created_at}
+						{new Date(jobData.created_at).toLocaleString()}
+					{:else}
+						Not available
+					{/if}
 				</div>
-				<div class="form-group">
-					<label class="blue-text">READY TIME:</label>
-					<input 
-						type="time" 
-						bind:value={jobData.ready_time} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
+			</div>
+
+			<!-- Ready Date/Time -->
+			<div class="bg-white p-4 rounded-lg border">
+				<h4 class="font-semibold text-blue-700 mb-4">📦 Ready for Pickup</h4>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium mb-2">Ready Date:</label>
+						<input 
+							type="date" 
+							bind:value={jobData.ready_date} 
+							class="w-full p-2 border rounded-md"
+							onchange={debouncedTimelineSave}
+						/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium mb-2">Ready Time:</label>
+						<input 
+							type="time" 
+							bind:value={jobData.ready_time} 
+							class="w-full p-2 border rounded-md"
+							onchange={debouncedTimelineSave}
+						/>
+					</div>
 				</div>
-				<div class="form-group">
-					<label class="blue-text">JOB CREATED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.jobcreated} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
+				{#if jobData.ready_date || jobData.ready_time}
+					<div class="mt-3 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+						Ready: {jobData.ready_date || 'No date'} {jobData.ready_time || 'No time'}
+					</div>
+				{/if}
 			</div>
 
 			<!-- Pickup Process -->
-			<div class="timeline-section">
-				<h4 class="section-title">Pickup Process</h4>
-				<div class="form-group">
-					<label class="blue-text">PICKUP DRIVER DISPATCHED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.pdriver_dispatched} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">PICKUP DRIVER ARRIVED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.pdriver_arrived} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">PICKUP COMPLETED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.pdriver_pickup} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
+			<div class="bg-white p-4 rounded-lg border">
+				<h4 class="font-semibold text-blue-700 mb-4">🚚 Pickup Process</h4>
+				<div class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium mb-2">Driver Dispatched:</label>
+						<DateTimePicker 
+							bind:value={jobData.pdriver_dispatched}
+							placeholder="Select dispatch date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.pdriver_dispatched}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Dispatched: {new Date(jobData.pdriver_dispatched).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Driver Arrived:</label>
+						<DateTimePicker 
+							bind:value={jobData.pdriver_arrived}
+							placeholder="Select arrival date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.pdriver_arrived}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Arrived: {new Date(jobData.pdriver_arrived).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Pickup Completed:</label>
+						<DateTimePicker 
+							bind:value={jobData.pdriver_pickup}
+							placeholder="Select pickup completion date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.pdriver_pickup}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Completed: {new Date(jobData.pdriver_pickup).toLocaleString()}
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
 
-			<!-- Airport/Flight Process -->
-			<div class="timeline-section">
-				<h4 class="section-title">Airport & Flight</h4>
-				<div class="form-group">
-					<label class="blue-text">AIRPORT DROPOFF:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.airport_dropoff} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">FLIGHT DEPARTURE:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.flight_tenured} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">FLIGHT ARRIVAL:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.flight_recovered} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
+			<!-- Flight Process -->
+			<div class="bg-white p-4 rounded-lg border">
+				<h4 class="font-semibold text-blue-700 mb-4">✈️ Airport & Flight</h4>
+				<div class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium mb-2">Airport Dropoff:</label>
+						<DateTimePicker 
+							bind:value={jobData.airport_dropoff}
+							placeholder="Select airport dropoff date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.airport_dropoff}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Dropped off: {new Date(jobData.airport_dropoff).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Flight Departure:</label>
+						<DateTimePicker 
+							bind:value={jobData.flight_tenured}
+							placeholder="Select flight departure date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.flight_tenured}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Departed: {new Date(jobData.flight_tenured).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Flight Arrival:</label>
+						<DateTimePicker 
+							bind:value={jobData.flight_recovered}
+							placeholder="Select flight arrival date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.flight_recovered}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Arrived: {new Date(jobData.flight_recovered).toLocaleString()}
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
 
 			<!-- Delivery Process -->
-			<div class="timeline-section">
-				<h4 class="section-title">Delivery Process</h4>
-				<div class="form-group">
-					<label class="blue-text">DELIVERY DRIVER DISPATCHED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.ddriver_dispatched} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">DELIVERY DRIVER RECOVERED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.ddriver_recovered} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">DELIVERY COMPLETED:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.ddriver_delivery} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
-				</div>
-				<div class="form-group">
-					<label class="blue-text">PROOF OF DELIVERY:</label>
-					<input 
-						type="datetime-local" 
-						bind:value={jobData.pod} 
-						class="form-input timeline-field"
-						on:change={debouncedTimelineSave}
-					/>
+			<div class="bg-white p-4 rounded-lg border">
+				<h4 class="font-semibold text-blue-700 mb-4">🚛 Delivery Process</h4>
+				<div class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium mb-2">Delivery Driver Dispatched:</label>
+						<DateTimePicker 
+							bind:value={jobData.ddriver_dispatched}
+							placeholder="Select delivery dispatch date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.ddriver_dispatched}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Dispatched: {new Date(jobData.ddriver_dispatched).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Driver Recovered Package:</label>
+						<DateTimePicker 
+							bind:value={jobData.ddriver_recovered}
+							placeholder="Select recovery date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.ddriver_recovered}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Recovered: {new Date(jobData.ddriver_recovered).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Delivery Completed:</label>
+						<DateTimePicker 
+							bind:value={jobData.ddriver_delivery}
+							placeholder="Select delivery completion date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.ddriver_delivery}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								Delivered: {new Date(jobData.ddriver_delivery).toLocaleString()}
+							</div>
+						{/if}
+					</div>
+					
+					<div>
+						<label class="block text-sm font-medium mb-2">Proof of Delivery:</label>
+						<DateTimePicker 
+							bind:value={jobData.pod}
+							placeholder="Select proof of delivery date and time"
+							onchange={debouncedTimelineSave}
+						/>
+						{#if jobData.pod}
+							<div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+								POD: {new Date(jobData.pod).toLocaleString()}
+							</div>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
@@ -2252,6 +2379,8 @@
 		box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.15), 0 4px 16px rgba(234, 88, 12, 0.2);
 		border-color: #ea580c;
 	}
+
+
 
 	/* Timeline Grid Layout */
 	.timeline-grid {
@@ -3460,5 +3589,147 @@
 			align-items: flex-start;
 			gap: 0.5rem;
 		}
+	}
+
+	/* Job Created Display Styling */
+	.job-created-display {
+		padding: 0.75rem;
+		background: #f8fafc;
+		border: 2px solid #e5e7eb;
+		border-radius: 6px;
+		font-family: monospace;
+	}
+
+	.created-date {
+		display: block;
+		font-weight: 600;
+		color: #374151;
+		margin-bottom: 0.25rem;
+	}
+
+	.created-note {
+		display: block;
+		font-size: 0.75rem;
+		color: #6b7280;
+		font-style: italic;
+	}
+
+	.no-date {
+		color: #9ca3af;
+		font-style: italic;
+	}
+
+	/* Enhanced Timeline Styling */
+	.timeline-container {
+		max-width: 100%;
+		margin: 0 auto;
+	}
+
+	.timeline-header {
+		background: linear-gradient(135deg, #2563eb, #1d4ed8);
+		color: white;
+		padding: 1.5rem;
+		border-radius: 12px 12px 0 0;
+		margin-bottom: 0;
+	}
+
+	.timeline-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin: 0 0 0.5rem 0;
+	}
+
+	.job-created-info {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		font-size: 0.9rem;
+		opacity: 0.9;
+	}
+
+	.created-label {
+		font-weight: 500;
+	}
+
+	.created-value {
+		font-family: monospace;
+		background: rgba(255, 255, 255, 0.1);
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.created-empty {
+		font-style: italic;
+		opacity: 0.7;
+	}
+
+	.timeline-section {
+		background: white;
+		border: 2px solid #e5e7eb;
+		margin-bottom: 1rem;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.timeline-section .section-title {
+		background: #f8fafc;
+		color: #374151;
+		padding: 1rem 1.5rem;
+		margin: 0;
+		font-size: 1.1rem;
+		font-weight: 600;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.timeline-fields {
+		padding: 1.5rem;
+		display: grid;
+		gap: 1.5rem;
+	}
+
+	.timeline-step {
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		padding: 1rem;
+		background: #fafafa;
+	}
+
+	.field-label {
+		display: block;
+		font-weight: 600;
+		color: #374151;
+		margin-bottom: 0.5rem;
+		font-size: 0.9rem;
+	}
+
+	.field-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.date-input, .time-input {
+		padding: 0.75rem;
+		border: 2px solid #d1d5db;
+		border-radius: 6px;
+		font-size: 1rem;
+		transition: border-color 0.2s ease;
+	}
+
+	.date-input:focus, .time-input:focus {
+		outline: none;
+		border-color: #2563eb;
+		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+	}
+
+	.timestamp-display {
+		margin-top: 0.5rem;
+		padding: 0.5rem;
+		background: #ecfdf5;
+		border: 1px solid #10b981;
+		border-radius: 4px;
+		font-size: 0.875rem;
+		color: #047857;
+		font-weight: 500;
 	}
 </style> 
