@@ -17,6 +17,8 @@
 	let editMode = false
 	let message = ''
 	let customerId: string
+	let salesmen: any[] = []
+	let loadingSalesmen = false
 	
 	// Form data for editing
 	let editData = {
@@ -31,7 +33,8 @@
 		zip: '',
 		billing_contact: '',
 		payment_terms: 'NET_30',
-		notes: ''
+		notes: '',
+		salesman_id: ''
 	}
 
 	onMount(async () => {
@@ -41,6 +44,7 @@
 			try {
 				userProfile = await getCurrentUserProfile()
 				await loadCustomer()
+				await loadSalesmen()
 			} catch (error) {
 				console.error('Error loading user profile:', error)
 			}
@@ -76,13 +80,35 @@
 				zip: customer.zip || '',
 				billing_contact: customer.billing_contact || '',
 				payment_terms: customer.payment_terms || 'NET_30',
-				notes: customer.notes || ''
+				notes: customer.notes || '',
+				salesman_id: customer.salesman_id || ''
 			}
 		} catch (err) {
 			console.error('Error in loadCustomer:', err)
 			message = 'Error loading customer details'
 		} finally {
 			loading = false
+		}
+	}
+
+	async function loadSalesmen() {
+		try {
+			loadingSalesmen = true
+			const { data, error } = await supabase
+				.from('salesman')
+				.select('id, name, email, fin_cono')
+				.order('name', { ascending: true })
+			
+			if (error) {
+				console.error('Error loading salesmen:', error)
+				return
+			}
+			
+			salesmen = data || []
+		} catch (err) {
+			console.error('Error in loadSalesmen:', err)
+		} finally {
+			loadingSalesmen = false
 		}
 	}
 
@@ -105,7 +131,8 @@
 					zip: editData.zip.trim() || null,
 					billing_contact: editData.billing_contact.trim() || null,
 					payment_terms: editData.payment_terms,
-					notes: editData.notes.trim() || null
+					notes: editData.notes.trim() || null,
+					salesman_id: editData.salesman_id || null
 				})
 				.eq('id', customerId)
 				.select()
@@ -149,7 +176,8 @@
 			zip: customer.zip || '',
 			billing_contact: customer.billing_contact || '',
 			payment_terms: customer.payment_terms || 'NET_30',
-			notes: customer.notes || ''
+			notes: customer.notes || '',
+			salesman_id: customer.salesman_id || ''
 		}
 		message = ''
 	}
@@ -312,6 +340,21 @@
 										</select>
 									</div>
 								</div>
+								<div class="form-row">
+									<div class="form-group">
+										<label>Assigned Salesman</label>
+										<select bind:value={editData.salesman_id} class="form-input">
+											<option value="">-- No Salesman Assigned --</option>
+											{#if loadingSalesmen}
+												<option disabled>Loading salesmen...</option>
+											{:else}
+												{#each salesmen as salesman (salesman.id)}
+													<option value={salesman.id}>{salesman.name} {salesman.fin_cono ? `(${salesman.fin_cono})` : ''}</option>
+												{/each}
+											{/if}
+										</select>
+									</div>
+								</div>
 							</div>
 
 							<!-- Notes -->
@@ -411,6 +454,20 @@
 									<div class="info-row">
 										<span class="info-label">Customer ID:</span>
 										<span class="info-value customer-id">{customer.id}</span>
+									</div>
+									<div class="info-row">
+										<span class="info-label">Assigned Salesman:</span>
+										<span class="info-value">
+											{#if customer.salesman_id}
+												{#each salesmen as salesman (salesman.id)}
+													{#if salesman.id === customer.salesman_id}
+														{salesman.name} {salesman.fin_cono ? `(${salesman.fin_cono})` : ''}
+													{/if}
+												{/each}
+											{:else}
+												<span style="color: #6b7280;">No salesman assigned</span>
+											{/if}
+										</span>
 									</div>
 								</div>
 							</div>

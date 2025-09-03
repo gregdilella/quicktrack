@@ -179,7 +179,7 @@
 					<option value="YUL">YUL - Montreal-Trudeau</option>
 					<option value="JFK">JFK - John F. Kennedy</option>
 					<option value="LAX">LAX - Los Angeles</option>
-					<option value="LHR">LHR - London Heathrow</option>
+					<option value="LGW">LGW - London Gatwick</option>
 					<option value="CDG">CDG - Charles de Gaulle</option>
 					<option value="MAD">MAD - Madrid</option>
 					<option value="BCN">BCN - Barcelona</option>
@@ -195,7 +195,7 @@
 					<option value="JFK">JFK - John F. Kennedy</option>
 					<option value="YUL">YUL - Montreal-Trudeau</option>
 					<option value="LAX">LAX - Los Angeles</option>
-					<option value="LHR">LHR - London Heathrow</option>
+					<option value="LGW">LGW - London Gatwick</option>
 					<option value="CDG">CDG - Charles de Gaulle</option>
 					<option value="MAD">MAD - Madrid</option>
 					<option value="BCN">BCN - Barcelona</option>

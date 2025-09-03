@@ -273,7 +273,7 @@
 					service_type: jobData.service_type || null,
 					transport_mode: jobData.transport_mode || null,
 					equipment_type: jobData.equipment_type || null,
-					service_level: jobData.service_level || 'standard',
+					vehicle_type: jobData.vehicle_type || null,
 					special_instructions: jobData.special_instructions || null,
 					updated_at: new Date().toISOString()
 				})
@@ -1336,10 +1336,10 @@
 				<div class="field-group">
 					<label class="blue-text">Type of Service</label>
 					<select bind:value={jobData.service_type} class="field-input service-field">
-						<option value="ground">Ground</option>
-						<option value="air">Air</option>
-						<option value="ocean">Ocean</option>
-						<option value="express">Express</option>
+						<option value="NFO">NFO</option>
+						<option value="NDO">NDO</option>
+						<option value="OBC">OBC</option>
+						<option value="CHAR">CHAR</option>
 					</select>
 				</div>
 			</div>
@@ -1510,16 +1510,16 @@
 				</select>
 			</div>
 			<div class="form-group">
-				<label class="blue-text">SERVICE LEVEL:</label>
+				<label class="blue-text">VEHICLE TYPE:</label>
 				<select 
-					bind:value={jobData.service_level} 
+					bind:value={jobData.vehicle_type} 
 					class="form-input transport-field"
 					on:change={debouncedTransportSave}
 				>
-					<option value="standard">Standard</option>
-					<option value="expedited">Expedited</option>
-					<option value="priority">Priority</option>
-					<option value="critical">Critical</option>
+					<option value="">Select Vehicle</option>
+					<option value="car">Car</option>
+					<option value="van">Van</option>
+					<option value="boxtruck">Box Truck</option>
 				</select>
 			</div>
 			<div class="form-group full-width">

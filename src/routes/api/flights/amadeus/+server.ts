@@ -273,11 +273,6 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
     console.error('Error details:', errorDetails);
     
     // Return more detailed error information in development
-    throw error(500, {
-      message: errorMessage,
-      details: errorDetails,
-      timestamp: new Date().toISOString(),
-      endpoint: 'flight-inspirations'
-    });
+    throw error(500, errorMessage);
   }
 }; 

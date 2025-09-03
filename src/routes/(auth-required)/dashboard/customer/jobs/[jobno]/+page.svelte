@@ -244,8 +244,8 @@
 						<span class="detail-value">{job.service_type || 'N/A'}</span>
 					</div>
 					<div class="detail-item">
-						<span class="detail-label">Service Level</span>
-						<span class="detail-value">{job.service_level || 'N/A'}</span>
+													<span class="detail-label">Vehicle Type</span>
+							<span class="detail-value">{job.vehicle_type || 'N/A'}</span>
 					</div>
 					<div class="detail-item">
 						<span class="detail-label">Transport Mode</span>

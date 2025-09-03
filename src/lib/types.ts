@@ -15,7 +15,7 @@ export type Customer = Tables<'customers'>
 export type LSP = Tables<'lsps'>
 export type Job = Tables<'jobsfile'>
 export type Billing = Tables<'billing'>
-export type Flight = Tables<'flights'>
+export type AWB = Tables<'awb'>
 export type Timetable = Tables<'timetable'>
 export type LSPCost = Tables<'lsp_costs'>
 
@@ -24,7 +24,7 @@ export type CreateCustomer = TablesInsert<'customers'>
 export type CreateLSP = TablesInsert<'lsps'>
 export type CreateJob = TablesInsert<'jobsfile'>
 export type CreateBilling = TablesInsert<'billing'>
-export type CreateFlight = TablesInsert<'flights'>
+export type CreateAWB = TablesInsert<'awb'>
 export type CreateTimetable = TablesInsert<'timetable'>
 export type CreateLSPCost = TablesInsert<'lsp_costs'>
 
@@ -33,6 +33,6 @@ export type UpdateCustomer = TablesUpdate<'customers'>
 export type UpdateLSP = TablesUpdate<'lsps'>
 export type UpdateJob = TablesUpdate<'jobsfile'>
 export type UpdateBilling = TablesUpdate<'billing'>
-export type UpdateFlight = TablesUpdate<'flights'>
+export type UpdateAWB = TablesUpdate<'awb'>
 export type UpdateTimetable = TablesUpdate<'timetable'>
 export type UpdateLSPCost = TablesUpdate<'lsp_costs'> 

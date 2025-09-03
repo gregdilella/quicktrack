@@ -17,16 +17,18 @@
 	let groupedJobs: Record<string, JobWithTimeline[]> = {}
 	let dataLoading = true
 
-	onMount(async () => {
-		user = await getCurrentUser()
-		if (user) {
-			try {
-				userProfile = await getCurrentUserProfile()
-			} catch (error) {
-				console.error('Error loading user profile:', error)
+	onMount(() => {
+		(async () => {
+			user = await getCurrentUser()
+			if (user) {
+				try {
+					userProfile = await getCurrentUserProfile()
+				} catch (error) {
+					console.error('Error loading user profile:', error)
+				}
 			}
-		}
-		await loadOperationsData()
+			await loadOperationsData()
+		})()
 		
 		// Listen for timeline updates from job edit pages
 		const handleTimelineUpdate = (event: CustomEvent) => {

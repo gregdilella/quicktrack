@@ -38,6 +38,7 @@
 	let earliestReadyToFlyISO = $state('');
 	let recommendedFlightId = $state<string | null>(null);
 	let estimatedDeliveryISO = $state<string | null>(null);
+	let selectedFlightData = $state<any>(null);
 
 	// Address search helpers (Svelte 5 runes)
 	let shipperSearchQuery = $state('');
@@ -94,8 +95,8 @@
 		weight_unit: 'lbs',
 		dimensions: '',
 		declared_value: 0,
-		service_type: 'Standard',
-		service_level: 'Door to Door',
+		service_type: 'NFO',
+		job_type: 'web',
 		transport_mode: 'Air',
 		equipment_type: '',
 		ready_date: '',
@@ -173,10 +174,20 @@
 		successMessage = '';
 
 		try {
-			const result = await createCustomerJob(formData as CustomerJobFormData);
+			const result = await createCustomerJob(
+				formData as CustomerJobFormData,
+				selectedFlightData,
+				originAirport,
+				destinationAirport,
+				netjetsQuote
+			);
 			
 			if (result.success) {
-				successMessage = `Job ${result.jobno || result.jobNumber} created successfully!`;
+				let message = `Job ${result.jobno || result.jobNumber} created successfully!`;
+				if (result.awbNumber) {
+					message += ` AWB: ${result.awbNumber}`;
+				}
+				successMessage = message;
 				// Redirect to job search after 2 seconds
 				setTimeout(() => {
 					goto('/dashboard/customer/job-search');
@@ -533,6 +544,12 @@
 			recommendedFlightId = flightId;
 			estimatedDeliveryISO = etaISO;
 
+			// Store the selected flight data for AWB creation
+			if (flightId && flightResults?.flights?.all) {
+				selectedFlightData = flightResults.flights.all.find((f: any) => f.id === flightId) || flightResults.flights.all[0] || null;
+				console.log('🛫 Customer selected flight data for AWB:', selectedFlightData);
+			}
+
 			// If still no flights, try alternative airports
 			if ((flightResults.summary?.totalOffers || 0) === 0) {
 				console.log('🔄 No flights found with primary airports (2-day search), trying alternatives for base date...');
@@ -633,6 +650,12 @@
 								originAirport = altOrigin;
 								destinationAirport = altDestination;
 								flightResults = altData;
+								
+								// Store flight data for AWB creation
+								if (altData.flights?.all && altData.flights.all.length > 0) {
+									selectedFlightData = altData.flights.all[0];
+									console.log('🛫 Alternative flight selected for AWB:', selectedFlightData);
+								}
 								
 								return; // Success! Exit the function
 							}
@@ -1000,7 +1023,7 @@
 							<input 
 								type="text" 
 								id="consignee_search" 
-								placeholder="e.g., Heathrow Airport, London"
+								placeholder="e.g., Los Angeles International Airport"
 								value={consigneeSearchQuery}
 								oninput={(e) => { consigneeSearchQuery = (e.target as HTMLInputElement).value; clearMessages(); }}
 							/>
@@ -1185,7 +1208,7 @@
 					{#if searchingFlights}
 						<div class="flight-loading">
 							<div class="spinner"></div>
-							<p>Finding nearest airport and searching for flights to London Heathrow...</p>
+							<p>Finding nearest airports and searching for flights...</p>
 						</div>
 					{:else if flightSearchError}
 						<div class="flight-error">

@@ -20,6 +20,7 @@ export type Database = {
           airline_name: string
           contact_email: string | null
           created_at: string | null
+          iata_prefix: string | null
           id: number
           phone: string | null
           updated_at: string | null
@@ -29,6 +30,7 @@ export type Database = {
           airline_name: string
           contact_email?: string | null
           created_at?: string | null
+          iata_prefix?: string | null
           id?: number
           phone?: string | null
           updated_at?: string | null
@@ -38,6 +40,7 @@ export type Database = {
           airline_name?: string
           contact_email?: string | null
           created_at?: string | null
+          iata_prefix?: string | null
           id?: number
           phone?: string | null
           updated_at?: string | null
@@ -257,47 +260,6 @@ export type Database = {
           },
         ]
       }
-      flights: {
-        Row: {
-          cost: number | null
-          created_at: string | null
-          destination: string | null
-          flight_no: string | null
-          id: number
-          jobnumber: string | null
-          mawb: string | null
-          origin: string | null
-        }
-        Insert: {
-          cost?: number | null
-          created_at?: string | null
-          destination?: string | null
-          flight_no?: string | null
-          id?: number
-          jobnumber?: string | null
-          mawb?: string | null
-          origin?: string | null
-        }
-        Update: {
-          cost?: number | null
-          created_at?: string | null
-          destination?: string | null
-          flight_no?: string | null
-          id?: number
-          jobnumber?: string | null
-          mawb?: string | null
-          origin?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "flights_jobnumber_fkey"
-            columns: ["jobnumber"]
-            isOneToOne: false
-            referencedRelation: "jobsfile"
-            referencedColumns: ["jobnumber"]
-          },
-        ]
-      }
       jobsfile: {
         Row: {
           account_number: string | null
@@ -308,6 +270,7 @@ export type Database = {
           consignee_address2: string | null
           consignee_city: string | null
           consignee_contact: string | null
+          consignee_miles: number | null
           consignee_name: string | null
           consignee_phone: string | null
           consignee_state: string | null
@@ -325,8 +288,8 @@ export type Database = {
           dimensions: string | null
           equipment_type: string | null
           id: number
-          job_number: string | null
-          job_type: string | null
+          is_dangerous_goods: boolean | null
+          job_type: Database["public"]["Enums"]["job_type_enum"] | null
           jobno: string | null
           jobnumber: string
           packaging_id: string | null
@@ -334,20 +297,22 @@ export type Database = {
           po_number: string | null
           ready_date: string | null
           ready_time: string | null
-          service_level: string | null
-          service_type: string | null
+          requires_outside_hours: boolean | null
+          service_type: Database["public"]["Enums"]["service_type_enum"] | null
           shipper_address1: string | null
           shipper_address2: string | null
           shipper_city: string | null
           shipper_contact: string | null
+          shipper_miles: number | null
           shipper_name: string | null
           shipper_phone: string | null
           shipper_state: string | null
           shipper_zip: string | null
           special_instructions: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["status_enum"] | null
           transport_mode: string | null
           updated_at: string | null
+          vehicle_type: Database["public"]["Enums"]["vehicle_type_enum"] | null
           vendorcode: string | null
           weight: number | null
           weight_unit: string | null
@@ -361,6 +326,7 @@ export type Database = {
           consignee_address2?: string | null
           consignee_city?: string | null
           consignee_contact?: string | null
+          consignee_miles?: number | null
           consignee_name?: string | null
           consignee_phone?: string | null
           consignee_state?: string | null
@@ -378,8 +344,8 @@ export type Database = {
           dimensions?: string | null
           equipment_type?: string | null
           id?: number
-          job_number?: string | null
-          job_type?: string | null
+          is_dangerous_goods?: boolean | null
+          job_type?: Database["public"]["Enums"]["job_type_enum"] | null
           jobno?: string | null
           jobnumber: string
           packaging_id?: string | null
@@ -387,20 +353,22 @@ export type Database = {
           po_number?: string | null
           ready_date?: string | null
           ready_time?: string | null
-          service_level?: string | null
-          service_type?: string | null
+          requires_outside_hours?: boolean | null
+          service_type?: Database["public"]["Enums"]["service_type_enum"] | null
           shipper_address1?: string | null
           shipper_address2?: string | null
           shipper_city?: string | null
           shipper_contact?: string | null
+          shipper_miles?: number | null
           shipper_name?: string | null
           shipper_phone?: string | null
           shipper_state?: string | null
           shipper_zip?: string | null
           special_instructions?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["status_enum"] | null
           transport_mode?: string | null
           updated_at?: string | null
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type_enum"] | null
           vendorcode?: string | null
           weight?: number | null
           weight_unit?: string | null
@@ -414,6 +382,7 @@ export type Database = {
           consignee_address2?: string | null
           consignee_city?: string | null
           consignee_contact?: string | null
+          consignee_miles?: number | null
           consignee_name?: string | null
           consignee_phone?: string | null
           consignee_state?: string | null
@@ -431,8 +400,8 @@ export type Database = {
           dimensions?: string | null
           equipment_type?: string | null
           id?: number
-          job_number?: string | null
-          job_type?: string | null
+          is_dangerous_goods?: boolean | null
+          job_type?: Database["public"]["Enums"]["job_type_enum"] | null
           jobno?: string | null
           jobnumber?: string
           packaging_id?: string | null
@@ -440,25 +409,34 @@ export type Database = {
           po_number?: string | null
           ready_date?: string | null
           ready_time?: string | null
-          service_level?: string | null
-          service_type?: string | null
+          requires_outside_hours?: boolean | null
+          service_type?: Database["public"]["Enums"]["service_type_enum"] | null
           shipper_address1?: string | null
           shipper_address2?: string | null
           shipper_city?: string | null
           shipper_contact?: string | null
+          shipper_miles?: number | null
           shipper_name?: string | null
           shipper_phone?: string | null
           shipper_state?: string | null
           shipper_zip?: string | null
           special_instructions?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["status_enum"] | null
           transport_mode?: string | null
           updated_at?: string | null
+          vehicle_type?: Database["public"]["Enums"]["vehicle_type_enum"] | null
           vendorcode?: string | null
           weight?: number | null
           weight_unit?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "jobsfile_account_number_fkey"
+            columns: ["account_number"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["account_number"]
+          },
           {
             foreignKeyName: "jobsfile_customer_id_fkey"
             columns: ["customer_id"]
@@ -775,7 +753,7 @@ export type Database = {
             columns: ["jobnumber"]
             isOneToOne: false
             referencedRelation: "jobsfile"
-            referencedColumns: ["jobnumber"]
+            referencedColumns: ["jobno"]
           },
         ]
       }
@@ -846,6 +824,15 @@ export type Database = {
       }
     }
     Enums: {
+      job_type_enum: "web" | "email" | "placement" | "return" | "call"
+      service_type_enum: "NFO" | "NDO" | "OBC" | "CHAR"
+      status_enum:
+        | "dispatch"
+        | "live"
+        | "delivered"
+        | "billed"
+        | "invoiced"
+        | "collected"
       user_role:
         | "Admin"
         | "LSP"
@@ -853,6 +840,7 @@ export type Database = {
         | "Operations"
         | "Customer"
         | "Not-Assigned"
+      vehicle_type_enum: "car" | "van" | "boxtruck"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -980,6 +968,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      job_type_enum: ["web", "email", "placement", "return", "call"],
+      service_type_enum: ["NFO", "NDO", "OBC", "CHAR"],
+      status_enum: [
+        "dispatch",
+        "live",
+        "delivered",
+        "billed",
+        "invoiced",
+        "collected",
+      ],
       user_role: [
         "Admin",
         "LSP",
@@ -988,6 +986,7 @@ export const Constants = {
         "Customer",
         "Not-Assigned",
       ],
+      vehicle_type_enum: ["car", "van", "boxtruck"],
     },
   },
 } as const

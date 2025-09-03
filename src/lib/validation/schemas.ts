@@ -12,7 +12,7 @@ const stateCode = z.string().length(2, 'State must be 2 characters').toUpperCase
 // Job validation schema
 export const jobSchema = z.object({
   // Job identification
-  job_number: z.string().min(1, 'Job number is required'),
+  jobnumber: z.string().min(1, 'Job number is required'),
   jobno: z.string().min(1, 'Job number with type is required'),
   bol_number: optionalString,
   po_number: optionalString,
@@ -21,8 +21,8 @@ export const jobSchema = z.object({
   commodity: nonEmptyString.max(100, 'Commodity must be less than 100 characters'),
   pieces: z.coerce.number().int('Pieces must be a whole number').min(1, 'Pieces must be at least 1'),
   weight: z.coerce.number().min(0.1, 'Weight must be greater than 0'),
-  service_type: z.enum(['NFO', 'NDO', 'OBC', 'Charter']),
-  job_type: z.enum(['Call', 'Email', 'Web']),
+  service_type: z.enum(['NFO', 'NDO', 'OBC', 'CHAR']),
+  job_type: z.enum(['web', 'email', 'placement', 'return', 'call']),
   
   // Shipper information
   shipper_name: nonEmptyString.max(100, 'Shipper name must be less than 100 characters'),
@@ -84,14 +84,14 @@ export const customerJobSchema = z.object({
 	description: z.string().optional(),
 	pieces: z.number().min(1, "At least 1 piece required").max(9999, "Maximum 9999 pieces"),
 	weight: z.number().min(0.1, "Weight must be greater than 0").max(99999, "Maximum weight is 99999"),
-	weight_unit: z.enum(["kg", "lbs"], { required_error: "Weight unit is required" }),
+	weight_unit: z.enum(["kg", "lbs"], { message: "Weight unit is required" }),
 	dimensions: z.string().optional(),
 	declared_value: z.number().min(0, "Declared value cannot be negative").optional(),
 	
 	// Service Information
-	service_type: z.enum(["Express", "Standard", "Economy", "Overnight", "Same Day"], { required_error: "Service type is required" }),
-	service_level: z.enum(["Door to Door", "Door to Airport", "Airport to Door", "Airport to Airport"], { required_error: "Service level is required" }),
-	transport_mode: z.enum(["Air", "Ground", "Ocean", "Multi-Modal"], { required_error: "Transport mode is required" }),
+	service_type: z.enum(["NFO", "NDO", "OBC", "CHAR"], { message: "Service type is required" }),
+	job_type: z.enum(["web", "email", "placement", "return", "call"], { message: "Job type is required" }),
+	transport_mode: z.enum(["Air", "Ground", "Ocean", "Multi-Modal"], { message: "Transport mode is required" }),
 	equipment_type: z.string().optional(),
 	
 	// Pickup Information

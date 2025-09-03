@@ -7,6 +7,10 @@
 	import { supabase } from '$lib/supabase'
 	import type { User } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
+	import { validateAddress, buildAddressString, findNearestAirportWithRoute, findMultipleAirportsWithRoutes, type ValidatedAddress, type AirportRouteInfo } from '$lib/services/googleMapsService'
+	import AddressMap from '$lib/components/AddressMap.svelte'
+	import { computeNetjetsQuote, buildNetjetsInputFromJobForm, saveQuoteToDatabase, ensureJobHasQuote, type NetjetsQuoteBreakdown } from '$lib/Quoting/netjets'
+	import { createAWBFromFlightData, type FlightData, type JobDataForAWB } from '$lib/services/awbService'
 	
 	let user: User | null = null
 	let userProfile: UserProfile | null = null
@@ -20,6 +24,33 @@
 	let message = ''
 	let success = false
 	let validationErrors: Record<string, string> = {}
+
+	// Address validation state
+	let validatingShipperAddress = false
+	let validatingConsigneeAddress = false
+	let shipperValidatedAddress: ValidatedAddress | null = null
+	let consigneeValidatedAddress: ValidatedAddress | null = null
+	let addressValidationErrors: Record<string, string> = {}
+	let addressesValidated = false
+
+	// Flight search state
+	let searchingFlights = false
+	let flightResults: any = null
+	let flightSearchError = ''
+	let originAirport = '' // Shipper's nearest airport
+	let destinationAirport = '' // Consignee's nearest airport
+	let shipperAirportRoute: AirportRouteInfo | null = null
+	let consigneeAirportRoute: AirportRouteInfo | null = null
+	let earliestReadyToFlyISO = ''
+	let recommendedFlightId: string | null = null
+	let estimatedDeliveryISO: string | null = null
+	let selectedFlightData: FlightData | null = null
+
+	// Address search helpers
+	let shipperSearchQuery = ''
+	let consigneeSearchQuery = ''
+	let searchingShipper = false
+	let searchingConsignee = false
 	
 	// Helper functions
 	function getTodaysDate(): string {
@@ -34,21 +65,22 @@
 
 	function generateJobno(jobNumber: string, jobType: string): string {
 		if (!jobNumber) return ''
-		const typeCode = jobType === 'Call' ? 'C' : 'M'
+		const typeCode = jobType === 'call' ? 'C' : 'M'
 		return jobNumber + typeCode
 	}
 
 	// Job data structure
 	let jobData = {
-		job_number: '',
+		jobnumber: '',
 		jobno: '',
 		bol_number: '',
 		po_number: '',
 		commodity: '',
 		pieces: 1,
 		weight: 1,
+		weight_unit: 'lbs',
 		service_type: 'NFO',
-		job_type: 'Call',
+		job_type: 'call',
 		
 		// Customer information (required)
 		customer_id: '',
@@ -77,6 +109,67 @@
 		// Timing
 		ready_date: getTodaysDate(),
 		ready_time: getCurrentTime()
+	}
+
+	async function applyValidatedToForm(validated: ValidatedAddress, type: 'shipper' | 'consignee') {
+		const street = [
+			validated.components.street_number,
+			validated.components.route
+		].filter(Boolean).join(' ')
+
+		if (type === 'shipper') {
+			jobData.shipper_address1 = street || validated.formatted
+			jobData.shipper_city = validated.components.locality || ''
+			jobData.shipper_state = validated.components.administrative_area_level_1 || ''
+			jobData.shipper_zip = validated.components.postal_code || ''
+			shipperValidatedAddress = validated
+		} else {
+			jobData.consignee_address1 = street || validated.formatted
+			jobData.consignee_city = validated.components.locality || ''
+			jobData.consignee_state = validated.components.administrative_area_level_1 || ''
+			jobData.consignee_zip = validated.components.postal_code || ''
+			consigneeValidatedAddress = validated
+		}
+	}
+
+	async function searchAndFill(type: 'shipper' | 'consignee') {
+		try {
+			if (type === 'shipper') {
+				if (!shipperSearchQuery.trim()) return
+				searchingShipper = true
+				const validated = await validateAddress(shipperSearchQuery.trim())
+				if (validated) await applyValidatedToForm(validated, 'shipper')
+			} else {
+				if (!consigneeSearchQuery.trim()) return
+				searchingConsignee = true
+				const validated = await validateAddress(consigneeSearchQuery.trim())
+				if (validated) await applyValidatedToForm(validated, 'consignee')
+			}
+		} finally {
+			searchingShipper = false
+			searchingConsignee = false
+		}
+	}
+
+	function clearAddressValidation(type: 'shipper' | 'consignee') {
+		if (type === 'shipper') {
+			shipperValidatedAddress = null
+			addressValidationErrors.shipper = ''
+		} else {
+			consigneeValidatedAddress = null
+			addressValidationErrors.consignee = ''
+		}
+		// Clear flight results when address changes
+		flightResults = null
+		flightSearchError = ''
+		originAirport = ''
+		destinationAirport = ''
+		shipperAirportRoute = null
+		consigneeAirportRoute = null
+		earliestReadyToFlyISO = ''
+		recommendedFlightId = null
+		estimatedDeliveryISO = null
+		addressesValidated = false
 	}
 
 	onMount(async () => {
@@ -149,6 +242,160 @@
 		showCustomerDropdown = false
 	}
 
+	// --- Helpers for timing calculations ---
+	function addMinutes(date: Date, minutes: number): Date {
+		const d = new Date(date)
+		d.setMinutes(d.getMinutes() + minutes)
+		return d
+	}
+
+	function combineDateAndTime(dateStr: string, timeStr: string): Date {
+		return new Date(`${dateStr}T${timeStr || '00:00'}:00`)
+	}
+
+	function formatISO(dt: Date): string {
+		return dt.toISOString()
+	}
+
+	function getHHmm(dt: Date): string {
+		const hh = dt.getHours().toString().padStart(2, '0')
+		const mm = dt.getMinutes().toString().padStart(2, '0')
+		return `${hh}:${mm}`
+	}
+
+	function nextNDates(startDate: string, n: number): string[] {
+		const dates: string[] = []
+		const base = new Date(`${startDate}T00:00:00`)
+		for (let i = 0; i < n; i++) {
+			const d = new Date(base)
+			d.setDate(base.getDate() + i)
+			dates.push(d.toISOString().slice(0, 10))
+		}
+		return dates
+	}
+
+	function filterOutRegionalAircraft(flights: any[]): any[] {
+		return flights.filter((flight: any) => {
+			const aircraft = flight.enhanced?.aircraft
+			if (!aircraft) return true
+			const aircraftList = aircraft.split(', ')
+			return !aircraftList.some((plane: string) => {
+				const cleanPlane = plane.trim().toUpperCase()
+				return (
+					cleanPlane.startsWith('E') ||
+					cleanPlane.startsWith('CR') ||
+					cleanPlane.includes('DE HAVILLAND') ||
+					cleanPlane.includes('DASH') ||
+					cleanPlane.startsWith('DH')
+				)
+			})
+		})
+	}
+
+	async function searchFlightsForDates(origin: string, destination: string, baseDate: string, earliestISO: string | null) {
+		const dates = nextNDates(baseDate, 2) // base day + next day
+		const earliest = earliestISO ? new Date(earliestISO) : null
+
+		const fetches = dates.map((d, idx) => {
+			const params = new URLSearchParams({
+				origin,
+				destination,
+				departureDate: d,
+				adults: '1',
+				children: '0',
+				infants: '0',
+				nonStop: 'false',
+				currency: 'USD',
+				max: '50'
+			})
+			if (idx === 0 && earliest) {
+				params.set('departureTime', getHHmm(earliest))
+			}
+			return fetch(`/api/flights/search?${params.toString()}`).then(async (r) => {
+				const data = await r.json()
+				return { ok: r.ok, data }
+			})
+		})
+
+		const results = await Promise.all(fetches)
+
+		const merged = {
+			summary: { totalOffers: 0, directFlights: 0, connectingFlights: 0 },
+			flights: { direct: [], connecting: [], all: [] } as any,
+			byDate: [] as any[]
+		}
+
+		for (const { ok, data } of results) {
+			if (!ok || !data?.flights) continue
+			data.flights.direct = filterOutRegionalAircraft(data.flights.direct || [])
+			data.flights.connecting = filterOutRegionalAircraft(data.flights.connecting || [])
+			data.flights.all = filterOutRegionalAircraft(data.flights.all || [])
+
+			merged.flights.direct = [...merged.flights.direct, ...data.flights.direct]
+			merged.flights.connecting = [...merged.flights.connecting, ...data.flights.connecting]
+			merged.flights.all = [...merged.flights.all, ...data.flights.all]
+			merged.summary.totalOffers += data.flights.all.length
+			merged.summary.directFlights += data.flights.direct.length
+			merged.summary.connectingFlights += data.flights.connecting.length
+			merged.byDate.push({ date: data.searchCriteria?.departureDate, flights: data.flights })
+		}
+
+		merged.flights.all.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime())
+		merged.flights.direct.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime())
+		merged.flights.connecting.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime())
+
+		return merged
+	}
+
+	function computeRecommendedFlightAndETA(mergedFlights: any, earliestISO: string, destDriveMins: number) {
+		const earliest = new Date(earliestISO)
+		const all = (mergedFlights?.flights?.all || []).filter((f: any) => {
+			// Only consider flights on or after the ready date (same day or later)
+			if (!f?.enhanced?.departureTime) return false
+			const dep = new Date(f.enhanced.departureTime)
+			const readyDay = new Date(earliest)
+			readyDay.setHours(0,0,0,0)
+			const depDay = new Date(dep)
+			depDay.setHours(0,0,0,0)
+			return depDay.getTime() >= readyDay.getTime()
+		})
+		const candidate = all.find((f: any) => {
+			if (!f?.enhanced?.departureTime) return false
+			return new Date(f.enhanced.departureTime) >= earliest
+		})
+		if (!candidate) return { flightId: null, etaISO: null }
+		const arrival = new Date(candidate.enhanced.arrivalTime)
+		const eta = addMinutes(addMinutes(arrival, 90), destDriveMins || 0)
+		return { flightId: candidate.id || null, etaISO: formatISO(eta) }
+	}
+
+	// --- Netjets Quote calculation ---
+	function poundsFromForm(): number {
+		const w = Number(jobData.weight || 0)
+		if (!w || isNaN(w)) return 0
+		return (jobData.weight_unit === 'kg') ? w * 2.20462 : w
+	}
+
+	// Compute Netjets quote reactively
+	$: netjetsQuote = (() => {
+		try {
+			const quoteInput = {
+				...buildNetjetsInputFromJobForm({
+					...jobData,
+					shipper_miles: shipperAirportRoute?.distance_miles || 0,
+					consignee_miles: consigneeAirportRoute?.distance_miles || 0,
+					weight: poundsFromForm(),
+					shipper_state: jobData.shipper_state,
+					consignee_state: jobData.consignee_state,
+					shipper_city: jobData.shipper_city
+				})
+			}
+			return computeNetjetsQuote(quoteInput)
+		} catch (e) {
+			return null
+		}
+	})()
+
 	async function generateJobNumber(): Promise<string> {
 		try {
 			const { data: { session } } = await supabase.auth.getSession()
@@ -158,9 +405,9 @@
 			
 			const { data, error } = await supabase
 				.from('jobsfile')
-				.select('job_number')
-				.like('job_number', '3%')
-				.order('job_number', { ascending: false })
+				.select('jobnumber')
+				.like('jobnumber', '3%')
+				.order('jobnumber', { ascending: false })
 				.limit(1)
 			
 			if (error) {
@@ -171,7 +418,7 @@
 			let nextNumber = 3000001
 			
 			if (data && data.length > 0) {
-				const lastJobNumber = data[0].job_number
+				const lastJobNumber = data[0].jobnumber
 				const lastNumber = parseInt(lastJobNumber)
 				if (!isNaN(lastNumber)) {
 					nextNumber = lastNumber + 1
@@ -183,6 +430,335 @@
 			console.error('Error generating job number:', error)
 			return '3000001'
 		}
+	}
+
+	/**
+	 * Validates both addresses and searches for flights between nearest airports
+	 */
+	async function validateAddressesAndSearchFlights() {
+		// Check if both addresses are filled
+		const shipperAddressString = buildAddressString(
+			jobData.shipper_address1 || '',
+			'',
+			jobData.shipper_city || '',
+			jobData.shipper_state || '',
+			jobData.shipper_zip || ''
+		)
+		
+		const consigneeAddressString = buildAddressString(
+			jobData.consignee_address1 || '',
+			'',
+			jobData.consignee_city || '',
+			jobData.consignee_state || '',
+			jobData.consignee_zip || ''
+		)
+
+		if (!shipperAddressString.trim()) {
+			flightSearchError = 'Please fill in the shipper address fields'
+			return
+		}
+
+		if (!consigneeAddressString.trim()) {
+			flightSearchError = 'Please fill in the consignee address fields'
+			return
+		}
+
+		// Clear previous results
+		validatingShipperAddress = true
+		validatingConsigneeAddress = true
+		searchingFlights = true
+		flightSearchError = ''
+		flightResults = null
+		originAirport = ''
+		destinationAirport = ''
+		addressValidationErrors = {}
+		addressesValidated = false
+
+		try {
+			console.log('🔍 Validating both addresses and finding airports...')
+
+			// Validate both addresses in parallel
+			const [shipperValidated, consigneeValidated] = await Promise.all([
+				validateAddress(shipperAddressString),
+				validateAddress(consigneeAddressString)
+			])
+
+			if (!shipperValidated) {
+				throw new Error('Could not validate shipper address. Please check the details.')
+			}
+
+			if (!consigneeValidated) {
+				throw new Error('Could not validate consignee address. Please check the details.')
+			}
+
+			// Update validated addresses
+			shipperValidatedAddress = shipperValidated
+			consigneeValidatedAddress = consigneeValidated
+
+			// Update form fields with validated components
+			if (shipperValidated.components.locality && !jobData.shipper_city) {
+				jobData.shipper_city = shipperValidated.components.locality
+			}
+			if (shipperValidated.components.administrative_area_level_1 && !jobData.shipper_state) {
+				jobData.shipper_state = shipperValidated.components.administrative_area_level_1
+			}
+			if (shipperValidated.components.postal_code && !jobData.shipper_zip) {
+				jobData.shipper_zip = shipperValidated.components.postal_code
+			}
+
+			if (consigneeValidated.components.locality && !jobData.consignee_city) {
+				jobData.consignee_city = consigneeValidated.components.locality
+			}
+			if (consigneeValidated.components.administrative_area_level_1 && !jobData.consignee_state) {
+				jobData.consignee_state = consigneeValidated.components.administrative_area_level_1
+			}
+			if (consigneeValidated.components.postal_code && !jobData.consignee_zip) {
+				jobData.consignee_zip = consigneeValidated.components.postal_code
+			}
+
+			console.log('✅ Both addresses validated, finding nearest airports...')
+
+			// Find nearest airports for both addresses in parallel
+			const [shipperAirportResult, consigneeAirportResult] = await Promise.all([
+				findNearestAirportWithRoute(shipperValidated.latitude, shipperValidated.longitude),
+				findNearestAirportWithRoute(consigneeValidated.latitude, consigneeValidated.longitude)
+			])
+
+			if (!shipperAirportResult || !shipperAirportResult.airport) {
+				throw new Error('No nearby airports found for shipper address')
+			}
+
+			if (!consigneeAirportResult || !consigneeAirportResult.airport) {
+				throw new Error('No nearby airports found for consignee address')
+			}
+
+			originAirport = shipperAirportResult.airport.iata_code || ''
+			destinationAirport = consigneeAirportResult.airport.iata_code || ''
+			shipperAirportRoute = shipperAirportResult
+			consigneeAirportRoute = consigneeAirportResult
+
+			if (!originAirport) {
+				throw new Error('Shipper airport found but no IATA code available')
+			}
+
+			if (!destinationAirport) {
+				throw new Error('Consignee airport found but no IATA code available')
+			}
+
+			console.log(`✈️ Origin airport: ${originAirport}, Destination airport: ${destinationAirport}`)
+			// Mark addresses as validated so maps section can render
+			addressesValidated = true
+
+			// Check Ready Date
+			const departureDate = jobData.ready_date
+			if (!departureDate) {
+				throw new Error('Please set a Ready Date first before searching flights')
+			}
+			
+			const readyDate = new Date(departureDate)
+			const today = new Date()
+			today.setHours(0, 0, 0, 0)
+			
+			if (readyDate < today) {
+				throw new Error('Ready Date must be in the future. Please update the Ready Date.')
+			}
+
+			// Compute earliest feasible departure: ready + drive to origin + 90 min
+			const baseReady = combineDateAndTime(jobData.ready_date as string, jobData.ready_time as string)
+			const driveToOriginMins = shipperAirportRoute?.duration_minutes || 0
+			const earliest = addMinutes(addMinutes(baseReady, driveToOriginMins), 90)
+			earliestReadyToFlyISO = earliest.toISOString()
+
+			// Multi-day search (base day + next day), enforce earliest time on day 0
+			console.log(`🛫 Searching flights (2 days): ${originAirport} → ${destinationAirport}`)
+			const merged = await searchFlightsForDates(originAirport, destinationAirport, departureDate, earliestReadyToFlyISO)
+			flightResults = {
+				...merged,
+				summary: {
+					...merged.summary,
+					searchTime: new Date().toISOString()
+				}
+			}
+
+			console.log(`✅ Found ${flightResults.summary?.totalOffers || 0} flights over 2 days (after filtering)`)
+
+			// Pick recommended flight and compute ETA at consignee
+			const destDriveMins = consigneeAirportRoute?.duration_minutes || 0
+			const { flightId, etaISO } = computeRecommendedFlightAndETA(flightResults, earliestReadyToFlyISO, destDriveMins)
+			recommendedFlightId = flightId
+			estimatedDeliveryISO = etaISO
+
+			// Store the selected flight data for AWB creation
+			if (flightId && flightResults?.flights?.all) {
+				selectedFlightData = flightResults.flights.all.find((f: any) => f.id === flightId) || flightResults.flights.all[0] || null
+				console.log('🛫 Selected flight data for AWB:', selectedFlightData)
+			}
+
+			// If still no flights, try alternative airports
+			if ((flightResults.summary?.totalOffers || 0) === 0) {
+				console.log('🔄 No flights found with primary airports (2-day search), trying alternatives for base date...')
+				await tryAlternativeAirports(shipperValidated, consigneeValidated, departureDate)
+			}
+
+		} catch (error: any) {
+			console.error('❌ Address validation or flight search failed:', error)
+			flightSearchError = error.message || 'Failed to validate addresses or search flights'
+		} finally {
+			validatingShipperAddress = false
+			validatingConsigneeAddress = false
+			searchingFlights = false
+		}
+	}
+
+	/**
+	 * Try alternative airports when no flights are found with primary airports
+	 */
+	async function tryAlternativeAirports(shipperValidated: ValidatedAddress, consigneeValidated: ValidatedAddress, departureDate: string) {
+		try {
+			console.log('🔍 Finding alternative airports for both locations...')
+			
+			// Get multiple airports for both locations
+			const [shipperAirports, consigneeAirports] = await Promise.all([
+				findMultipleAirportsWithRoutes(shipperValidated.latitude, shipperValidated.longitude, 3),
+				findMultipleAirportsWithRoutes(consigneeValidated.latitude, consigneeValidated.longitude, 3)
+			])
+
+			console.log(`📍 Found ${shipperAirports.length} shipper airports and ${consigneeAirports.length} consignee airports`)
+
+			// Try different combinations of airports
+			for (const shipperAirport of shipperAirports) {
+				if (!shipperAirport.airport.iata_code) continue
+				
+				for (const consigneeAirport of consigneeAirports) {
+					if (!consigneeAirport.airport.iata_code) continue
+					
+					const altOrigin = shipperAirport.airport.iata_code
+					const altDestination = consigneeAirport.airport.iata_code
+					
+					// Skip if it's the same combination we already tried
+					if (altOrigin === originAirport && altDestination === destinationAirport) {
+						continue
+					}
+					
+					console.log(`🛫 Trying alternative route: ${altOrigin} → ${altDestination}`)
+					
+					try {
+						const params = new URLSearchParams({
+							origin: altOrigin,
+							destination: altDestination,
+							departureDate: departureDate,
+							adults: '1',
+							children: '0',
+							infants: '0',
+							nonStop: 'false',
+							currency: 'USD',
+							max: '20'
+						})
+
+						const response = await fetch(`/api/flights/search?${params.toString()}`)
+						const altData = await response.json()
+
+						if (response.ok && altData.flights) {
+							// Filter out flights with small regional aircraft
+							const filterFlights = (flights: any[]) => {
+								return flights.filter((flight: any) => {
+									const aircraft = flight.enhanced?.aircraft
+									if (!aircraft) return true
+									
+									const aircraftList = aircraft.split(', ')
+									return !aircraftList.some((plane: string) => {
+										const cleanPlane = plane.trim().toUpperCase()
+										return (
+											cleanPlane.startsWith('E') ||      // Embraer (ERJ, E170, E190, etc.)
+											cleanPlane.startsWith('CR') ||     // Bombardier CRJ series
+											cleanPlane.includes('DE HAVILLAND') || // De Havilland aircraft
+											cleanPlane.includes('DASH') ||     // Dash 8, etc.
+											cleanPlane.startsWith('DH')        // De Havilland codes (DH4, etc.)
+										)
+									})
+								})
+							}
+
+							altData.flights.direct = filterFlights(altData.flights.direct || [])
+							altData.flights.connecting = filterFlights(altData.flights.connecting || [])
+							altData.flights.all = filterFlights(altData.flights.all || [])
+							
+							altData.summary.directFlights = altData.flights.direct.length
+							altData.summary.connectingFlights = altData.flights.connecting.length
+							altData.summary.totalOffers = altData.flights.all.length
+
+							if (altData.summary?.totalOffers > 0) {
+								console.log(`✅ Found ${altData.summary.totalOffers} flights with alternative route: ${altOrigin} → ${altDestination}`)
+								
+								// Update the airports and results
+								originAirport = altOrigin
+								destinationAirport = altDestination
+								flightResults = altData
+								
+								// Store flight data for AWB creation
+								if (altData.flights?.all && altData.flights.all.length > 0) {
+									selectedFlightData = altData.flights.all[0]
+									console.log('🛫 Alternative flight selected for AWB:', selectedFlightData)
+								}
+								
+								return // Success! Exit the function
+							}
+						}
+					} catch (altError) {
+						console.warn(`Failed to search flights for ${altOrigin} → ${altDestination}:`, altError)
+					}
+				}
+			}
+			
+			console.log('⚠️ No flights found even with alternative airports')
+			flightSearchError = `No flights found between any nearby airports on ${departureDate} (after filtering out regional aircraft). Try a different date or check back later.`
+			
+		} catch (error) {
+			console.error('❌ Failed to try alternative airports:', error)
+		}
+	}
+
+	// Format price
+	function formatPrice(price: number, currency: string = 'USD'): string {
+		return new Intl.NumberFormat('en-US', {
+			style: 'currency',
+			currency: currency
+		}).format(price)
+	}
+
+	// Format date/time
+	function formatDateTime(dateString?: string): string {
+		if (!dateString) return 'N/A'
+		return new Date(dateString).toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit'
+		})
+	}
+
+	function selectFeaturedFlights(all: any[]) {
+		if (!Array.isArray(all)) return { earliest: null, fastest: null, cheapest: null }
+		// Same-day-or-later filter is already applied upstream for recommendation
+		const sortedByDeparture = [...all].sort((a, b) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime())
+		const earliest = sortedByDeparture[0] || null
+		const fastest = [...all].sort((a, b) => (a.enhanced?.totalDurationMinutes || 1e9) - (b.enhanced?.totalDurationMinutes || 1e9))[0] || null
+		const cheapest = [...all].sort((a, b) => parseFloat(a.price?.total || '1e9') - parseFloat(b.price?.total || '1e9'))[0] || null
+		return { earliest, fastest, cheapest }
+	}
+
+	function filterFlightsFromReadyDate(all: any[], baseDate: string) {
+		if (!Array.isArray(all) || !baseDate) return all || []
+		const readyDay = new Date(`${baseDate}T00:00:00`)
+		readyDay.setHours(0, 0, 0, 0)
+		return all
+			.filter((f: any) => {
+				const dep = new Date(f?.enhanced?.departureTime || 0)
+				const depDay = new Date(dep)
+				depDay.setHours(0, 0, 0, 0)
+				return depDay.getTime() >= readyDay.getTime()
+			})
+			.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime())
 	}
 
 	async function createNewJob() {
@@ -213,8 +789,8 @@
 			}
 
 			// Generate job number
-			jobData.job_number = await generateJobNumber()
-			jobData.jobno = generateJobno(jobData.job_number, jobData.job_type)
+		jobData.jobnumber = await generateJobNumber()
+		jobData.jobno = generateJobno(jobData.jobnumber, jobData.job_type)
 
 			// Get current user
 			const { data: { user } } = await supabase.auth.getUser()
@@ -223,8 +799,7 @@
 			const { data, error } = await supabase
 				.from('jobsfile')
 				.insert([{
-					jobnumber: jobData.job_number,
-					job_number: jobData.job_number,
+					jobnumber: jobData.jobnumber,
 					jobno: jobData.jobno,
 					bol_number: jobData.bol_number || null,
 					po_number: jobData.po_number || null,
@@ -236,6 +811,7 @@
 					
 					customer_id: jobData.customer_id,
 					customer_name: jobData.customer_name,
+					account_number: selectedCustomer?.account_number || null,
 					
 					shipper_name: jobData.shipper_name,
 					shipper_address1: jobData.shipper_address1 || null,
@@ -258,7 +834,7 @@
 					ready_date: jobData.ready_date,
 					ready_time: jobData.ready_time,
 					
-					status: 'pending',
+					status: 'dispatch',
 					created_by: user?.id || null,
 					created_at: new Date().toISOString()
 				}])
@@ -270,8 +846,51 @@
 				return
 			}
 			
+			console.log('✅ Job created successfully, now creating AWB...')
+			
+			// Create AWB automatically if we have flight data
+			try {
+				const jobDataForAWB: JobDataForAWB = {
+					jobnumber: jobData.jobnumber,
+					pieces: jobData.pieces,
+					weight: jobData.weight,
+					weight_unit: jobData.weight_unit,
+					created_by: user?.id || undefined
+				}
+
+				const awbResult = await createAWBFromFlightData(
+					jobDataForAWB,
+					selectedFlightData,
+					originAirport,
+					destinationAirport
+				)
+
+				if (awbResult.success) {
+					console.log('✅ AWB created successfully:', awbResult.awbNumber)
+					message = `Job ${jobData.jobno} created successfully! AWB: ${awbResult.awbNumber}`
+				} else {
+					console.warn('⚠️ Job created but AWB creation failed:', awbResult.error)
+					message = `Job ${jobData.jobno} created successfully! (AWB creation failed: ${awbResult.error})`
+				}
+			} catch (awbError) {
+				console.error('Error creating AWB:', awbError)
+				message = `Job ${jobData.jobno} created successfully! (AWB creation failed)`
+			}
+			
+			// Ensure every job has a quote (detailed if available, basic otherwise)
+			try {
+				console.log('💰 Ensuring job has quote...')
+				const quoteResult = await ensureJobHasQuote(supabase, jobData.jobnumber, jobData, netjetsQuote)
+				if (quoteResult.success) {
+					console.log(`✅ Quote saved successfully (${quoteResult.quoteType})`)
+				} else {
+					console.warn('⚠️ Quote creation failed:', quoteResult.error)
+				}
+			} catch (quoteError) {
+				console.error('Error ensuring quote:', quoteError)
+			}
+			
 			success = true
-			message = `Job ${jobData.jobno} created successfully!`
 			
 			// Navigate to job detail page
 			setTimeout(() => {
@@ -296,7 +915,7 @@
 		handleCustomerSearch()
 	}
 
-	$: jobData.jobno = generateJobno(jobData.job_number, jobData.job_type)
+	$: jobData.jobno = generateJobno(jobData.jobnumber, jobData.job_type)
 </script>
 
 <svelte:head>
@@ -315,7 +934,7 @@
 
 		<!-- Navigation -->
 		<div class="nav-section">
-			<button class="nav-link" on:click={() => goto('/dashboard/operations')}>
+			<button class="nav-link" onclick={() => goto('/dashboard/operations')}>
 				⬅ Back to Operations
 			</button>
 		</div>
@@ -334,25 +953,26 @@
 				<p>Loading...</p>
 			</div>
 		{:else}
-			<div class="form-section">
-				<form on:submit|preventDefault={createNewJob}>
+			<!-- Job Creation Form -->
+			<form onsubmit={(e) => { e.preventDefault(); createNewJob(); }} class="job-form">
 					<!-- Customer Selection (Required) -->
-					<div class="form-group full-width">
-						<h3>Customer Information</h3>
+				<div class="form-section">
+					<h2>Customer Information</h2>
 						<div class="customer-search-section">
-							<label>Customer (Required) *</label>
+						<label for="customer_search">Customer (Required) *</label>
 							<div class="search-container">
 								<input 
 									type="text"
+								id="customer_search"
 									bind:value={customerSearchQuery}
 									placeholder="Search customers by name, email, or account number..."
 									class="search-input"
 									class:error={validationErrors.customer_id}
-									on:focus={() => showCustomerDropdown = filteredCustomers.length > 0}
-									on:blur={() => setTimeout(() => showCustomerDropdown = false, 200)}
+								onfocus={() => showCustomerDropdown = filteredCustomers.length > 0}
+								onblur={() => setTimeout(() => showCustomerDropdown = false, 200)}
 								/>
 								{#if selectedCustomer}
-									<button type="button" class="clear-customer" on:click={clearCustomerSelection}>
+								<button type="button" class="clear-customer" onclick={clearCustomerSelection}>
 										✕
 									</button>
 								{/if}
@@ -362,8 +982,8 @@
 										{#each filteredCustomers as customer (customer.id)}
 											<div 
 												class="customer-option"
-												on:click={() => selectCustomer(customer)}
-												on:keydown={(e) => e.key === 'Enter' && selectCustomer(customer)}
+											onclick={() => selectCustomer(customer)}
+											onkeydown={(e) => e.key === 'Enter' && selectCustomer(customer)}
 												role="button"
 												tabindex="0"
 											>
@@ -394,174 +1014,747 @@
 						</div>
 					</div>
 
-					<!-- Job Information -->
-					<div class="form-row">
+				<!-- Job Information Section -->
+				<div class="form-section">
+					<h2>Job Information</h2>
+					<div class="form-grid">
 						<div class="form-group">
-							<label>Job No</label>
-							<input type="text" value={jobData.jobno || 'Auto-generated'} class="form-input" readonly />
+							<label for="jobno">Job No</label>
+							<input type="text" id="jobno" value={jobData.jobnumber || 'Auto-generated'} class="form-input" readonly />
 						</div>
+
 						<div class="form-group">
-							<label>BOL Number</label>
-							<input type="text" bind:value={jobData.bol_number} class="form-input" />
+							<label for="bol_number">BOL Number</label>
+							<input type="text" id="bol_number" bind:value={jobData.bol_number} class="form-input" />
 						</div>
+
 						<div class="form-group">
-							<label>PO Number</label>
-							<input type="text" bind:value={jobData.po_number} class="form-input" />
-						</div>
+							<label for="po_number">PO Number</label>
+							<input type="text" id="po_number" bind:value={jobData.po_number} class="form-input" />
 					</div>
 
-					<!-- Commodity & Service Info -->
-					<div class="form-row">
 						<div class="form-group">
-							<label>Commodity *</label>
-							<input type="text" bind:value={jobData.commodity} class="form-input" class:error={validationErrors.commodity} required />
-							{#if validationErrors.commodity}
-								<span class="error-text">{validationErrors.commodity}</span>
-							{/if}
+							<label for="commodity">Commodity *</label>
+							<input 
+								type="text" 
+								id="commodity" 
+								bind:value={jobData.commodity}
+								class="form-input"
+								class:error={validationErrors.commodity}
+								placeholder="e.g., Electronics, Documents, Medical Supplies"
+								required 
+							/>
+							{#if validationErrors.commodity}<span class="error-text">{validationErrors.commodity}</span>{/if}
 						</div>
+
 						<div class="form-group">
-							<label>Pieces</label>
-							<input type="number" bind:value={jobData.pieces} class="form-input" min="1" />
+							<label for="pieces">Number of Pieces *</label>
+							<input 
+								type="number" 
+								id="pieces" 
+								bind:value={jobData.pieces}
+								class="form-input"
+								class:error={validationErrors.pieces}
+								min="1" 
+								max="9999"
+								required 
+							/>
+							{#if validationErrors.pieces}<span class="error-text">{validationErrors.pieces}</span>{/if}
 						</div>
+
 						<div class="form-group">
-							<label>Weight</label>
-							<input type="number" bind:value={jobData.weight} class="form-input" min="1" />
+							<label for="weight">Weight *</label>
+							<div class="input-group">
+								<input 
+									type="number" 
+									id="weight" 
+									bind:value={jobData.weight}
+									class="form-input"
+									class:error={validationErrors.weight}
+									min="1" 
+									step="1"
+									required 
+								/>
+								<select bind:value={jobData.weight_unit} class="form-input" class:error={validationErrors.weight_unit}>
+									<option value="kg">kg</option>
+									<option value="lbs">lbs</option>
+								</select>
 						</div>
+							{#if validationErrors.weight}<span class="error-text">{validationErrors.weight}</span>{/if}
+							{#if validationErrors.weight_unit}<span class="error-text">{validationErrors.weight_unit}</span>{/if}
+						</div>
+
 						<div class="form-group">
-							<label>Service Type</label>
-							<select bind:value={jobData.service_type} class="form-input">
+							<label for="service_type">Service Type</label>
+							<select bind:value={jobData.service_type} id="service_type" class="form-input">
 								<option value="NFO">NFO</option>
 								<option value="NDO">NDO</option>
 								<option value="OBC">OBC</option>
-								<option value="Charter">Charter</option>
+								<option value="CHAR">Charter</option>
 							</select>
 						</div>
+
 						<div class="form-group">
-							<label>Job Type</label>
-							<select bind:value={jobData.job_type} class="form-input">
-								<option value="Call">Call</option>
-								<option value="Email">Email</option>
-								<option value="Web">Web</option>
+							<label for="job_type">Job Type</label>
+							<select bind:value={jobData.job_type} id="job_type" class="form-input">
+								<option value="call">Call</option>
+								<option value="email">Email</option>
+								<option value="web">Web</option>
+								<option value="placement">Placement</option>
+								<option value="return">Return</option>
 							</select>
+						</div>
 						</div>
 					</div>
 
-					<!-- Ready Date & Time -->
-					<div class="form-row">
+				<!-- Pickup Information Section -->
+				<div class="form-section">
+					<h2>Pickup Information</h2>
+					<div class="form-grid">
 						<div class="form-group">
-							<label>Ready Date</label>
-							<input type="date" bind:value={jobData.ready_date} class="form-input" />
+							<label for="ready_date">Ready Date *</label>
+							<input 
+								type="date" 
+								id="ready_date" 
+								bind:value={jobData.ready_date}
+								class="form-input"
+								class:error={validationErrors.ready_date}
+								required 
+							/>
+							{#if validationErrors.ready_date}<span class="error-text">{validationErrors.ready_date}</span>{/if}
 						</div>
+
 						<div class="form-group">
-							<label>Ready Time</label>
-							<input type="time" bind:value={jobData.ready_time} class="form-input" />
+							<label for="ready_time">Ready Time *</label>
+							<input 
+								type="time" 
+								id="ready_time" 
+								bind:value={jobData.ready_time}
+								class="form-input"
+								class:error={validationErrors.ready_time}
+								required 
+							/>
+							{#if validationErrors.ready_time}<span class="error-text">{validationErrors.ready_time}</span>{/if}
+						</div>
 						</div>
 					</div>
 
-					<!-- Shipper & Consignee -->
-					<div class="locations-row">
-						<!-- Shipper -->
-						<div class="location-section">
-							<h4>Shipper Information</h4>
-							<div class="location-fields">
-								<div class="form-group">
-									<label>Company Name *</label>
-									<input type="text" bind:value={jobData.shipper_name} class="form-input" class:error={validationErrors.shipper_name} required />
-									{#if validationErrors.shipper_name}
-										<span class="error-text">{validationErrors.shipper_name}</span>
-									{/if}
+				<!-- Shipper and Consignee Information Section -->
+				<div class="form-section">
+					<h2>Shipper & Consignee Information</h2>
+					<div class="address-forms-container">
+						<!-- Shipper Information -->
+						<div class="address-form-column">
+							<h3>📦 Shipper (From)</h3>
+							<div class="form-grid">
+
+							<div class="form-group full-width" style="margin-bottom: 1rem;">
+								<label for="shipper_search">Search Address or Airport</label>
+								<div class="input-group">
+									<input 
+										type="text" 
+										id="shipper_search" 
+										placeholder="e.g., JFK Airport, New York"
+										value={shipperSearchQuery}
+										oninput={(e) => { shipperSearchQuery = (e.target as HTMLInputElement).value; }}
+										class="form-input"
+									/>
+									<button type="button" class="btn secondary" onclick={() => searchAndFill('shipper')} disabled={searchingShipper}>
+										{searchingShipper ? 'Searching...' : 'Search & Fill'}
+									</button>
+								</div>
 								</div>
 								<div class="form-group">
-									<label>Address 1</label>
-									<input type="text" bind:value={jobData.shipper_address1} class="form-input" />
+							<label for="shipper_name">Company/Name *</label>
+							<input 
+								type="text" 
+								id="shipper_name" 
+								bind:value={jobData.shipper_name}
+								class="form-input"
+								class:error={validationErrors.shipper_name}
+								required 
+							/>
+							{#if validationErrors.shipper_name}<span class="error-text">{validationErrors.shipper_name}</span>{/if}
 								</div>
-								<div class="form-group">
-									<label>Address 2</label>
-									<input type="text" bind:value={jobData.shipper_address2} class="form-input" />
-								</div>
-								<div class="form-row">
+
 									<div class="form-group">
-										<label>City</label>
-										<input type="text" bind:value={jobData.shipper_city} class="form-input" />
+							<label for="shipper_contact">Contact Person *</label>
+							<input 
+								type="text" 
+								id="shipper_contact" 
+								bind:value={jobData.shipper_contact}
+								class="form-input"
+								class:error={validationErrors.shipper_contact}
+								required 
+							/>
+							{#if validationErrors.shipper_contact}<span class="error-text">{validationErrors.shipper_contact}</span>{/if}
 									</div>
+
 									<div class="form-group">
-										<label>State</label>
-										<input type="text" bind:value={jobData.shipper_state} class="form-input" />
+							<label for="shipper_phone">Phone *</label>
+							<input 
+								type="tel" 
+								id="shipper_phone" 
+								bind:value={jobData.shipper_phone}
+								class="form-input"
+								class:error={validationErrors.shipper_phone}
+								required 
+							/>
+							{#if validationErrors.shipper_phone}<span class="error-text">{validationErrors.shipper_phone}</span>{/if}
 									</div>
+
+						<div class="form-group full-width">
+							<label for="shipper_address1">Address Line 1 *</label>
+							<input 
+								type="text" 
+								id="shipper_address1" 
+								bind:value={jobData.shipper_address1}
+								oninput={() => clearAddressValidation('shipper')}
+								class="form-input"
+								class:error={validationErrors.shipper_address1}
+								required 
+							/>
+							{#if validationErrors.shipper_address1}<span class="error-text">{validationErrors.shipper_address1}</span>{/if}
+						</div>
+
 									<div class="form-group">
-										<label>ZIP</label>
-										<input type="text" bind:value={jobData.shipper_zip} class="form-input" />
+							<label for="shipper_city">City *</label>
+							<input 
+								type="text" 
+								id="shipper_city" 
+								bind:value={jobData.shipper_city}
+								oninput={() => clearAddressValidation('shipper')}
+								class="form-input"
+								class:error={validationErrors.shipper_city}
+								required 
+							/>
+							{#if validationErrors.shipper_city}<span class="error-text">{validationErrors.shipper_city}</span>{/if}
 									</div>
-								</div>
-								<div class="form-row">
+
 									<div class="form-group">
-										<label>Phone</label>
-										<input type="tel" bind:value={jobData.shipper_phone} class="form-input" />
+							<label for="shipper_state">State/Province *</label>
+							<input 
+								type="text" 
+								id="shipper_state" 
+								bind:value={jobData.shipper_state}
+								oninput={() => clearAddressValidation('shipper')}
+								class="form-input"
+								class:error={validationErrors.shipper_state}
+								required 
+							/>
+							{#if validationErrors.shipper_state}<span class="error-text">{validationErrors.shipper_state}</span>{/if}
 									</div>
+
 									<div class="form-group">
-										<label>Contact</label>
-										<input type="text" bind:value={jobData.shipper_contact} class="form-input" />
-									</div>
+							<label for="shipper_zip">ZIP/Postal Code *</label>
+							<input 
+								type="text" 
+								id="shipper_zip" 
+								bind:value={jobData.shipper_zip}
+								oninput={() => clearAddressValidation('shipper')}
+								class="form-input"
+								class:error={validationErrors.shipper_zip}
+								required 
+							/>
+							{#if validationErrors.shipper_zip}<span class="error-text">{validationErrors.shipper_zip}</span>{/if}
 								</div>
 							</div>
 						</div>
 
-						<!-- Consignee -->
-						<div class="location-section">
-							<h4>Consignee Information</h4>
-							<div class="location-fields">
-								<div class="form-group">
-									<label>Company Name *</label>
-									<input type="text" bind:value={jobData.consignee_name} class="form-input" class:error={validationErrors.consignee_name} required />
-									{#if validationErrors.consignee_name}
-										<span class="error-text">{validationErrors.consignee_name}</span>
-									{/if}
-								</div>
-								<div class="form-group">
-									<label>Address 1</label>
-									<input type="text" bind:value={jobData.consignee_address1} class="form-input" />
-								</div>
-								<div class="form-group">
-									<label>Address 2</label>
-									<input type="text" bind:value={jobData.consignee_address2} class="form-input" />
-								</div>
-								<div class="form-row">
-									<div class="form-group">
-										<label>City</label>
-										<input type="text" bind:value={jobData.consignee_city} class="form-input" />
-									</div>
-									<div class="form-group">
-										<label>State</label>
-										<input type="text" bind:value={jobData.consignee_state} class="form-input" />
-									</div>
-									<div class="form-group">
-										<label>ZIP</label>
-										<input type="text" bind:value={jobData.consignee_zip} class="form-input" />
-									</div>
-								</div>
-								<div class="form-row">
-									<div class="form-group">
-										<label>Phone</label>
-										<input type="tel" bind:value={jobData.consignee_phone} class="form-input" />
-									</div>
-									<div class="form-group">
-										<label>Contact</label>
-										<input type="text" bind:value={jobData.consignee_contact} class="form-input" />
-									</div>
-								</div>
+						<!-- Consignee Information -->
+						<div class="address-form-column">
+							<h3>📍 Consignee (To)</h3>
+							<div class="form-grid">
+
+							<!-- Address search for consignee -->
+						<div class="form-group full-width" style="margin-bottom: 1rem;">
+							<label for="consignee_search">Search Address or Airport</label>
+							<div class="input-group">
+								<input 
+									type="text" 
+									id="consignee_search" 
+									placeholder="e.g., Los Angeles International Airport"
+									value={consigneeSearchQuery}
+									oninput={(e) => { consigneeSearchQuery = (e.target as HTMLInputElement).value; }}
+									class="form-input"
+								/>
+								<button type="button" class="btn secondary" onclick={() => searchAndFill('consignee')} disabled={searchingConsignee}>
+									{searchingConsignee ? 'Searching...' : 'Search & Fill'}
+								</button>
 							</div>
 						</div>
-					</div>
+								<div class="form-group">
+								<label for="consignee_name">Company/Name *</label>
+								<input 
+									type="text" 
+									id="consignee_name" 
+									bind:value={jobData.consignee_name}
+									class="form-input"
+									class:error={validationErrors.consignee_name}
+									required 
+								/>
+								{#if validationErrors.consignee_name}<span class="error-text">{validationErrors.consignee_name}</span>{/if}
+								</div>
 
-					<!-- Submit Button -->
-					<div class="form-actions">
-						<button type="submit" class="submit-button" disabled={saving}>
-							{saving ? 'Creating Job...' : 'Create Job'}
+								<div class="form-group">
+							<label for="consignee_contact">Contact Person *</label>
+							<input 
+								type="text" 
+								id="consignee_contact" 
+								bind:value={jobData.consignee_contact}
+								class="form-input"
+								class:error={validationErrors.consignee_contact}
+								required 
+							/>
+							{#if validationErrors.consignee_contact}<span class="error-text">{validationErrors.consignee_contact}</span>{/if}
+								</div>
+
+								<div class="form-group">
+							<label for="consignee_phone">Phone *</label>
+							<input 
+								type="tel" 
+								id="consignee_phone" 
+								bind:value={jobData.consignee_phone}
+								class="form-input"
+								class:error={validationErrors.consignee_phone}
+								required 
+							/>
+							{#if validationErrors.consignee_phone}<span class="error-text">{validationErrors.consignee_phone}</span>{/if}
+								</div>
+
+						<div class="form-group full-width">
+							<label for="consignee_address1">Address Line 1 *</label>
+							<input 
+								type="text" 
+								id="consignee_address1" 
+								bind:value={jobData.consignee_address1}
+								oninput={() => clearAddressValidation('consignee')}
+								class="form-input"
+								class:error={validationErrors.consignee_address1}
+								required 
+							/>
+							{#if validationErrors.consignee_address1}<span class="error-text">{validationErrors.consignee_address1}</span>{/if}
+						</div>
+
+									<div class="form-group">
+							<label for="consignee_city">City *</label>
+							<input 
+								type="text" 
+								id="consignee_city" 
+								bind:value={jobData.consignee_city}
+								oninput={() => clearAddressValidation('consignee')}
+								class="form-input"
+								class:error={validationErrors.consignee_city}
+								required 
+							/>
+							{#if validationErrors.consignee_city}<span class="error-text">{validationErrors.consignee_city}</span>{/if}
+									</div>
+
+									<div class="form-group">
+							<label for="consignee_state">State/Province *</label>
+							<input 
+								type="text" 
+								id="consignee_state" 
+								bind:value={jobData.consignee_state}
+								oninput={() => clearAddressValidation('consignee')}
+								class="form-input"
+								class:error={validationErrors.consignee_state}
+								required 
+							/>
+							{#if validationErrors.consignee_state}<span class="error-text">{validationErrors.consignee_state}</span>{/if}
+									</div>
+
+									<div class="form-group">
+							<label for="consignee_zip">ZIP/Postal Code *</label>
+							<input 
+								type="text" 
+								id="consignee_zip" 
+								bind:value={jobData.consignee_zip}
+								oninput={() => clearAddressValidation('consignee')}
+								class="form-input"
+								class:error={validationErrors.consignee_zip}
+								required 
+							/>
+							{#if validationErrors.consignee_zip}<span class="error-text">{validationErrors.consignee_zip}</span>{/if}
+									</div>
+								</div>
+									</div>
+									</div>
+								</div>
+				
+				<!-- Address Validation & Flight Search Section -->
+				<div class="form-section">
+					
+					<div class="validation-button-container">
+						<button 
+							type="button" 
+							class="btn danger validate-and-search-btn"
+							onclick={validateAddressesAndSearchFlights}
+							disabled={validatingShipperAddress || validatingConsigneeAddress || searchingFlights}
+						>
+							{#if validatingShipperAddress || validatingConsigneeAddress || searchingFlights}
+								<div class="btn-spinner"></div>
+								{#if validatingShipperAddress || validatingConsigneeAddress}
+									Validating Addresses...
+								{:else if searchingFlights}
+									Searching Flights...
+								{/if}
+							{:else}
+								<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+								</svg>
+								✈️ Validate Addresses & Find Flights
+							{/if}
 						</button>
-						<button type="button" class="cancel-button" on:click={() => goto('/dashboard/operations')}>
+						{#if flightSearchError}
+							<div class="error-message">{flightSearchError}</div>
+						{/if}
+						{#if !jobData.ready_date}
+							<div class="validation-hint">
+								💡 <strong>Tip:</strong> Set the Ready Date above first to search for flights on that date
+							</div>
+						{/if}
+						</div>
+					</div>
+
+				<!-- Address Locations Section -->
+				{#if addressesValidated && (shipperValidatedAddress || consigneeValidatedAddress)}
+					<div class="form-section">
+						<h2>Address Locations</h2>
+						<div class="maps-container">
+							<h3>📍 Address Locations</h3>
+							<div class="maps-grid">
+								{#if shipperValidatedAddress}
+									<div class="map-wrapper">
+										<AddressMap 
+											validatedAddress={shipperValidatedAddress} 
+											title="Pickup Route (Shipper → Airport {originAirport})"
+											height="300px"
+											showDetails={true}
+											showAirportRoute={true}
+										/>
+									</div>
+								{/if}
+								
+								{#if consigneeValidatedAddress}
+									<div class="map-wrapper">
+										<AddressMap 
+											validatedAddress={consigneeValidatedAddress} 
+											title="Delivery Route (Airport {destinationAirport} → Consignee)"
+											height="300px"
+											showDetails={true}
+											showAirportRoute={true}
+										/>
+									</div>
+								{/if}
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Flight Information Section -->
+				{#if originAirport || destinationAirport || searchingFlights || flightResults || flightSearchError}
+					<div class="form-section">
+						<h2>Flight Options</h2>
+						
+						{#if searchingFlights}
+							<div class="flight-loading">
+								<div class="spinner"></div>
+								<p>Finding nearest airports and searching for flights...</p>
+							</div>
+						{:else if flightSearchError}
+							<div class="flight-error">
+								<svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+								</svg>
+								<p>{flightSearchError}</p>
+							</div>
+						{:else if flightResults && originAirport && destinationAirport}
+							<div class="flight-results">
+								<div class="flight-summary">
+									<h3>✈️ Flights from {originAirport} → {destinationAirport}</h3>
+									<div class="flight-stats">
+										<span><strong>Departure Date:</strong> {jobData.ready_date || 'Not set'}</span>
+										<span><strong>Total Flights:</strong> {flightResults.summary?.totalOffers || 0}</span>
+										<span><strong>Direct:</strong> {flightResults.summary?.directFlights || 0}</span>
+										<span><strong>Connecting:</strong> {flightResults.summary?.connectingFlights || 0}</span>
+										<span class="filter-note">*Regional aircraft filtered out</span>
+									</div>
+								</div>
+
+								{#if shipperAirportRoute}
+									<div class="flight-stats" style="margin-top: 0.5rem;">
+										<span><strong>Drive to origin airport:</strong> {Math.round(shipperAirportRoute.duration_minutes)} min</span>
+										{#if earliestReadyToFlyISO}
+											<span class="earliest-box"><strong>Earliest ready to fly:</strong> {formatDateTime(earliestReadyToFlyISO)}</span>
+										{/if}
+										{#if estimatedDeliveryISO}
+											<span><strong>Estimated delivery:</strong> {formatDateTime(estimatedDeliveryISO)}</span>
+										{/if}
+									</div>
+								{/if}
+
+								<!-- Earliest Available Flights Table -->
+								<div class="flight-category">
+									<h4>🌟 Earliest Available Flights (starting {jobData.ready_date})</h4>
+									<div class="earliest-flights">
+																	<table class="earliest-table">
+									<thead>
+										<tr>
+											<th>Departs</th>
+											<th>Arrives</th>
+											<th>Airlines</th>
+											<th>Stops</th>
+										</tr>
+									</thead>
+											<tbody>
+												{#key flightResults}
+													{#each [
+														selectFeaturedFlights(filterFlightsFromReadyDate(flightResults.flights?.all || [], jobData.ready_date || '')).earliest,
+														selectFeaturedFlights(filterFlightsFromReadyDate(flightResults.flights?.all || [], jobData.ready_date || '')).fastest,
+														selectFeaturedFlights(filterFlightsFromReadyDate(flightResults.flights?.all || [], jobData.ready_date || '')).cheapest
+													] as f}
+														{#if f}
+															<tr class="{recommendedFlightId && f.id === recommendedFlightId ? 'recommended-row' : ''}">
+																<td>{formatDateTime(f.enhanced?.departureTime)}</td>
+																<td>{formatDateTime(f.enhanced?.arrivalTime)}</td>
+																<td>{(f.enhanced?.airlines || []).join(', ')}</td>
+																<td>{f.enhanced?.stops || 0}</td>
+															</tr>
+														{/if}
+													{/each}
+												{/key}
+											</tbody>
+										</table>
+									</div>
+								</div>
+
+								<!-- Direct Flights -->
+								{#if flightResults.flights?.direct?.length > 0}
+									<div class="flight-category">
+										<h4>🛫 Direct Flights ({flightResults.flights.direct.length})</h4>
+										<div class="flights-grid">
+											{#each flightResults.flights.direct.slice(0, 3) as flight}
+												<div class="flight-card direct-flight {recommendedFlightId && flight.id === recommendedFlightId ? 'recommended' : ''}">
+													<div class="flight-header">
+														<span class="flight-type">Direct</span>
+													</div>
+													<div class="flight-details">
+														<div class="flight-time">
+															<strong>Departure:</strong> {formatDateTime(flight.enhanced?.departureTime)}
+														</div>
+														<div class="flight-time">
+															<strong>Arrival:</strong> {formatDateTime(flight.enhanced?.arrivalTime)}
+														</div>
+														<div class="flight-duration">
+															<strong>Duration:</strong> {flight.enhanced?.totalDuration || 'N/A'}
+														</div>
+														<div class="flight-airline">
+															<strong>Airlines:</strong> {flight.enhanced?.airlines?.join(', ') || 'N/A'}
+														</div>
+														{#if flight.enhanced?.aircraft}
+															<div class="flight-aircraft">
+																<strong>Aircraft:</strong> {flight.enhanced.aircraft}
+															</div>
+														{/if}
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								<!-- Connecting Flights -->
+								{#if flightResults.flights?.connecting?.length > 0}
+									<div class="flight-category">
+										<h4>🔄 Connecting Flights ({flightResults.flights.connecting.length})</h4>
+										<div class="flights-grid">
+											{#each flightResults.flights.connecting.slice(0, 3) as flight}
+												<div class="flight-card connecting-flight {recommendedFlightId && flight.id === recommendedFlightId ? 'recommended' : ''}">
+													<div class="flight-header">
+														<span class="flight-type">{flight.enhanced?.stops || 1} Stop(s)</span>
+													</div>
+													<div class="flight-details">
+														<div class="flight-time">
+															<strong>Departure:</strong> {formatDateTime(flight.enhanced?.departureTime)}
+														</div>
+														<div class="flight-time">
+															<strong>Arrival:</strong> {formatDateTime(flight.enhanced?.arrivalTime)}
+														</div>
+														<div class="flight-duration">
+															<strong>Duration:</strong> {flight.enhanced?.totalDuration || 'N/A'}
+														</div>
+														<div class="flight-airline">
+															<strong>Airlines:</strong> {flight.enhanced?.airlines?.join(', ') || 'N/A'}
+														</div>
+														{#if flight.enhanced?.aircraft}
+															<div class="flight-aircraft">
+																<strong>Aircraft:</strong> {flight.enhanced.aircraft}
+															</div>
+														{/if}
+													</div>
+												</div>
+											{/each}
+										</div>
+									</div>
+								{/if}
+
+								{#if flightResults.summary?.totalOffers === 0}
+									<div class="no-flights">
+										<p>No flights found from {originAirport} to {destinationAirport} on {jobData.ready_date} (after filtering out regional aircraft).</p>
+										<p>Try changing the Ready Date, using different addresses, or check again later.</p>
+									</div>
+								{/if}
+
+								{#if estimatedDeliveryISO}
+									<div class="flight-category">
+										<h4>📦 Estimated Delivery</h4>
+										<p><strong>Estimated delivery time:</strong> {formatDateTime(estimatedDeliveryISO)}</p>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				{/if}
+
+				<!-- Quote Section -->
+				{#if netjetsQuote && (shipperAirportRoute || consigneeAirportRoute)}
+					<div class="form-section">
+						<h2>Quote</h2>
+						<div class="flight-results">
+							<table class="earliest-table">
+								<thead>
+									<tr>
+										<th>Item</th>
+										<th>Calculation</th>
+										<th>Amount</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#if netjetsQuote.NF > 0}
+										<tr>
+											<td>Network Fee (NF)</td>
+											<td>Weight-based: {poundsFromForm().toFixed(1)} lbs</td>
+											<td>{formatPrice(netjetsQuote.NF)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.MP > 0}
+										<tr>
+											<td>Pickup Mileage (MP)</td>
+											<td>{Math.round(shipperAirportRoute?.distance_miles || 0)} mi</td>
+											<td>{formatPrice(netjetsQuote.MP)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.MD > 0}
+										<tr>
+											<td>Delivery Mileage (MD)</td>
+											<td>{Math.round(consigneeAirportRoute?.distance_miles || 0)} mi</td>
+											<td>{formatPrice(netjetsQuote.MD)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.PP > 0}
+										<tr>
+											<td>Per Piece (PP)</td>
+											<td>{jobData.pieces} pieces</td>
+											<td>{formatPrice(netjetsQuote.PP)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.NCUS > 0}
+										<tr>
+											<td>Non-Continental US (NCUS)</td>
+											<td>AK/HI/PR surcharge</td>
+											<td>{formatPrice(netjetsQuote.NCUS)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.AH > 0}
+										<tr>
+											<td>After Hours (AH)</td>
+											<td>Outside 8 AM - 6 PM</td>
+											<td>{formatPrice(netjetsQuote.AH)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.NFT > 0}
+										<tr>
+											<td>Network Freight Transfer (NFT)</td>
+											<td>Multiple MAWBs</td>
+											<td>{formatPrice(netjetsQuote.NFT)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.DG > 0}
+										<tr>
+											<td>Dangerous Goods (DG)</td>
+											<td>Hazmat surcharge</td>
+											<td>{formatPrice(netjetsQuote.DG)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.TFM > 0}
+										<tr>
+											<td>Transport Fee Mileage (TFM)</td>
+											<td>ATD mileage</td>
+											<td>{formatPrice(netjetsQuote.TFM)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.SSC > 0}
+										<tr>
+											<td>Security Surcharge (SSC)</td>
+											<td>6% of base</td>
+											<td>{formatPrice(netjetsQuote.SSC)}</td>
+										</tr>
+									{/if}
+									{#if netjetsQuote.FS > 0}
+										<tr>
+											<td>Fuel Surcharge (FS)</td>
+											<td>10% of base</td>
+											<td>{formatPrice(netjetsQuote.FS)}</td>
+										</tr>
+									{/if}
+									<tr>
+										<td colspan="2" style="text-align:right; font-weight:700;">Total</td>
+										<td style="font-weight:700;">{formatPrice(netjetsQuote.total)}</td>
+									</tr>
+								</tbody>
+							</table>
+							<div class="quote-disclaimer">
+								*These are transport costs and may not include incidentals like driver waiting time.
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- Form Actions -->
+					<div class="form-actions">
+					<button type="button" class="btn secondary" onclick={() => goto('/dashboard/operations')}>
 							Cancel
 						</button>
+					<button 
+						type="submit" 
+						class="btn primary" 
+						disabled={saving || !addressesValidated || !flightResults || !!flightSearchError || (flightResults?.summary?.totalOffers || 0) === 0}
+					>
+						{#if saving}
+							<div class="btn-spinner"></div>
+							Creating Job...
+						{:else}
+							Create Job
+						{/if}
+					</button>
 					</div>
+				
+				<!-- Button Status Message -->
+				{#if !saving && (!addressesValidated || !flightResults || !!flightSearchError || (flightResults?.summary?.totalOffers || 0) === 0)}
+					<div class="button-status-message">
+						{#if !addressesValidated}
+							💡 Please validate addresses and search for flights first
+						{:else if flightSearchError}
+							⚠️ Flight search error - please try again
+						{:else if !flightResults}
+							✈️ Flight search required before creating job
+						{:else if (flightResults?.summary?.totalOffers || 0) === 0}
+							❌ No flights found - try different dates or airports
+						{/if}
+					</div>
+				{/if}
 
 					<!-- Message Display -->
 					{#if message}
@@ -570,12 +1763,11 @@
 						</div>
 					{/if}
 				</form>
-			</div>
 		{/if}
 
 		<!-- Logout Button -->
 		<div class="logout-section">
-			<button on:click={handleSignOut} disabled={loading} class="logout-button">
+			<button onclick={handleSignOut} disabled={loading} class="logout-button">
 				{loading ? 'Signing Out...' : 'Logout'}
 			</button>
 		</div>
@@ -611,12 +1803,8 @@
 	.page-title {
 		font-size: 2.5rem;
 		font-weight: 700;
-		color: #1f2937;
+		color: #34547a;
 		margin: 0 0 0.5rem 0;
-		background: linear-gradient(135deg, #ea580c, #dc2626);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
 	}
 
 	.page-subtitle {
@@ -686,11 +1874,11 @@
 		border: 1px solid #e5e7eb;
 	}
 
-	.loading-spinner {
+	.loading-spinner, .spinner {
 		width: 40px;
 		height: 40px;
-		border: 4px solid #e5e7eb;
-		border-top: 4px solid #ea580c;
+		border: 4px solid #f3f4f6;
+		border-top: 4px solid #34547a;
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 		margin-bottom: 1rem;
@@ -701,53 +1889,89 @@
 		100% { transform: rotate(360deg); }
 	}
 
-	.form-section {
+	.job-form {
 		background: white;
-		padding: 2.5rem;
-		border-radius: 20px;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-		border: 1px solid #e5e7eb;
-		margin-bottom: 2rem;
+		border-radius: 16px;
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+		border: 1px solid rgba(0, 0, 0, 0.05);
+		overflow: hidden;
+	}
+
+	.form-section {
+		padding: 2rem;
+		border-bottom: 1px solid #f3f4f6;
+	}
+
+	.form-section:last-child {
+		border-bottom: none;
+	}
+
+	.form-section h2 {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #1f2937;
+		margin: 0 0 1.5rem 0;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid #34547a;
+		display: inline-block;
+	}
+
+	.form-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 1.5rem;
 	}
 
 	.form-group {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
 	}
 
 	.form-group.full-width {
 		grid-column: 1 / -1;
 	}
 
-	.form-group h3 {
-		margin: 0 0 1.5rem 0;
-		font-size: 1.5rem;
-		color: #1f2937;
-		font-weight: 600;
-	}
-
 	.form-group label {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: #374151;
+		margin-bottom: 0.5rem;
+	}
+
+	.form-group input,
+	.form-group select,
+	.form-group textarea {
+		padding: 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		transition: all 0.2s ease;
+		background: white;
 	}
 
 	.form-input {
-		padding: 0.875rem 1rem;
-		border: 2px solid #e5e7eb;
-		background-color: white;
-		border-radius: 12px;
-		transition: all 0.3s ease;
-		color: #1f2937;
-		font-size: 0.95rem;
+		padding: 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		transition: all 0.2s ease;
+		background: white;
 	}
 
-	.form-input:focus {
+	.form-input:focus,
+	.form-group input:focus,
+	.form-group select:focus,
+	.form-group textarea:focus {
 		outline: none;
-		border-color: #ea580c;
-		background-color: #fff7ed;
-		box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.1);
+		border-color: #34547a;
+		box-shadow: 0 0 0 3px rgba(52, 84, 122, 0.1);
+	}
+
+	.form-input.error,
+	.form-group input.error,
+	.form-group select.error {
+		border-color: #ef4444;
+		background: #fef2f2;
 	}
 
 	.form-input:read-only {
@@ -756,13 +1980,26 @@
 		cursor: not-allowed;
 	}
 
-	.form-row {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 1.5rem;
-		margin-bottom: 2rem;
+	.input-group {
+		display: flex;
+		gap: 0.5rem;
 	}
 
+	.input-group input {
+		flex: 1;
+	}
+
+	.input-group select {
+		min-width: 80px;
+	}
+
+	.error-text {
+		font-size: 0.75rem;
+		color: #ef4444;
+		margin-top: 0.25rem;
+	}
+
+	/* Customer search styles */
 	.customer-search-section {
 		margin-bottom: 2rem;
 	}
@@ -783,8 +2020,8 @@
 
 	.search-input:focus {
 		outline: none;
-		border-color: #ea580c;
-		box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.1);
+		border-color: #34547a;
+		box-shadow: 0 0 0 4px rgba(52, 84, 122, 0.1);
 	}
 
 	.clear-customer {
@@ -879,125 +2116,436 @@
 		margin-left: 0.5rem;
 	}
 
-	.locations-row {
+	/* Side-by-side Address Forms */
+	.address-forms-container {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 2rem;
 		margin-bottom: 2rem;
 	}
 
-	.location-section {
+	.address-form-column {
+		background: #f8fafc;
+		border-radius: 12px;
 		padding: 1.5rem;
-		border: 1px solid #e5e7eb;
-		border-radius: 12px;
-		background: linear-gradient(135deg, #ffffff, #f8fafc);
+		border: 1px solid #e2e8f0;
 	}
 
-	.location-section h4 {
-		margin: 0 0 1rem 0;
+	.address-form-column h3 {
+		margin: 0 0 1.5rem 0;
+		color: #1e40af;
 		font-size: 1.1rem;
-		color: #374151;
 		font-weight: 600;
-		padding-bottom: 0.5rem;
-		border-bottom: 1px solid #e5e7eb;
+		padding-bottom: 0.75rem;
+		border-bottom: 2px solid #3b82f6;
 	}
 
-	.location-fields {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.form-actions {
-		display: flex;
-		gap: 1.5rem;
-		justify-content: center;
-		margin-top: 2.5rem;
-		padding-top: 2rem;
-		border-top: 1px solid #e5e7eb;
-	}
-
-	.submit-button {
-		padding: 1rem 2rem;
-		background: linear-gradient(135deg, #16a34a, #15803d);
-		color: white;
-		border: none;
-		border-radius: 12px;
+	/* Button styles */
+	.btn {
+		padding: 0.875rem 2rem;
+		border-radius: 8px;
+		font-size: 0.875rem;
 		font-weight: 600;
 		cursor: pointer;
-		transition: all 0.3s ease;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
-		min-width: 150px;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		border: none;
+		text-decoration: none;
 	}
 
-	.submit-button:hover:not(:disabled) {
-		background: linear-gradient(135deg, #15803d, #166534);
-		transform: translateY(-2px);
-		box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+	.btn.primary {
+		background: #34547a;
+		color: white;
 	}
 
-	.submit-button:disabled {
-		opacity: 0.7;
+	.btn.primary:hover:not(:disabled) {
+		background: #5a7fb8;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 15px rgba(52, 84, 122, 0.3);
+	}
+
+	.btn.secondary {
+		background: #f3f4f6;
+		color: #374151;
+		border: 1px solid #d1d5db;
+	}
+
+	.btn.secondary:hover {
+		background: #e5e7eb;
+	}
+
+	.btn.danger {
+		background: #dc2626;
+		color: white;
+	}
+
+	.btn.danger:hover:not(:disabled) {
+		background: #b91c1c;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+	}
+
+	.btn:disabled {
+		opacity: 0.6;
 		cursor: not-allowed;
 		transform: none;
 	}
 
-	.cancel-button {
+	.btn-spinner {
+		width: 16px;
+		height: 16px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top: 2px solid white;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	.btn-icon {
+		width: 18px;
+		height: 18px;
+		flex-shrink: 0;
+	}
+
+	/* Validation Button Container */
+	.validation-button-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+		margin: 2rem 0;
+		padding: 2rem;
+		background: #fafafa;
+		border-radius: 12px;
+		border: 2px dashed #e5e7eb;
+	}
+
+	.validate-and-search-btn {
+		font-size: 1.1rem;
+		font-weight: 600;
 		padding: 1rem 2rem;
-		background: linear-gradient(135deg, #6b7280, #4b5563);
-		color: white;
-		border: none;
-		border-radius: 12px;
-		font-weight: 600;
-		cursor: pointer;
-		transition: all 0.3s ease;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
-		box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
-		min-width: 120px;
+		min-width: 280px;
+		box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+		transition: all 0.2s ease;
 	}
 
-	.cancel-button:hover {
-		background: linear-gradient(135deg, #4b5563, #374151);
+	.validate-and-search-btn:hover:not(:disabled) {
 		transform: translateY(-2px);
-		box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
+		box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
 	}
 
-	.message {
-		padding: 1rem 1.5rem;
-		margin-top: 1.5rem;
-		border-radius: 12px;
+	.validate-and-search-btn:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+		transform: none;
+		box-shadow: 0 2px 6px rgba(220, 38, 38, 0.1);
+	}
+
+	.error-message {
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		border-radius: 8px;
+		padding: 1rem;
+		color: #dc2626;
+		font-weight: 500;
 		text-align: center;
+		max-width: 500px;
+	}
+
+	.validation-hint {
+		background: #eff6ff;
+		border: 1px solid #bfdbfe;
+		border-radius: 8px;
+		padding: 1rem;
+		font-size: 0.875rem;
+		color: #1e40af;
+		text-align: center;
+		max-width: 500px;
+	}
+
+	/* Maps Container */
+	.maps-container {
+		margin-top: 2rem;
+		padding-top: 2rem;
+		border-top: 1px solid #e5e7eb;
+	}
+
+	.maps-container h3 {
+		margin: 0 0 1.5rem 0;
+		color: #374151;
+		font-size: 1.2rem;
 		font-weight: 600;
-		font-size: 0.95rem;
-		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 	}
 
-	.message.success {
-		background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-		color: #166534;
-		border: 2px solid #22c55e;
+	.maps-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1.5rem;
 	}
 
-	.message.error {
-		background: linear-gradient(135deg, #fef2f2, #fecaca);
-		color: #dc2626;
-		border: 2px solid #ef4444;
+	.map-wrapper {
+		border-radius: 8px;
+		overflow: hidden;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	}
 
-	.error-text {
-		color: #dc2626;
-		font-size: 0.75rem;
-		margin-top: 0.25rem;
+	/* Flight Results Styles */
+	.flight-loading {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 2rem;
+		background: #f8fafc;
+		border-radius: 8px;
+		border: 1px solid #e2e8f0;
+	}
+
+	.flight-loading p {
+		margin: 0;
+		color: #64748b;
 		font-weight: 500;
 	}
 
-	.form-input.error {
-		border-color: #dc2626;
-		background-color: #fef2f2;
-		box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+	.flight-error {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 1.5rem;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		border-radius: 8px;
+		color: #dc2626;
+	}
+
+	.flight-error svg {
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
+	}
+
+	.flight-error p {
+		margin: 0;
+		font-weight: 500;
+	}
+
+	.flight-results {
+		background: #f8fafc;
+		border-radius: 12px;
+		padding: 1.5rem;
+		border: 1px solid #e2e8f0;
+	}
+
+	.flight-summary {
+		margin-bottom: 1.5rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid #e2e8f0;
+	}
+
+	.flight-summary h3 {
+		margin: 0 0 1rem 0;
+		color: #1e40af;
+		font-size: 1.25rem;
+	}
+
+	.flight-stats {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1.5rem;
+		font-size: 0.875rem;
+	}
+
+	.flight-stats span {
+		color: #374151;
+	}
+
+	.filter-note {
+		color: #6b7280 !important;
+		font-style: italic;
+	}
+
+	.flight-category {
+		margin-bottom: 1.5rem;
+	}
+
+	.flight-category h4 {
+		margin: 0 0 1rem 0;
+		color: #374151;
+		font-size: 1.1rem;
+		font-weight: 600;
+	}
+
+	.flights-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 1rem;
+	}
+
+	.flight-card {
+		background: white;
+		border-radius: 8px;
+		padding: 1rem;
+		border: 1px solid #e5e7eb;
+		transition: all 0.2s ease;
+	}
+
+	.flight-card:hover {
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		transform: translateY(-2px);
+	}
+
+	.direct-flight {
+		border-left: 4px solid #10b981;
+	}
+
+	.connecting-flight {
+		border-left: 4px solid #f59e0b;
+	}
+
+	.flight-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 0.75rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid #f3f4f6;
+	}
+
+	.flight-type {
+		font-weight: 600;
+		color: #374151;
+		font-size: 0.875rem;
+	}
+
+	.flight-details {
+		font-size: 0.8rem;
+		line-height: 1.4;
+	}
+
+	.flight-details > div {
+		margin-bottom: 0.5rem;
+		color: #4b5563;
+	}
+
+	.flight-aircraft {
+		color: #6366f1 !important;
+		font-weight: 500;
+	}
+
+	.no-flights {
+		text-align: center;
+		padding: 2rem;
+		background: #fef3c7;
+		border: 1px solid #fbbf24;
+		border-radius: 8px;
+		color: #92400e;
+	}
+
+	.no-flights p {
+		margin: 0.5rem 0;
+	}
+
+	/* Earliest table + highlight */
+	.earliest-table {
+		width: 100%;
+		border-collapse: collapse;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.earliest-table th,
+	.earliest-table td {
+		padding: 0.75rem;
+		border-bottom: 1px solid #f3f4f6;
+		font-size: 0.875rem;
+		color: #374151;
+	}
+
+	.earliest-table thead th {
+		background: #f8fafc;
+		font-weight: 600;
+	}
+
+	.recommended-row {
+		outline: 2px solid #3b82f6;
+		outline-offset: -2px;
+		background: #eff6ff;
+	}
+
+	.earliest-box {
+		padding: 0.25rem 0.5rem;
+		border: 2px solid #3b82f6;
+		border-radius: 6px;
+		color: #1e3a8a;
+		background: #eff6ff;
+	}
+
+	/* Highlight recommended flight cards */
+	.flight-card.recommended {
+		box-shadow: 0 0 0 2px #3b82f6 inset;
+		background: #eff6ff;
+	}
+
+	.quote-disclaimer {
+		margin-top: 1rem;
+		padding: 0.75rem;
+		background: #f9fafb;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+		font-size: 0.875rem;
+		color: #6b7280;
+		font-style: italic;
+		text-align: center;
+	}
+
+	.form-actions {
+		padding: 2rem;
+		background: #f9fafb;
+		display: flex;
+		justify-content: flex-end;
+		gap: 1rem;
+	}
+
+	.button-status-message {
+		background: #fef3c7;
+		border: 1px solid #fbbf24;
+		border-radius: 8px;
+		padding: 0.75rem 1rem;
+		font-size: 0.875rem;
+		color: #92400e;
+		text-align: center;
+		margin-top: 0.75rem;
+		font-weight: 500;
+	}
+
+	.message {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 1rem 1.5rem;
+		border-radius: 12px;
+		margin-bottom: 1.5rem;
+		font-weight: 500;
+	}
+
+	.message.success {
+		background: #dcfce7;
+		color: #166534;
+		border: 1px solid #bbf7d0;
+	}
+
+	.message.error {
+		background: #fef2f2;
+		color: #dc2626;
+		border: 1px solid #fecaca;
+	}
+
+	.message svg {
+		width: 20px;
+		height: 20px;
+		flex-shrink: 0;
 	}
 
 	.logout-section {
@@ -1037,22 +2585,48 @@
 			padding: 1rem;
 		}
 		
-		.locations-row {
-			grid-template-columns: 1fr;
-		}
-		
-		.form-row {
+		.form-grid {
 			grid-template-columns: 1fr;
 		}
 		
 		.form-actions {
 			flex-direction: column;
-			align-items: center;
+		}
+
+		.btn {
+			width: 100%;
+			justify-content: center;
+		}
+
+		.flights-grid {
+			grid-template-columns: 1fr;
 		}
 		
-		.submit-button, .cancel-button {
-			width: 100%;
-			max-width: 300px;
+		.flight-stats {
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+
+		.validation-button-container {
+			margin: 1.5rem 0;
+			padding: 1.5rem;
+		}
+
+		.validate-and-search-btn {
+			font-size: 1rem;
+			padding: 0.875rem 1.5rem;
+			min-width: 240px;
+		}
+
+		/* Mobile responsive for address forms */
+		.address-forms-container {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+
+		.maps-grid {
+			grid-template-columns: 1fr;
+			gap: 1rem;
 		}
 	}
 </style> 

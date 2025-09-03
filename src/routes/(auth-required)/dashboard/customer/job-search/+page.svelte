@@ -132,7 +132,7 @@
 	}
 
 	function viewJobDetails(jobNumber: string) {
-		goto(`/jobs/${jobNumber}`);
+		goto(`/dashboard/customer/jobs/${jobNumber}`);
 	}
 
 	// Reactive statements for filtering

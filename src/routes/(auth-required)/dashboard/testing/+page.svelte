@@ -197,7 +197,7 @@
 							<option value="YUL">YUL - Montreal-Trudeau</option>
 							<option value="JFK">JFK - John F. Kennedy</option>
 							<option value="LAX">LAX - Los Angeles</option>
-							<option value="LHR">LHR - London Heathrow</option>
+							<option value="LGW">LGW - London Gatwick</option>
 							<option value="CDG">CDG - Charles de Gaulle</option>
 							<option value="NRT">NRT - Tokyo Narita</option>
 							<option value="SJO">SJO - San José Costa Rica</option>
@@ -294,7 +294,7 @@
 							<option value="YUL">YUL - Montreal-Trudeau</option>
 							<option value="JFK">JFK - John F. Kennedy</option>
 							<option value="LAX">LAX - Los Angeles</option>
-							<option value="LHR">LHR - London Heathrow</option>
+							<option value="LGW">LGW - London Gatwick</option>
 							<option value="CDG">CDG - Charles de Gaulle</option>
 							<option value="NRT">NRT - Tokyo Narita</option>
 						</select>
@@ -414,7 +414,7 @@
 							<option value="YUL">YUL - Montreal-Trudeau</option>
 							<option value="JFK">JFK - John F. Kennedy</option>
 							<option value="LAX">LAX - Los Angeles</option>
-							<option value="LHR">LHR - London Heathrow</option>
+							<option value="LGW">LGW - London Gatwick</option>
 							<option value="CDG">CDG - Charles de Gaulle</option>
 							<option value="NRT">NRT - Tokyo Narita</option>
 						</select>
@@ -425,7 +425,7 @@
 							<option value="BNA">BNA - Nashville International</option>
 							<option value="JFK">JFK - John F. Kennedy</option>
 							<option value="LAX">LAX - Los Angeles</option>
-							<option value="LHR">LHR - London Heathrow</option>
+							<option value="LGW">LGW - London Gatwick</option>
 							<option value="CDG">CDG - Charles de Gaulle</option>
 							<option value="ATL">ATL - Atlanta</option>
 							<option value="ORD">ORD - Chicago O'Hare</option>

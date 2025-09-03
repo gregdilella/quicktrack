@@ -5,6 +5,7 @@
 	import { getCurrentUser, requireAuth } from '$lib/auth'
 	import { jobSchema, type JobFormData, validateForm } from '$lib/validation/schemas'
 	import { computeNetjetsQuote, buildNetjetsInputFromJobForm, saveQuoteToDatabase } from '$lib/Quoting/netjets'
+	import { createAWBFromFlightData, type FlightData, type JobDataForAWB } from '$lib/services/awbService'
 	
 	let loading = false
 	let message = ''
@@ -13,6 +14,11 @@
 
 	// Quote preview state
 	let quotePreview: ReturnType<typeof computeNetjetsQuote> | null = null
+	
+	// Props for flight data (can be passed from parent components)
+	export let selectedFlightData: FlightData | null = null
+	export let originAirport: string = ''
+	export let destinationAirport: string = ''
 	
 	// Helper function to get today's date in YYYY-MM-DD format
 	function getTodaysDate(): string {
@@ -30,13 +36,13 @@
 	function generateJobno(jobNumber: string, jobType: string): string {
 		if (!jobNumber) return ''
 		
-		const typeCode = jobType === 'Call' ? 'C' : 'M' // Email and Web both use 'M'
+		const typeCode = jobType === 'call' ? 'C' : 'M' // Email and Web both use 'M'
 		return jobNumber + typeCode
 	}
 
 	// Job data structure
 	let jobData = {
-		job_number: '',
+		jobnumber: '',
 		jobno: '',
 		bol_number: '',
 		po_number: '',
@@ -44,7 +50,7 @@
 		pieces: '1',
 		weight: '1',
 		service_type: 'NFO',
-		job_type: 'Call',
+		job_type: 'call',
 		
 		// Shipper information
 		shipper_name: '',
@@ -84,9 +90,9 @@
 					// Get the highest existing job number
 		const { data, error } = await supabase
 			.from('jobsfile')
-			.select('job_number')
-			.like('job_number', '3%')
-			.order('job_number', { ascending: false })
+			.select('jobnumber')
+			.like('jobnumber', '3%')
+			.order('jobnumber', { ascending: false })
 			.limit(1)
 			
 			if (error) {
@@ -96,13 +102,13 @@
 			
 			let nextNumber = 3000001 // Starting number
 			
-			if (data && data.length > 0) {
-				const lastJobNumber = data[0].job_number
-				const lastNumber = parseInt(lastJobNumber)
-				if (!isNaN(lastNumber)) {
-					nextNumber = lastNumber + 1
-				}
+					if (data && data.length > 0) {
+			const lastJobNumber = data[0].jobnumber
+			const lastNumber = parseInt(lastJobNumber)
+			if (!isNaN(lastNumber)) {
+				nextNumber = lastNumber + 1
 			}
+		}
 			
 			return nextNumber.toString().padStart(7, '0')
 		} catch (error) {
@@ -119,8 +125,8 @@
 		return '3' + lastSix.padStart(6, '0')
 	}
 	
-	// Reactive statement to update jobno whenever job_number or job_type changes
-	$: jobData.jobno = generateJobno(jobData.job_number, jobData.job_type)
+	// Reactive statement to update jobno whenever jobnumber or job_type changes
+	$: jobData.jobno = generateJobno(jobData.jobnumber, jobData.job_type)
 
 	// Reactive: compute quote preview as the user fills the form (Netjets only for now)
 	$: {
@@ -166,12 +172,12 @@
 			
 			// Generate job number only when creating the job
 			try {
-				jobData.job_number = await generateJobNumber()
-				console.log('Generated job number:', jobData.job_number)
+				jobData.jobnumber = await generateJobNumber()
+				console.log('Generated job number:', jobData.jobnumber)
 			} catch (error) {
 				console.warn('Failed to generate job number from database, using fallback')
-				jobData.job_number = generateFallbackJobNumber()
-				console.log('Fallback job number:', jobData.job_number)
+				jobData.jobnumber = generateFallbackJobNumber()
+				console.log('Fallback job number:', jobData.jobnumber)
 			}
 			
 			// Validate form data using Zod
@@ -204,8 +210,7 @@
 			
 			// Debug: Log the data being inserted
 			console.log('Data being inserted:', {
-				jobnumber: cleanedData.job_number,
-				job_number: cleanedData.job_number,
+				jobnumber: cleanedData.jobnumber,
 				jobno: cleanedData.jobno,
 				commodity: cleanedData.commodity,
 				shipper_name: cleanedData.shipper_name,
@@ -216,8 +221,7 @@
 		const { data, error } = await supabase
 			.from('jobsfile')
 			.insert([{
-					jobnumber: cleanedData.job_number,  // Primary field for database relationships
-					job_number: cleanedData.job_number,
+					jobnumber: cleanedData.jobnumber,  // Primary field for database relationships
 					jobno: cleanedData.jobno,
 					bol_number: cleanedData.bol_number,
 					po_number: cleanedData.po_number,
@@ -248,7 +252,7 @@
 					ready_date: cleanedData.ready_date,
 					ready_time: cleanedData.ready_time,
 					
-					status: 'pending',
+					status: 'dispatch',
 					created_by: user?.id || null,
 					created_at: new Date().toISOString()
 				}])
@@ -279,8 +283,53 @@
 				return
 			}
 			
+			console.log('✅ Job created successfully, now creating AWB...')
+			
+			// Create AWB automatically if we have flight data
+			try {
+				const jobDataForAWB: JobDataForAWB = {
+					jobnumber: jobData.jobnumber,
+					pieces: parseInt(jobData.pieces.toString()),
+					weight: parseFloat(jobData.weight.toString()),
+					weight_unit: 'lbs', // Default for CreateNewJob component
+					created_by: user?.id || undefined
+				}
+
+				const awbResult = await createAWBFromFlightData(
+					jobDataForAWB,
+					selectedFlightData,
+					originAirport,
+					destinationAirport
+				)
+
+				if (awbResult.success) {
+					console.log('✅ AWB created successfully:', awbResult.awbNumber)
+					message = `Job ${jobData.jobno || jobData.jobnumber} created successfully! AWB: ${awbResult.awbNumber}`
+				} else {
+					console.warn('⚠️ Job created but AWB creation failed:', awbResult.error)
+					message = `Job ${jobData.jobno || jobData.jobnumber} created successfully! (AWB creation failed: ${awbResult.error})`
+				}
+			} catch (awbError) {
+				console.error('Error creating AWB:', awbError)
+				message = `Job ${jobData.jobno || jobData.jobnumber} created successfully! (AWB creation failed)`
+			}
+			
+			// Save quote to database if we have one
+			try {
+				if (quotePreview && jobData.jobnumber) {
+					console.log('💰 Saving quote to database...')
+					const quoteResult = await saveQuoteToDatabase(supabase, jobData.jobnumber, quotePreview)
+					if (quoteResult.success) {
+						console.log('✅ Quote saved successfully')
+					} else {
+						console.warn('⚠️ Quote saving failed:', quoteResult.error)
+					}
+				}
+			} catch (quoteError) {
+				console.error('Error saving quote:', quoteError)
+			}
+			
 			success = true
-			message = `Job ${jobData.jobno || jobData.job_number} created successfully!`
 			
 			// Navigate to the job detail page after a brief delay
 			setTimeout(() => {
@@ -301,57 +350,59 @@
 		<!-- Row 1: Job Info (Job, BOL, PO#) -->
 		<div class="row-box">
 			<div class="field-group">
-				<label class="blue-text">Job</label>
-				<input type="text" value={jobData.job_number || 'Will be generated on submission'} class="field-input job-number-display" readonly />
+				<label for="job-number" class="blue-text">Job</label>
+				<input id="job-number" type="text" value={jobData.jobnumber || 'Will be generated on submission'} class="field-input job-number-display" readonly />
 			</div>
 			<div class="field-group">
-				<label class="blue-text">BOL</label>
-				<input type="text" bind:value={jobData.bol_number} class="field-input" />
+				<label for="bol-number" class="blue-text">BOL</label>
+				<input id="bol-number" type="text" bind:value={jobData.bol_number} class="field-input" />
 			</div>
 			<div class="field-group">
-				<label class="blue-text">PO#</label>
-				<input type="text" bind:value={jobData.po_number} class="field-input" />
+				<label for="po-number" class="blue-text">PO#</label>
+				<input id="po-number" type="text" bind:value={jobData.po_number} class="field-input" />
 			</div>
 		</div>
 
 		<!-- Row 2: Commodity Info (Commodity, #Pcs, Weight, Type of Service, Job Type) -->
 		<div class="row-box">
 			<div class="field-group">
-				<label class="blue-text">Commodity *</label>
-				<input type="text" bind:value={jobData.commodity} class="field-input commodity-field" class:error={validationErrors.commodity} required />
+				<label for="commodity" class="blue-text">Commodity *</label>
+				<input id="commodity" type="text" bind:value={jobData.commodity} class="field-input commodity-field" class:error={validationErrors.commodity} required />
 				{#if validationErrors.commodity}
 					<span class="error-text">{validationErrors.commodity}</span>
 				{/if}
 			</div>
 			<div class="field-group">
-				<label class="blue-text">#Pcs</label>
-				<input type="number" bind:value={jobData.pieces} class="field-input small-field" class:error={validationErrors.pieces} />
+				<label for="pieces" class="blue-text">#Pcs</label>
+				<input id="pieces" type="number" bind:value={jobData.pieces} class="field-input small-field" class:error={validationErrors.pieces} />
 				{#if validationErrors.pieces}
 					<span class="error-text">{validationErrors.pieces}</span>
 				{/if}
 			</div>
 			<div class="field-group">
-				<label class="blue-text">Weight</label>
-				<input type="number" bind:value={jobData.weight} class="field-input small-field" class:error={validationErrors.weight} />
+				<label for="weight" class="blue-text">Weight</label>
+				<input id="weight" type="number" bind:value={jobData.weight} class="field-input small-field" class:error={validationErrors.weight} />
 				{#if validationErrors.weight}
 					<span class="error-text">{validationErrors.weight}</span>
 				{/if}
 			</div>
 			<div class="field-group">
-				<label class="blue-text">Type of Service</label>
-				<select bind:value={jobData.service_type} class="field-input service-field">
+				<label for="service-type" class="blue-text">Type of Service</label>
+				<select id="service-type" bind:value={jobData.service_type} class="field-input service-field">
 					<option value="NFO">NFO</option>
 					<option value="NDO">NDO</option>
 					<option value="OBC">OBC</option>
-					<option value="Charter">Charter</option>
+					<option value="CHAR">Charter</option>
 				</select>
 			</div>
 			<div class="field-group">
-				<label class="blue-text">Job Type</label>
-				<select bind:value={jobData.job_type} class="field-input service-field">
-					<option value="Call">Call</option>
-					<option value="Email">Email</option>
-					<option value="Web">Web</option>
+				<label for="job-type" class="blue-text">Job Type</label>
+				<select id="job-type" bind:value={jobData.job_type} class="field-input service-field">
+					<option value="call">Call</option>
+					<option value="email">Email</option>
+					<option value="web">Web</option>
+					<option value="placement">Placement</option>
+					<option value="return">Return</option>
 				</select>
 			</div>
 		</div>
@@ -359,15 +410,15 @@
 		<!-- Row 3: Ready Date and Time -->
 		<div class="row-box">
 			<div class="field-group">
-				<label class="blue-text">Ready Date</label>
-				<input type="date" bind:value={jobData.ready_date} class="field-input" class:error={validationErrors.ready_date} />
+				<label for="ready-date" class="blue-text">Ready Date</label>
+				<input id="ready-date" type="date" bind:value={jobData.ready_date} class="field-input" class:error={validationErrors.ready_date} />
 				{#if validationErrors.ready_date}
 					<span class="error-text">{validationErrors.ready_date}</span>
 				{/if}
 			</div>
 			<div class="field-group">
-				<label class="blue-text">Ready Time</label>
-				<input type="time" bind:value={jobData.ready_time} class="field-input" class:error={validationErrors.ready_time} />
+				<label for="ready-time" class="blue-text">Ready Time</label>
+				<input id="ready-time" type="time" bind:value={jobData.ready_time} class="field-input" class:error={validationErrors.ready_time} />
 				{#if validationErrors.ready_time}
 					<span class="error-text">{validationErrors.ready_time}</span>
 				{/if}
@@ -468,9 +519,9 @@
 		<!-- Quote Preview (Netjets) -->
 		<div class="row-box">
 			<div class="field-group" style="min-width:280px;">
-				<label class="blue-text">Quote Preview (Netjets)</label>
+				<label for="quote-preview" class="blue-text">Quote Preview (Netjets)</label>
 				{#if quotePreview}
-					<div class="quote-grid">
+					<div id="quote-preview" class="quote-grid">
 						<div>NF: ${quotePreview.NF.toFixed(2)}</div>
 						<div>PP: ${quotePreview.PP.toFixed(2)}</div>
 						<div>NCUS: ${quotePreview.NCUS.toFixed(2)}</div>
@@ -490,7 +541,7 @@
 						*These are transport costs and may not include incidentals like driver waiting time.
 					</div>
 				{:else}
-					<div class="quote-grid">Fill the form to preview</div>
+					<div id="quote-preview" class="quote-grid">Fill the form to preview</div>
 				{/if}
 			</div>
 		</div>

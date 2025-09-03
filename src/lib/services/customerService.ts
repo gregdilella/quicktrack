@@ -1,5 +1,7 @@
 import { supabase } from '$lib/supabase';
 import type { Database } from '$lib/types/supabase.types';
+import { createAWBFromFlightData, type FlightData, type JobDataForAWB } from './awbService';
+import { saveQuoteToDatabase, computeNetjetsQuote, buildNetjetsInputFromJobForm, ensureJobHasQuote } from '$lib/Quoting/netjets';
 
 export type Customer = Database['public']['Tables']['customers']['Row'];
 export type JobsFile = Database['public']['Tables']['jobsfile']['Row'];
@@ -123,7 +125,13 @@ export async function getCustomerJob(jobNumber: string): Promise<JobsFile | null
  * Create a new job for the current customer
  * Customer info will be auto-populated by the database trigger
  */
-export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ success: boolean; jobNumber?: string; jobno?: string; error?: string }> {
+export async function createCustomerJob(
+	jobData: Partial<JobsFile>, 
+	flightData?: FlightData | null,
+	originAirport?: string,
+	destinationAirport?: string,
+	quoteData?: any
+): Promise<{ success: boolean; jobNumber?: string; jobno?: string; awbNumber?: string; error?: string }> {
 	try {
 		// Get current user's customer info
 		const customer = await getCurrentUserCustomer();
@@ -141,8 +149,8 @@ export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ s
 		}
 
 		// Generate jobno from job_number + job_type (default to 'M' if not specified)
-		const jobType = jobData.job_type || 'Email'; // Default to Email which uses 'M'
-		const typeCode = jobType === 'Call' ? 'C' : 'M';
+		const jobType = jobData.job_type || 'email'; // Default to email which uses 'M'
+		const typeCode = jobType === 'call' ? 'C' : 'M';
 		const jobno = jobNumber + typeCode;
 
 		// Get current user for created_by
@@ -156,7 +164,8 @@ export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ s
 				jobno: jobno,
 				customer_id: customer.id,
 				customer_name: customer.name,
-				status: 'New',
+				account_number: customer.account_number,
+				status: 'dispatch',
 				created_by: user?.id || null,
 				created_at: new Date().toISOString()
 			})
@@ -168,7 +177,50 @@ export async function createCustomerJob(jobData: Partial<JobsFile>): Promise<{ s
 			return { success: false, error: error.message };
 		}
 
-		return { success: true, jobNumber: newJob.jobnumber, jobno: newJob.jobno };
+		console.log('✅ Customer job created successfully, now creating AWB...');
+
+		// Create AWB automatically if we have flight data
+		let awbNumber: string | undefined;
+		try {
+			const jobDataForAWB: JobDataForAWB = {
+				jobnumber: newJob.jobnumber,
+				pieces: jobData.pieces || undefined,
+				weight: jobData.weight || undefined,
+				weight_unit: jobData.weight_unit || 'kg',
+				created_by: user?.id || undefined
+			}
+
+			const awbResult = await createAWBFromFlightData(
+				jobDataForAWB,
+				flightData || null,
+				originAirport,
+				destinationAirport
+			)
+
+			if (awbResult.success) {
+				console.log('✅ Customer AWB created successfully:', awbResult.awbNumber);
+				awbNumber = awbResult.awbNumber;
+			} else {
+				console.warn('⚠️ Customer job created but AWB creation failed:', awbResult.error);
+			}
+		} catch (awbError) {
+			console.error('Error creating customer AWB:', awbError);
+		}
+
+		// Ensure every job has a quote (detailed if provided, basic otherwise)
+		try {
+			console.log('💰 Ensuring customer job has quote...');
+			const quoteResult = await ensureJobHasQuote(supabase, newJob.jobnumber, jobData, quoteData);
+			if (quoteResult.success) {
+				console.log(`✅ Customer quote saved successfully (${quoteResult.quoteType})`);
+			} else {
+				console.warn('⚠️ Customer quote creation failed:', quoteResult.error);
+			}
+		} catch (quoteError) {
+			console.error('Error ensuring customer quote:', quoteError);
+		}
+
+		return { success: true, jobNumber: newJob.jobnumber, jobno: newJob.jobno, awbNumber };
 	} catch (error) {
 		console.error('Error in createCustomerJob:', error);
 		return { success: false, error: 'Unexpected error occurred' };
@@ -189,10 +241,10 @@ export async function getCustomerJobStats(): Promise<{
 		
 		const totalJobs = jobs.length;
 		const activeJobs = jobs.filter(job => 
-			job.status && !['Completed', 'Delivered', 'Cancelled'].includes(job.status)
+			job.status && !['delivered', 'billed', 'invoiced', 'collected'].includes(job.status)
 		).length;
 		const completedJobs = jobs.filter(job => 
-			job.status && ['Completed', 'Delivered'].includes(job.status)
+			job.status && ['delivered', 'billed', 'invoiced', 'collected'].includes(job.status)
 		).length;
 		const recentJobs = jobs.slice(0, 5); // Get 5 most recent jobs
 

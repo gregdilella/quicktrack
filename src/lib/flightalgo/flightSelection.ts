@@ -1,3 +1,4 @@
+
 /**
  * Flight Selection Algorithm
  * 
@@ -156,7 +157,7 @@ export async function searchFlightsFromReadyTime(
   // Generate search dates starting from ready date
   for (let i = 0; i < searchDays; i++) {
     const searchDate = new Date(readyDate);
-    searchDate.setDate(readDate.getDate() + i);
+    searchDate.setDate(readyDate.getDate() + i);
     searchDates.push(searchDate.toISOString().split('T')[0]); // YYYY-MM-DD format
   }
 

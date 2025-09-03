@@ -154,7 +154,7 @@ export async function createAWB(jobnumber: string, awbData: AWBFormData): Promis
 		const insertData: AWBInsert = {
 			...awbData,
 			jobnumber,
-			status: 'Created',
+			status: 'dispatch',
 			created_by: (await supabase.auth.getUser()).data.user?.id || null
 		};
 
@@ -253,7 +253,7 @@ export async function assignLSPToJob(jobnumber: string, lspData: LSPAssignmentFo
 			lsp_id: lspData.lsp_id,
 			vendorcode: lsp.vendor_code,
 			function: lspData.function,
-			status: 'Assigned',
+			status: 'dispatch',
 			assigned_date: new Date().toISOString()
 		};
 

@@ -28,7 +28,7 @@ export interface NetjetsQuoteBreakdown {
   MD: number
   AH: number
   NFT: number
-  DG: numbers
+  DG: number
   TFM: number
   SSC: number
   FS: number
@@ -194,6 +194,70 @@ export async function saveQuoteToDatabase(supabase: any, jobnumber: string, brea
   } catch (err) {
     console.error('Error in saveQuoteToDatabase:', err)
     return { success: false, error: 'Failed to save quote' }
+  }
+}
+
+/**
+ * Create a basic quote for a new job when detailed flight data isn't available
+ * This ensures every job has at least a basic quote that can be updated later
+ */
+export function createBasicQuote(jobData: any): NetjetsQuoteBreakdown {
+  const weight = Number(jobData?.weight || 0)
+  const pieces = Number(jobData?.pieces || 1)
+  
+  // Create basic quote input with minimal data
+  const basicInput: NetjetsQuoteInput = {
+    weightlbs: weight,
+    pieces: pieces,
+    shipperstate: jobData?.shipper_state || null,
+    consigneestate: jobData?.consignee_state || null,
+    Originalshippermiles: 0, // Default to 0 since we don't have route data
+    PickUpVehicleType: 'CAR_SUV_MINVAN', // Default vehicle type
+    shippercity: jobData?.shipper_city || null,
+    flightorigenmerge: null,
+    FlightTenderered: null,
+    pickupdate: null,
+    Originalconsigneemiles: 0, // Default to 0 since we don't have route data
+    deliverydate: null,
+    FlightRecovery: null,
+    mawbmerge: null,
+    isDangerousGoods: false, // Default to false
+    ATD: 0
+  }
+  
+  return computeNetjetsQuote(basicInput)
+}
+
+/**
+ * Ensures every job has a quote - either the provided detailed quote or a basic one
+ */
+export async function ensureJobHasQuote(
+  supabase: any, 
+  jobnumber: string, 
+  jobData: any, 
+  existingQuote?: NetjetsQuoteBreakdown | null
+): Promise<{ success: boolean; error?: string; quoteType: 'detailed' | 'basic' }> {
+  try {
+    let quoteToSave: NetjetsQuoteBreakdown
+    let quoteType: 'detailed' | 'basic'
+    
+    if (existingQuote && existingQuote.total > 0) {
+      // Use the detailed quote if available
+      quoteToSave = existingQuote
+      quoteType = 'detailed'
+      console.log('💰 Using detailed quote for job:', jobnumber)
+    } else {
+      // Create a basic quote
+      quoteToSave = createBasicQuote(jobData)
+      quoteType = 'basic'
+      console.log('💰 Creating basic quote for job:', jobnumber, 'Total:', quoteToSave.total)
+    }
+    
+    const result = await saveQuoteToDatabase(supabase, jobnumber, quoteToSave)
+    return { ...result, quoteType }
+  } catch (error) {
+    console.error('Error in ensureJobHasQuote:', error)
+    return { success: false, error: 'Failed to ensure job has quote', quoteType: 'basic' }
   }
 }
 

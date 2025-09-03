@@ -88,7 +88,7 @@ export async function getActiveJobsWithTimeline(): Promise<JobWithTimeline[]> {
 		const { data: jobs, error: jobsError } = await supabase
 			.from('jobsfile')
 			.select('*')
-			.not('status', 'in', '("Completed","Delivered","Cancelled")')
+			.not('status', 'in', '("delivered","billed","invoiced","collected")')
 			.order('created_at', { ascending: false });
 
 		if (jobsError) {
