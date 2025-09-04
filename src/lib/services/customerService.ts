@@ -2,6 +2,9 @@ import { supabase } from '$lib/supabase';
 import type { Database } from '$lib/types/supabase.types';
 import { createAWBFromFlightData, type FlightData, type JobDataForAWB } from './awbService';
 import { saveQuoteToDatabase, computeNetjetsQuote, buildNetjetsInputFromJobForm, ensureJobHasQuote } from '$lib/Quoting/netjets';
+import type { FlightRecommendation } from '$lib/flightalgo/flightSelection';
+import { saveFlightEstimatesToTimetable } from './timetableService';
+import { updateAWBWithFlightMetadata } from './awbService';
 
 export type Customer = Database['public']['Tables']['customers']['Row'];
 export type JobsFile = Database['public']['Tables']['jobsfile']['Row'];
@@ -130,7 +133,8 @@ export async function createCustomerJob(
 	flightData?: FlightData | null,
 	originAirport?: string,
 	destinationAirport?: string,
-	quoteData?: any
+	quoteData?: any,
+	flightRecommendation?: FlightRecommendation | null
 ): Promise<{ success: boolean; jobNumber?: string; jobno?: string; awbNumber?: string; error?: string }> {
 	try {
 		// Get current user's customer info
@@ -179,16 +183,35 @@ export async function createCustomerJob(
 
 		console.log('✅ Customer job created successfully, now creating AWB...');
 
+		// Save flight timing estimates to timetable and metadata to AWB
+		if (flightRecommendation && originAirport && destinationAirport) {
+			try {
+				console.log('📅 Saving flight timing estimates to timetable...');
+				const timetableResult = await saveFlightEstimatesToTimetable(
+					newJob.jobno || jobno,
+					flightRecommendation
+				);
+				if (timetableResult.success) {
+					console.log('✅ Flight timing estimates saved to timetable successfully');
+				} else {
+					console.warn('⚠️ Flight timing estimates saving failed:', timetableResult.error);
+				}
+			} catch (timetableError) {
+				console.error('Error saving flight timing estimates to timetable:', timetableError);
+			}
+		}
+
 		// Create AWB automatically if we have flight data
 		let awbNumber: string | undefined;
 		try {
-			const jobDataForAWB: JobDataForAWB = {
-				jobnumber: newJob.jobnumber,
-				pieces: jobData.pieces || undefined,
-				weight: jobData.weight || undefined,
-				weight_unit: jobData.weight_unit || 'kg',
-				created_by: user?.id || undefined
-			}
+					const jobDataForAWB: JobDataForAWB = {
+			jobno: newJob.jobno,
+			jobnumber: newJob.jobnumber, // Keep for backward compatibility
+			pieces: jobData.pieces || undefined,
+			weight: jobData.weight || undefined,
+			weight_unit: jobData.weight_unit || 'kg',
+			created_by: user?.id || undefined
+		}
 
 			const awbResult = await createAWBFromFlightData(
 				jobDataForAWB,
@@ -200,6 +223,26 @@ export async function createCustomerJob(
 			if (awbResult.success) {
 				console.log('✅ Customer AWB created successfully:', awbResult.awbNumber);
 				awbNumber = awbResult.awbNumber;
+
+				// Update AWB with flight metadata if we have flight recommendation
+				if (flightRecommendation && originAirport && destinationAirport) {
+					try {
+						console.log('🛫 Updating AWB with flight metadata...');
+						const awbMetadataResult = await updateAWBWithFlightMetadata(
+							newJob.jobno,
+							flightRecommendation,
+							originAirport,
+							destinationAirport
+						);
+						if (awbMetadataResult.success) {
+							console.log('✅ AWB updated with flight metadata successfully');
+						} else {
+							console.warn('⚠️ AWB flight metadata update failed:', awbMetadataResult.error);
+						}
+					} catch (metadataError) {
+						console.error('Error updating AWB with flight metadata:', metadataError);
+					}
+				}
 			} else {
 				console.warn('⚠️ Customer job created but AWB creation failed:', awbResult.error);
 			}

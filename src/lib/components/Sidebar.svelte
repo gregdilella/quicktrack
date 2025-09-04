@@ -419,16 +419,17 @@
 	.header-content {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.5rem;
 	}
 
 	.logo-blur-container {
 		max-width: fit-content;
 		flex-shrink: 0;
+		margin-right: 0.25rem;
 	}
 
 	.brand-logo-img {
-		max-width: 70px;
+		max-width: 50px;
 		width: 100%;
 		height: auto;
 		margin: 0;
@@ -439,7 +440,7 @@
 	/* Status Card */
 	.status-card {
 		background: white;
-		padding: 1.5rem;
+		padding: 0.75rem;
 		border-radius: 16px;
 		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 		border: 1px solid rgba(0, 0, 0, 0.05);
@@ -475,21 +476,28 @@
 	.user-info {
 		flex: 1;
 		min-width: 0;
+		overflow: hidden;
 	}
 
 	.user-status {
 		font-size: 0.7rem;
 		font-weight: 600;
-		margin: 0 0 0.2rem 0;
-		line-height: 1.1;
+		margin: 0 0 0.3rem 0;
+		line-height: 1.2;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.user-email {
-		font-size: 0.65rem;
+		font-size: 0.7rem;
 		color: #6b7280;
-		margin: 0 0 0.2rem 0;
-		line-height: 1.1;
-		word-break: break-all;
+		margin: 0;
+		line-height: 1.2;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-family: system-ui, -apple-system, sans-serif;
 	}
 
 
@@ -626,11 +634,11 @@
 	/* Mobile specific styles */
 	@media (max-width: 768px) {
 		.header-content {
-			gap: 0.5rem;
+			gap: 0.4rem;
 		}
 
 		.brand-logo-img {
-			max-width: 50px;
+			max-width: 40px;
 		}
 
 		.user-status {
@@ -639,6 +647,10 @@
 
 		.user-email {
 			font-size: 0.6rem;
+		}
+
+		.status-card {
+			padding: 0.5rem;
 		}
 	}
 </style> 

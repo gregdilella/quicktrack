@@ -119,7 +119,7 @@
                     />
                     <button 
                         type="button" 
-                        on:click={() => { searchQuery = ''; handleSearch(); }} 
+                        onclick={() => { searchQuery = ''; handleSearch(); }} 
                         class="clear-button"
                         class:visible={searchQuery.length > 0}
                     >
@@ -151,9 +151,10 @@
             {:else}
                 <div class="customers-grid">
                     {#each filteredSalesmen as s, i (s.salesman_id || s.id || `${s.email || ''}-${i}`)}
-                        <div class="customer-card">
+                        <div class="customer-card clickable" onclick={() => goto(`/dashboard/management/salesman-search/${s.id}`)}>
                             <div class="customer-header">
                                 <h4 class="customer-name">{s.name}</h4>
+                                <span class="click-indicator">→</span>
                             </div>
                             <div class="customer-details">
                                 {#if s.email}
@@ -176,7 +177,7 @@
         </div>
 
         <div class="logout-section">
-            <button on:click={handleSignOut} disabled={loading} class="logout-button">
+            <button onclick={handleSignOut} disabled={loading} class="logout-button">
                 {loading ? 'Signing Out...' : 'Logout'}
             </button>
         </div>
@@ -216,6 +217,10 @@
     .customers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1.5rem; padding: 2rem; }
     .customer-card { background: linear-gradient(135deg, #ffffff, #f8fafc); border: 2px solid #e5e7eb; border-radius: 16px; padding: 1.5rem; transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
     .customer-card:hover { border-color: #ea580c; box-shadow: 0 8px 30px rgba(234,88,12,0.15); transform: translateY(-4px); }
+    .customer-card.clickable { cursor: pointer; }
+    .customer-card.clickable:hover { border-color: #2563eb; box-shadow: 0 8px 30px rgba(37,99,235,0.15); }
+    .click-indicator { font-size: 1.5rem; color: #6b7280; transition: all 0.3s ease; }
+    .customer-card.clickable:hover .click-indicator { color: #2563eb; transform: translateX(4px); }
     .customer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #e5e7eb; }
     .customer-name { font-size: 1.25rem; font-weight: 600; color: #1f2937; margin: 0; }
     .detail-row { display: flex; gap: 0.75rem; }

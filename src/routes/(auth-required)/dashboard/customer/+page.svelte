@@ -5,6 +5,7 @@
 	import { getCurrentUser, signOut } from '$lib/auth'
 	import { getCurrentUserProfile } from '$lib/userService'
 	import { getCurrentUserCustomer, getCustomerJobStats } from '$lib/services/customerService'
+	import { supabase } from '$lib/supabase'
 	import type { User } from '@supabase/supabase-js'
 	import type { UserProfile } from '$lib/types'
 	import type { Customer } from '$lib/services/customerService'
@@ -25,6 +26,12 @@
 	}
 	let loading = false
 	let dataLoading = true
+	
+	// Admin customer switcher state
+	let allCustomers: Customer[] = []
+	let selectedCustomerId: string = ''
+	let showCustomerDropdown = false
+	let loadingCustomers = false
 
 	// Load user data on page load (authentication is handled server-side)
 	onMount(async () => {
@@ -42,6 +49,12 @@
 				userProfile = profileResult
 				customer = customerResult
 				jobStats = statsResult
+				
+				// If admin, load all customers for the switcher
+				if (userProfile?.role === 'Admin') {
+					await loadAllCustomers()
+					selectedCustomerId = customer?.id || ''
+				}
 			} catch (error) {
 				console.error('Error loading user data:', error)
 			} finally {
@@ -65,14 +78,85 @@
 		loading = false
 	}
 
+	// Load all customers for admin switcher
+	async function loadAllCustomers() {
+		if (userProfile?.role !== 'Admin') return
+		
+		try {
+			loadingCustomers = true
+			const { data, error } = await supabase
+				.from('customers')
+				.select('*')
+				.order('name', { ascending: true })
+			
+			if (error) {
+				console.error('Error loading customers:', error)
+				return
+			}
+			
+			allCustomers = data || []
+			console.log('Loaded customers for admin:', allCustomers.length)
+		} catch (err) {
+			console.error('Error in loadAllCustomers:', err)
+		} finally {
+			loadingCustomers = false
+		}
+	}
+
+	// Switch to a different customer (admin only)
+	async function switchToCustomer(customerId: string) {
+		if (userProfile?.role !== 'Admin') return
+		
+		try {
+			loading = true
+			selectedCustomerId = customerId
+			showCustomerDropdown = false
+			
+			// Load the selected customer's data
+			const { data: customerData, error: customerError } = await supabase
+				.from('customers')
+				.select('*')
+				.eq('id', customerId)
+				.single()
+			
+			if (customerError) {
+				console.error('Error loading selected customer:', customerError)
+				return
+			}
+			
+			customer = customerData
+			
+			// Reload job stats for the new customer
+			// Note: This might need to be updated to filter by customer_id
+			const statsResult = await getCustomerJobStats()
+			jobStats = statsResult
+			
+			console.log('Switched to customer:', customer?.name)
+		} catch (err) {
+			console.error('Error switching customer:', err)
+		} finally {
+			loading = false
+		}
+	}
+
 	// Get customer display name with fallback
 	function getCustomerDisplayName(): string {
-		if (userProfile?.role === 'Admin') return 'Netjets' // Default for admin as requested
+		if (userProfile?.role === 'Admin') {
+			return customer?.name || 'Select Customer'
+		}
 		return customer?.name || 'Netjets' // Default to Netjets when customer name is null
+	}
+
+	// Close dropdown when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (!target.closest('.customer-dropdown-container')) {
+			showCustomerDropdown = false;
+		}
 	}
 </script>
 
-<div class="customer-container">
+<div class="customer-container" onclick={handleClickOutside}>
 	<!-- Header Section -->
 	<div class="header-section">
 		<div class="brand-header">
@@ -101,8 +185,45 @@
 							Customer
 						{/if}
 					</p>
+					
+					<!-- Admin-only customer switcher -->
+					{#if userProfile?.role === 'Admin'}
+						<div class="admin-customer-switcher">
+							<label class="switcher-label">View as Customer:</label>
+							<div class="customer-dropdown-container">
+								<button 
+									class="customer-select-btn"
+									onclick={() => showCustomerDropdown = !showCustomerDropdown}
+									disabled={loadingCustomers}
+								>
+									{customer?.name || 'Select Customer'} ▼
+								</button>
+								
+								{#if showCustomerDropdown}
+									<div class="customer-dropdown">
+										{#if loadingCustomers}
+											<div class="dropdown-item loading">Loading customers...</div>
+										{:else}
+											{#each allCustomers as cust}
+												<button 
+													class="dropdown-item"
+													onclick={() => switchToCustomer(cust.id)}
+													class:selected={cust.id === selectedCustomerId}
+												>
+													<span class="customer-name">{cust.name}</span>
+													{#if cust.account_number}
+														<span class="customer-account">#{cust.account_number}</span>
+													{/if}
+												</button>
+											{/each}
+										{/if}
+									</div>
+								{/if}
+							</div>
+						</div>
+					{/if}
 				</div>
-				<button on:click={handleSignOut} disabled={loading} class="logout-btn">
+				<button onclick={handleSignOut} disabled={loading} class="logout-btn">
 					{loading ? 'Signing out...' : 'Sign Out'}
 				</button>
 			</div>
@@ -361,7 +482,117 @@
 	.user-role {
 		font-size: 0.875rem;
 		color: #6b7280;
-		margin: 0;
+		margin: 0 0 0.5rem 0;
+	}
+
+	/* Admin Customer Switcher Styles */
+	.admin-customer-switcher {
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid #e5e7eb;
+	}
+
+	.switcher-label {
+		display: block;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: #374151;
+		margin-bottom: 0.5rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.customer-dropdown-container {
+		position: relative;
+	}
+
+	.customer-select-btn {
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		background: #f8fafc;
+		border: 1px solid #d1d5db;
+		border-radius: 6px;
+		font-size: 0.875rem;
+		text-align: left;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.customer-select-btn:hover:not(:disabled) {
+		background: #f1f5f9;
+		border-color: #34547a;
+	}
+
+	.customer-select-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.customer-dropdown {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		right: 0;
+		background: white;
+		border: 1px solid #d1d5db;
+		border-radius: 6px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		z-index: 50;
+		max-height: 200px;
+		overflow-y: auto;
+		margin-top: 2px;
+	}
+
+	.dropdown-item {
+		width: 100%;
+		padding: 0.75rem;
+		text-align: left;
+		border: none;
+		background: white;
+		cursor: pointer;
+		transition: background-color 0.2s ease;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom: 1px solid #f3f4f6;
+	}
+
+	.dropdown-item:last-child {
+		border-bottom: none;
+	}
+
+	.dropdown-item:hover:not(.loading) {
+		background: #f8fafc;
+	}
+
+	.dropdown-item.selected {
+		background: #dbeafe;
+		color: #1d4ed8;
+	}
+
+	.dropdown-item.loading {
+		cursor: default;
+		font-style: italic;
+		color: #6b7280;
+	}
+
+	.customer-name {
+		font-weight: 500;
+		color: #374151;
+	}
+
+	.customer-account {
+		font-size: 0.75rem;
+		color: #6b7280;
+		font-family: monospace;
+	}
+
+	.dropdown-item.selected .customer-name {
+		color: #1d4ed8;
+		font-weight: 600;
 	}
 
 	.logout-btn {

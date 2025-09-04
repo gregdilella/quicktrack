@@ -130,6 +130,17 @@
 		}
 	}
 
+	// Job creation handlers (placeholder functions for now)
+	function handleCreatePlacementJob() {
+		console.log('Create Placement Job clicked for job:', jobData.jobno || jobData.jobnumber)
+		// TODO: Implement placement job creation logic
+	}
+
+	function handleCreateReturnJob() {
+		console.log('Create Return Job clicked for job:', jobData.jobno || jobData.jobnumber)
+		// TODO: Implement return job creation logic
+	}
+
 	// Salesman (derived from customer.salesman_id)
 	let whoSalesman: { salesman_id: string; name: string; fin_cono?: string | null } | null = null
 
@@ -449,12 +460,12 @@
 			const { data: existingRecord } = await supabase
 				.from('timetable')
 				.select('id')
-				.eq('jobnumber', jobIdentifier)
+				.eq('jobno', jobIdentifier)
 				.single()
 			
 			// Prepare the timeline data (excluding jobcreated which should not be updated)
 			const timelineData = {
-				jobnumber: jobIdentifier,
+				jobno: jobIdentifier,
 				pdriver_dispatched: jobData.pdriver_dispatched ? new Date(jobData.pdriver_dispatched).toISOString() : null,
 				pdriver_arrived: jobData.pdriver_arrived ? new Date(jobData.pdriver_arrived).toISOString() : null,
 				pdriver_pickup: jobData.pdriver_pickup ? new Date(jobData.pdriver_pickup).toISOString() : null,
@@ -475,7 +486,7 @@
 				({ data, error } = await supabase
 					.from('timetable')
 					.update(timelineData)
-					.eq('jobnumber', jobIdentifier)
+					.eq('jobno', jobIdentifier)
 					.select())
 			} else {
 				// Insert new record
@@ -536,7 +547,7 @@
 			const { data, error } = await supabase
 				.from('timetable')
 				.select('*')
-				.eq('jobnumber', jobIdentifier)
+				.eq('jobno', jobIdentifier)
 				.single()
 			
 			if (error) {
@@ -722,10 +733,10 @@
 				job_number: jobData.job_number
 			});
 			
-			const [lspsResult, awbsResult] = await Promise.all([
-				getJobLSPs(jobId),
-				getJobAWBs(jobId)
-			]);
+					const [lspsResult, awbsResult] = await Promise.all([
+			getJobLSPs(jobId),
+			getJobAWBs(jobData.jobno || jobId) // AWBs now use jobno
+		]);
 			
 			console.log('Job LSPs loaded:', lspsResult.length, lspsResult);
 			console.log('Job AWBs loaded:', awbsResult.length, awbsResult);
@@ -820,7 +831,7 @@
 		
 		try {
 			saving = true
-			const result = await createAWB(jobData.jobnumber, {
+			const result = await createAWB(jobData.jobno, {
 				awb_number: newAWB.awb_number,
 				airline_id: parseInt(newAWB.airline_id),
 				flight_number: newAWB.flight_number,
@@ -982,7 +993,7 @@
 			const { data: lspLevelRows, error: lspLevelError } = await supabase
 				.from('lsp_level')
 				.select('*')
-				.eq('jobnumber', jobId);
+				.eq('jobno', jobId);
 			
 			console.log('LSP Level rows:', { lspLevelRows, lspLevelError, jobId });
 			
@@ -1920,15 +1931,40 @@
 				{/if}
 			</div>
 
-			<div class="form-grid">
-				<div class="form-group">
-					<label class="blue-text">SELECT PACKAGING (optional)</label>
-					<select bind:value={selectedPackagingId} class="form-input" onchange={savePackagingSelection}>
-						<option value="">None</option>
-						{#each availablePackaging as p}
-							<option value={p.id}>{p.name}{p.type ? ` - ${p.type}` : ''}{p.temperature ? ` (${p.temperature})` : ''}</option>
-						{/each}
-					</select>
+			<!-- Two column layout: Packaging selection and Job creation -->
+			<div class="flex gap-6 flex-wrap">
+				<!-- Packaging Selection Column -->
+				<div class="flex-1 min-w-[300px]">
+					<div class="form-group">
+						<label class="blue-text">SELECT PACKAGING (optional)</label>
+						<select bind:value={selectedPackagingId} class="form-input" onchange={savePackagingSelection}>
+							<option value="">None</option>
+							{#each availablePackaging as p}
+								<option value={p.id}>{p.name}{p.type ? ` - ${p.type}` : ''}{p.temperature ? ` (${p.temperature})` : ''}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<!-- Job Creation Column -->
+				<div class="flex-1 min-w-[300px]">
+					<div class="form-group">
+						<label class="blue-text">CREATE RELATED JOBS</label>
+						<div class="flex gap-3 flex-wrap">
+							<button 
+								class="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-lg border border-orange-500 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 text-sm"
+								onclick={handleCreatePlacementJob}
+							>
+								📦 Create a Placement Job
+							</button>
+							<button 
+								class="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-lg border border-orange-500 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 text-sm"
+								onclick={handleCreateReturnJob}
+							>
+								↩️ Create a Return Job
+							</button>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -3732,4 +3768,5 @@
 		color: #047857;
 		font-weight: 500;
 	}
+
 </style> 

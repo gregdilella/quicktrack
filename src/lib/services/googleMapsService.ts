@@ -122,17 +122,32 @@ export async function validateAddress(address: string): Promise<ValidatedAddress
 
 /**
  * Calculates route information between two addresses including tolls
+ * @param origin Starting address or coordinates
+ * @param destination Ending address or coordinates  
+ * @param departureTime Optional departure time (ISO string, Unix timestamp, or 'now')
  */
-export async function calculateRoute(origin: string, destination: string): Promise<RouteInfo | null> {
+export async function calculateRoute(
+	origin: string, 
+	destination: string, 
+	departureTime?: string | number
+): Promise<RouteInfo | null> {
 	try {
 		console.log(`[Client] Calculating route from ${origin} to ${destination}`);
+		if (departureTime) {
+			console.log(`[Client] Using departure time: ${departureTime}`);
+		}
+		
+		const requestBody: any = { origin, destination };
+		if (departureTime) {
+			requestBody.departureTime = departureTime;
+		}
 		
 		const response = await fetch('/api/routes/calculate', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
 			},
-			body: JSON.stringify({ origin, destination })
+			body: JSON.stringify(requestBody)
 		});
 		
 		if (!response.ok) {
@@ -450,6 +465,21 @@ export async function findMultipleAirportsWithRoutes(
 		console.error('Error finding multiple airports with routes:', error);
 		return [];
 	}
+}
+
+/**
+ * Calculate route with specific departure time for accurate delivery ETA
+ * This is used for calculating the final delivery route from airport to destination
+ * @param origin Starting address or coordinates
+ * @param destination Ending address or coordinates
+ * @param departureTime Departure time as ISO string or Unix timestamp
+ */
+export async function calculateRouteWithTime(
+	origin: string, 
+	destination: string, 
+	departureTime: string | number
+): Promise<RouteInfo | null> {
+	return calculateRoute(origin, destination, departureTime);
 }
 
 

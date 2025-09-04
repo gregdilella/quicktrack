@@ -5,7 +5,8 @@ export type AWB = {
 	id: string;
 	awb_number: string;
 	airline_id: number;
-	jobnumber: string;
+	jobno: string;
+	jobnumber: string; // Keep for backward compatibility
 	pieces?: number | null;
 	weight?: number | null;
 	weight_unit?: string | null;
@@ -21,6 +22,12 @@ export type AWB = {
 	created_at?: string | null;
 	updated_at?: string | null;
 	created_by?: string | null;
+	// New flight metadata fields
+	flight_duration_minutes?: number | null;
+	selected_flight_id?: string | null;
+	origin_airport_code?: string | null;
+	destination_airport_code?: string | null;
+	is_direct_flight?: boolean | null;
 };
 
 export type AWBInsert = Omit<AWB, 'id' | 'created_at' | 'updated_at'>;

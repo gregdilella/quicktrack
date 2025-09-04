@@ -74,6 +74,7 @@
 
 	.tab-content {
 		padding: 2rem;
+		padding-bottom: 100px; /* Add space for navigation bar */
 		height: 100%;
 		min-height: 440px;
 		box-sizing: border-box;
@@ -195,6 +196,7 @@
 		.tab-content {
 			min-height: 360px;
 			padding: 1.5rem;
+			padding-bottom: 80px; /* Add space for navigation bar on mobile */
 		}
 		
 		.tab-button-vertical {

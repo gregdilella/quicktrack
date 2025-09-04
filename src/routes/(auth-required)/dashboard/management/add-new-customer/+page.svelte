@@ -22,7 +22,6 @@
 		contact_email: '',
 		phone: '',
 		address1: '',
-		address2: '',
 		city: '',
 		state: '',
 		zip: '',
@@ -76,6 +75,18 @@
 			saving = true
 			message = ''
 			
+			// Get the default sales rep ID
+			const { data: defaultSalesRep, error: salesRepError } = await supabase
+				.from('salesman')
+				.select('id')
+				.eq('fin_cono', 'DEF001')
+				.single()
+			
+			if (salesRepError) {
+				console.error('Error finding default sales rep:', salesRepError)
+				message = 'Warning: Could not assign default sales rep. Customer created without sales rep.'
+			}
+			
 			// Insert new customer into the database
 			const { data, error } = await supabase
 				.from('customers')
@@ -85,13 +96,13 @@
 					contact_email: customerData.contact_email.trim(),
 					phone: customerData.phone.trim() || null,
 					address1: customerData.address1.trim() || null,
-					address2: customerData.address2.trim() || null,
 					city: customerData.city.trim() || null,
 					state: customerData.state.trim() || null,
 					zip: customerData.zip.trim() || null,
 					billing_contact: customerData.billing_contact.trim() || null,
 					payment_terms: customerData.payment_terms,
-					notes: customerData.notes.trim() || null
+					notes: customerData.notes.trim() || null,
+					salesman_id: defaultSalesRep?.id || null
 				})
 				.select()
 				.single()
@@ -102,8 +113,10 @@
 				return
 			}
 			
-			message = 'Customer created successfully!'
+			const salesRepMessage = defaultSalesRep ? ' with default sales rep assigned' : ''
+			message = `Customer created successfully${salesRepMessage}!`
 			console.log('Created customer:', data)
+			console.log('Assigned sales rep:', defaultSalesRep?.id)
 			
 			// Redirect to management dashboard after successful creation
 			setTimeout(() => {
@@ -212,20 +225,10 @@ CC</pre>
 				
 				<div class="form-row">
 					<div class="form-group full-width">
-						<label class="blue-text">ADDRESS LINE 1:</label>
-						<input type="text" bind:value={customerData.address1} class="form-input" class:error={validationErrors.address1} />
+						<label class="blue-text">ADDRESS:</label>
+						<input type="text" bind:value={customerData.address1} class="form-input" class:error={validationErrors.address1} placeholder="Street address, suite, building, etc." />
 						{#if validationErrors.address1}
 							<span class="error-text">{validationErrors.address1}</span>
-						{/if}
-					</div>
-				</div>
-
-				<div class="form-row">
-					<div class="form-group full-width">
-						<label class="blue-text">ADDRESS LINE 2:</label>
-						<input type="text" bind:value={customerData.address2} class="form-input" class:error={validationErrors.address2} />
-						{#if validationErrors.address2}
-							<span class="error-text">{validationErrors.address2}</span>
 						{/if}
 					</div>
 				</div>

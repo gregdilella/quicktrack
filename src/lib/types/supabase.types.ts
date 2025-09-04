@@ -56,14 +56,20 @@ export type Database = {
           created_by: string | null
           currency: string | null
           destination_airport: string | null
+          destination_airport_code: string | null
           dimensions: string | null
           flight_date: string | null
+          flight_duration_minutes: number | null
           flight_number: string | null
           id: string
+          is_direct_flight: boolean | null
+          jobno: string
           jobnumber: string
           notes: string | null
           origin_airport: string | null
+          origin_airport_code: string | null
           pieces: number | null
+          selected_flight_id: string | null
           status: string | null
           updated_at: string | null
           weight: number | null
@@ -77,14 +83,20 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           destination_airport?: string | null
+          destination_airport_code?: string | null
           dimensions?: string | null
           flight_date?: string | null
+          flight_duration_minutes?: number | null
           flight_number?: string | null
           id?: string
+          is_direct_flight?: boolean | null
+          jobno: string
           jobnumber: string
           notes?: string | null
           origin_airport?: string | null
+          origin_airport_code?: string | null
           pieces?: number | null
+          selected_flight_id?: string | null
           status?: string | null
           updated_at?: string | null
           weight?: number | null
@@ -98,14 +110,20 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           destination_airport?: string | null
+          destination_airport_code?: string | null
           dimensions?: string | null
           flight_date?: string | null
+          flight_duration_minutes?: number | null
           flight_number?: string | null
           id?: string
+          is_direct_flight?: boolean | null
+          jobno?: string
           jobnumber?: string
           notes?: string | null
           origin_airport?: string | null
+          origin_airport_code?: string | null
           pieces?: number | null
+          selected_flight_id?: string | null
           status?: string | null
           updated_at?: string | null
           weight?: number | null
@@ -118,6 +136,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "airlines"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "awb_jobno_fkey"
+            columns: ["jobno"]
+            isOneToOne: false
+            referencedRelation: "jobsfile"
+            referencedColumns: ["jobno"]
           },
           {
             foreignKeyName: "awb_jobnumber_fkey"
@@ -702,11 +727,16 @@ export type Database = {
           ddriver_delivery: string | null
           ddriver_dispatched: string | null
           ddriver_recovered: string | null
+          estimated_airport_pickup: string | null
+          estimated_cargo_ready: string | null
+          estimated_delivery: string | null
+          estimated_flight_arrival: string | null
+          estimated_flight_departure: string | null
           flight_recovered: string | null
           flight_tenured: string | null
           id: number
           jobcreated: string | null
-          jobnumber: string
+          jobno: string
           pdriver_arrived: string | null
           pdriver_dispatched: string | null
           pdriver_pickup: string | null
@@ -719,11 +749,16 @@ export type Database = {
           ddriver_delivery?: string | null
           ddriver_dispatched?: string | null
           ddriver_recovered?: string | null
+          estimated_airport_pickup?: string | null
+          estimated_cargo_ready?: string | null
+          estimated_delivery?: string | null
+          estimated_flight_arrival?: string | null
+          estimated_flight_departure?: string | null
           flight_recovered?: string | null
           flight_tenured?: string | null
           id?: number
           jobcreated?: string | null
-          jobnumber: string
+          jobno: string
           pdriver_arrived?: string | null
           pdriver_dispatched?: string | null
           pdriver_pickup?: string | null
@@ -736,11 +771,16 @@ export type Database = {
           ddriver_delivery?: string | null
           ddriver_dispatched?: string | null
           ddriver_recovered?: string | null
+          estimated_airport_pickup?: string | null
+          estimated_cargo_ready?: string | null
+          estimated_delivery?: string | null
+          estimated_flight_arrival?: string | null
+          estimated_flight_departure?: string | null
           flight_recovered?: string | null
           flight_tenured?: string | null
           id?: number
           jobcreated?: string | null
-          jobnumber?: string
+          jobno?: string
           pdriver_arrived?: string | null
           pdriver_dispatched?: string | null
           pdriver_pickup?: string | null
@@ -749,8 +789,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "timetable_jobnumber_fkey"
-            columns: ["jobnumber"]
+            foreignKeyName: "timetable_jobno_fkey"
+            columns: ["jobno"]
             isOneToOne: false
             referencedRelation: "jobsfile"
             referencedColumns: ["jobno"]
@@ -765,6 +805,7 @@ export type Database = {
           id: string
           lsp_id: string | null
           role: Database["public"]["Enums"]["user_role"] | null
+          salesman_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -775,6 +816,7 @@ export type Database = {
           id?: string
           lsp_id?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
+          salesman_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -785,6 +827,7 @@ export type Database = {
           id?: string
           lsp_id?: string | null
           role?: Database["public"]["Enums"]["user_role"] | null
+          salesman_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -801,6 +844,13 @@ export type Database = {
             columns: ["lsp_id"]
             isOneToOne: false
             referencedRelation: "lsps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_table_salesman_id_fkey"
+            columns: ["salesman_id"]
+            isOneToOne: false
+            referencedRelation: "salesman"
             referencedColumns: ["id"]
           },
         ]

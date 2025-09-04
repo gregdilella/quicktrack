@@ -38,20 +38,35 @@ export const POST: RequestHandler = async ({ request }) => {
 			}, { status: 500 });
 		}
 
-		const { origin, destination } = await request.json();
+			const { origin, destination, departureTime } = await request.json();
 
-		if (!origin || !destination) {
-			return json({ 
-				success: false,
-				error: 'Origin and destination are required' 
-			}, { status: 400 });
+	if (!origin || !destination) {
+		return json({ 
+			success: false,
+			error: 'Origin and destination are required' 
+		}, { status: 400 });
+	}
+
+			console.log(`[Route API] Calculating route from ${origin} to ${destination}`);
+	if (departureTime) {
+		console.log(`[Route API] Using departure time: ${departureTime}`);
+	}
+
+	// First, get directions using the standard Directions API
+	// Use metric units to match what Google Maps embed shows, and include traffic
+	// Support both "now" and specific departure times (as Unix timestamp)
+	let departureTimeParam = 'now';
+	if (departureTime && departureTime !== 'now') {
+		// Convert ISO string to Unix timestamp if needed
+		if (typeof departureTime === 'string' && departureTime.includes('T')) {
+			departureTimeParam = Math.floor(new Date(departureTime).getTime() / 1000).toString();
+		} else {
+			departureTimeParam = departureTime.toString();
 		}
-
-		console.log(`[Route API] Calculating route from ${origin} to ${destination}`);
-
-		// First, get directions using the standard Directions API
-		// Use metric units to match what Google Maps embed shows, and include traffic
-		const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&units=metric&avoid=ferries&departure_time=now&key=${GOOGLE_MAPS_API_KEY}`;
+		console.log(`[Route API] Using departure timestamp: ${departureTimeParam}`);
+	}
+	
+	const directionsUrl = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&units=metric&avoid=ferries&departure_time=${departureTimeParam}&key=${GOOGLE_MAPS_API_KEY}`;
 		
 		const directionsResponse = await fetch(directionsUrl);
 		if (!directionsResponse.ok) {

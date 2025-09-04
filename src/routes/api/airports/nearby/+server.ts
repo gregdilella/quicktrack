@@ -91,6 +91,26 @@ function isInCanada(lat: number, lng: number): boolean {
 }
 
 /**
+ * Check if coordinates are in the UK
+ */
+function isInUK(lat: number, lng: number): boolean {
+	// UK bounds including Northern Ireland
+	return (
+		lat >= 49.5 && lat <= 61.0 && lng >= -8.5 && lng <= 2.0
+	);
+}
+
+/**
+ * Check if coordinates are in Continental Europe
+ */
+function isInEurope(lat: number, lng: number): boolean {
+	// Continental Europe bounds (excluding UK, Russia beyond Urals)
+	return (
+		lat >= 35.0 && lat <= 72.0 && lng >= -10.0 && lng <= 40.0 && !isInUK(lat, lng)
+	);
+}
+
+/**
  * Check if coordinates are near major US metro areas
  */
 function getNearbyUSMetroAirports(lat: number, lng: number): string[] {
@@ -132,6 +152,120 @@ function getNearbyUSMetroAirports(lat: number, lng: number): string[] {
 	return [];
 }
 
+/**
+ * Get major UK airports based on location
+ */
+function getNearbyUKAirports(lat: number, lng: number): string[] {
+	const ukAirports = [
+		// London area
+		{ name: 'London', lat: 51.5, lng: -0.1, airports: ['LHR', 'LGW', 'STN', 'LTN'], radius: 60 },
+		// Manchester area
+		{ name: 'Manchester', lat: 53.5, lng: -2.2, airports: ['MAN'], radius: 50 },
+		// Birmingham area
+		{ name: 'Birmingham', lat: 52.5, lng: -1.9, airports: ['BHX'], radius: 40 },
+		// Edinburgh area
+		{ name: 'Edinburgh', lat: 55.9, lng: -3.2, airports: ['EDI'], radius: 40 },
+		// Glasgow area
+		{ name: 'Glasgow', lat: 55.9, lng: -4.3, airports: ['GLA'], radius: 40 },
+		// Bristol area
+		{ name: 'Bristol', lat: 51.4, lng: -2.6, airports: ['BRS'], radius: 40 },
+		// Newcastle area
+		{ name: 'Newcastle', lat: 55.0, lng: -1.6, airports: ['NCL'], radius: 40 },
+		// Liverpool area
+		{ name: 'Liverpool', lat: 53.4, lng: -3.0, airports: ['LPL'], radius: 40 },
+		// Cardiff area
+		{ name: 'Cardiff', lat: 51.5, lng: -3.2, airports: ['CWL'], radius: 40 },
+		// Belfast area
+		{ name: 'Belfast', lat: 54.6, lng: -5.9, airports: ['BFS'], radius: 40 }
+	];
+
+	for (const metro of ukAirports) {
+		const distance = calculateDistanceMiles(lat, lng, metro.lat, metro.lng);
+		if (distance <= metro.radius) {
+			console.log(`[Airport API] Location is near ${metro.name}, UK, suggesting airports: ${metro.airports.join(', ')}`);
+			return metro.airports;
+		}
+	}
+	
+	return [];
+}
+
+/**
+ * Get major European airports based on location
+ */
+function getNearbyEuropeanAirports(lat: number, lng: number): string[] {
+	const europeanAirports = [
+		// France
+		{ name: 'Paris', lat: 48.9, lng: 2.3, airports: ['CDG', 'ORY'], radius: 60 },
+		{ name: 'Lyon', lat: 45.8, lng: 4.9, airports: ['LYS'], radius: 50 },
+		{ name: 'Nice', lat: 43.7, lng: 7.3, airports: ['NCE'], radius: 50 },
+		{ name: 'Marseille', lat: 43.3, lng: 5.4, airports: ['MRS'], radius: 50 },
+		
+		// Germany
+		{ name: 'Frankfurt', lat: 50.1, lng: 8.7, airports: ['FRA'], radius: 50 },
+		{ name: 'Munich', lat: 48.1, lng: 11.6, airports: ['MUC'], radius: 50 },
+		{ name: 'Berlin', lat: 52.5, lng: 13.4, airports: ['BER'], radius: 50 },
+		{ name: 'Hamburg', lat: 53.6, lng: 10.0, airports: ['HAM'], radius: 50 },
+		{ name: 'Cologne', lat: 50.9, lng: 6.9, airports: ['CGN'], radius: 50 },
+		{ name: 'Düsseldorf', lat: 51.2, lng: 6.8, airports: ['DUS'], radius: 50 },
+		
+		// Netherlands
+		{ name: 'Amsterdam', lat: 52.4, lng: 4.9, airports: ['AMS'], radius: 50 },
+		{ name: 'Rotterdam', lat: 51.9, lng: 4.5, airports: ['RTM'], radius: 40 },
+		
+		// Spain
+		{ name: 'Madrid', lat: 40.4, lng: -3.7, airports: ['MAD'], radius: 50 },
+		{ name: 'Barcelona', lat: 41.4, lng: 2.2, airports: ['BCN'], radius: 50 },
+		{ name: 'Valencia', lat: 39.5, lng: -0.5, airports: ['VLC'], radius: 50 },
+		{ name: 'Seville', lat: 37.4, lng: -5.9, airports: ['SVQ'], radius: 50 },
+		
+		// Italy
+		{ name: 'Rome', lat: 41.9, lng: 12.5, airports: ['FCO', 'CIA'], radius: 50 },
+		{ name: 'Milan', lat: 45.5, lng: 9.2, airports: ['MXP', 'LIN'], radius: 50 },
+		{ name: 'Venice', lat: 45.4, lng: 12.3, airports: ['VCE'], radius: 50 },
+		{ name: 'Naples', lat: 40.9, lng: 14.3, airports: ['NAP'], radius: 50 },
+		
+		// Belgium
+		{ name: 'Brussels', lat: 50.8, lng: 4.4, airports: ['BRU'], radius: 50 },
+		{ name: 'Antwerp', lat: 51.2, lng: 4.4, airports: ['ANR'], radius: 40 },
+		
+		// Switzerland
+		{ name: 'Zurich', lat: 47.4, lng: 8.5, airports: ['ZUR'], radius: 50 },
+		{ name: 'Geneva', lat: 46.2, lng: 6.1, airports: ['GVA'], radius: 50 },
+		
+		// Austria
+		{ name: 'Vienna', lat: 48.2, lng: 16.4, airports: ['VIE'], radius: 50 },
+		
+		// Portugal
+		{ name: 'Lisbon', lat: 38.7, lng: -9.1, airports: ['LIS'], radius: 50 },
+		{ name: 'Porto', lat: 41.2, lng: -8.6, airports: ['OPO'], radius: 50 },
+		
+		// Scandinavia
+		{ name: 'Stockholm', lat: 59.3, lng: 18.1, airports: ['ARN'], radius: 50 },
+		{ name: 'Copenhagen', lat: 55.7, lng: 12.6, airports: ['CPH'], radius: 50 },
+		{ name: 'Oslo', lat: 59.9, lng: 10.8, airports: ['OSL'], radius: 50 },
+		{ name: 'Helsinki', lat: 60.2, lng: 24.9, airports: ['HEL'], radius: 50 },
+		
+		// Eastern Europe
+		{ name: 'Warsaw', lat: 52.2, lng: 21.0, airports: ['WAW'], radius: 50 },
+		{ name: 'Prague', lat: 50.1, lng: 14.4, airports: ['PRG'], radius: 50 },
+		{ name: 'Budapest', lat: 47.5, lng: 19.0, airports: ['BUD'], radius: 50 },
+		
+		// Greece
+		{ name: 'Athens', lat: 37.9, lng: 23.7, airports: ['ATH'], radius: 50 }
+	];
+
+	for (const metro of europeanAirports) {
+		const distance = calculateDistanceMiles(lat, lng, metro.lat, metro.lng);
+		if (distance <= metro.radius) {
+			console.log(`[Airport API] Location is near ${metro.name}, Europe, suggesting airports: ${metro.airports.join(', ')}`);
+			return metro.airports;
+		}
+	}
+	
+	return [];
+}
+
 export const GET: RequestHandler = async ({ url }) => {
 	try {
 		// Check if API key is available
@@ -165,12 +299,26 @@ export const GET: RequestHandler = async ({ url }) => {
 		// Check location country and get suggested airports
 		const isUSLocation = isInUSA(latitude, longitude);
 		const isCanadaLocation = isInCanada(latitude, longitude);
+		const isUKLocation = isInUK(latitude, longitude);
+		const isEuropeLocation = isInEurope(latitude, longitude);
+		
 		const suggestedUSAirports = getNearbyUSMetroAirports(latitude, longitude);
+		const suggestedUKAirports = getNearbyUKAirports(latitude, longitude);
+		const suggestedEuropeanAirports = getNearbyEuropeanAirports(latitude, longitude);
 		
 		console.log(`🇺🇸 USA Location: ${isUSLocation}`);
 		console.log(`🇨🇦 Canada Location: ${isCanadaLocation}`);
+		console.log(`🇬🇧 UK Location: ${isUKLocation}`);
+		console.log(`🇪🇺 Europe Location: ${isEuropeLocation}`);
+		
 		if (suggestedUSAirports.length > 0) {
-			console.log(`✈️  Suggested Major Airports: ${suggestedUSAirports.join(', ')}`);
+			console.log(`✈️  Suggested US Airports: ${suggestedUSAirports.join(', ')}`);
+		}
+		if (suggestedUKAirports.length > 0) {
+			console.log(`✈️  Suggested UK Airports: ${suggestedUKAirports.join(', ')}`);
+		}
+		if (suggestedEuropeanAirports.length > 0) {
+			console.log(`✈️  Suggested European Airports: ${suggestedEuropeanAirports.join(', ')}`);
 		}
 		console.log('='.repeat(80) + '\n');
 
@@ -198,7 +346,19 @@ export const GET: RequestHandler = async ({ url }) => {
 				`https://maps.googleapis.com/maps/api/place/textsearch/json?query=YVR+Vancouver+airport&location=${latitude},${longitude}&radius=${radiusMeters}&key=${GOOGLE_MAPS_API_KEY}`,
 				`https://maps.googleapis.com/maps/api/place/textsearch/json?query=Pierre+Elliott+Trudeau+airport&location=${latitude},${longitude}&radius=${radiusMeters}&key=${GOOGLE_MAPS_API_KEY}`
 			] : []),
-			// Strategy 6: Montreal-specific search (only if near Montreal)
+			// Strategy 6: UK-specific searches for UK locations
+			...(isUKLocation && suggestedUKAirports.length > 0 ? 
+				suggestedUKAirports.map(code => 
+					`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${code}+airport&location=${latitude},${longitude}&radius=${radiusMeters}&key=${GOOGLE_MAPS_API_KEY}`
+				) : []
+			),
+			// Strategy 7: European-specific searches for European locations
+			...(isEuropeLocation && suggestedEuropeanAirports.length > 0 ? 
+				suggestedEuropeanAirports.map(code => 
+					`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${code}+airport&location=${latitude},${longitude}&radius=${radiusMeters}&key=${GOOGLE_MAPS_API_KEY}`
+				) : []
+			),
+			// Strategy 8: Montreal-specific search (only if near Montreal)
 			...(isNearMontreal(latitude, longitude) ? [
 				`https://maps.googleapis.com/maps/api/place/textsearch/json?query=Montreal+international+airport&location=${latitude},${longitude}&radius=${radiusMeters}&key=${GOOGLE_MAPS_API_KEY}`
 			] : []),

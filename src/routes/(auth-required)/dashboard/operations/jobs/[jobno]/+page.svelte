@@ -89,7 +89,7 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 			const { data, error: timelineError } = await supabase
 				.from('timetable')
 				.select('*')
-				.eq('jobnumber', jobno)
+				.eq('jobno', jobno)
 				.single()
 
 			if (timelineError && timelineError.code !== 'PGRST116') { // PGRST116 = not found

@@ -1,5 +1,6 @@
 import { supabase } from '$lib/supabase';
 import type { Database } from '$lib/types/supabase.types';
+import type { FlightRecommendation } from '$lib/flightalgo/flightSelection';
 
 type AWBInsert = Database['public']['Tables']['awb']['Insert'];
 type Airline = Database['public']['Tables']['airlines']['Row'];
@@ -42,7 +43,8 @@ export interface FlightData {
  * Job data for AWB creation
  */
 export interface JobDataForAWB {
-	jobnumber: string;
+	jobno: string;
+	jobnumber?: string; // Keep for backward compatibility during migration
 	pieces?: number;
 	weight?: number;
 	weight_unit?: string;
@@ -288,7 +290,8 @@ export async function createAWBFromFlightData(
 		const awbData: AWBInsert = {
 			awb_number: awbNumber,
 			airline_id: airline.id,
-			jobnumber: jobData.jobnumber,
+			jobno: jobData.jobno,
+			jobnumber: jobData.jobnumber, // Keep for backward compatibility during migration
 			pieces: jobData.pieces || null,
 			weight: jobData.weight || null,
 			weight_unit: jobData.weight_unit || 'kg',
@@ -360,6 +363,110 @@ export async function generateAWBNumberForAirline(airlineId: number): Promise<st
 	} catch (error) {
 		console.error('Error generating AWB number:', error);
 		return null;
+	}
+}
+
+/**
+ * Update AWB with flight metadata from flight recommendation
+ * This should be called after AWB creation to add flight details
+ */
+export async function updateAWBWithFlightMetadata(
+	jobno: string,
+	flightRecommendation: FlightRecommendation,
+	originAirportCode: string,
+	destinationAirportCode: string
+): Promise<{ success: boolean; error?: string }> {
+	try {
+		if (!flightRecommendation.flight || !flightRecommendation.flightDetails) {
+			return { success: false, error: 'No flight details available to save' };
+		}
+
+		const flight = flightRecommendation.flight;
+		const details = flightRecommendation.flightDetails;
+
+		// Prepare the flight metadata for AWB
+		const flightMetadata = {
+			flight_duration_minutes: details.flightDurationMinutes,
+			selected_flight_id: flight.id,
+			origin_airport_code: originAirportCode,
+			destination_airport_code: destinationAirportCode,
+			is_direct_flight: details.isDirect
+		};
+
+		console.log('🛫 Updating AWB with flight metadata:', {
+			jobno,
+			flightId: flight.id,
+			originAirportCode,
+			destinationAirportCode,
+			duration: details.flightDurationMinutes,
+			isDirect: details.isDirect
+		});
+
+		// Update the AWB record with flight metadata
+		const { data, error } = await supabase
+			.from('awb')
+			.update(flightMetadata)
+			.eq('jobno', jobno)
+			.select();
+
+		if (error) {
+			console.error('Error updating AWB with flight metadata:', error);
+			return { success: false, error: error.message };
+		}
+
+		if (!data || data.length === 0) {
+			return { success: false, error: 'No AWB found for the given job number' };
+		}
+
+		console.log('✅ AWB updated with flight metadata successfully');
+		return { success: true };
+
+	} catch (error) {
+		console.error('Unexpected error updating AWB with flight metadata:', error);
+		return { 
+			success: false, 
+			error: error instanceof Error ? error.message : 'Unknown error' 
+		};
+	}
+}
+
+/**
+ * Get flight metadata from AWB for a job
+ */
+export async function getFlightMetadataFromAWB(jobno: string): Promise<{
+	success: boolean;
+	metadata?: {
+		flight_duration_minutes: number | null;
+		selected_flight_id: string | null;
+		origin_airport_code: string | null;
+		destination_airport_code: string | null;
+		is_direct_flight: boolean | null;
+	};
+	error?: string;
+}> {
+	try {
+		const { data, error } = await supabase
+			.from('awb')
+			.select(`
+				flight_duration_minutes,
+				selected_flight_id,
+				origin_airport_code,
+				destination_airport_code,
+				is_direct_flight
+			`)
+			.eq('jobno', jobno)
+			.maybeSingle();
+
+		if (error) {
+			return { success: false, error: error.message };
+		}
+
+		return { success: true, metadata: data };
+	} catch (error) {
+		return { 
+			success: false, 
+			error: error instanceof Error ? error.message : 'Unknown error' 
+		};
 	}
 }
 

@@ -1,7 +1,6 @@
 import { supabase } from '$lib/supabase';
+import type { Database } from '$lib/types/supabase.types';
 import type { 
-	AWB, 
-	AWBInsert, 
 	AWBWithAirline, 
 	LSPLevel, 
 	LSPLevelInsert, 
@@ -13,9 +12,12 @@ import type {
 	LSPCostFormData
 } from '$lib/types/operations.types';
 
+// Use Database types for AWB operations
+type AWB = Database['public']['Tables']['awb']['Row'];
+type AWBInsert = Database['public']['Tables']['awb']['Insert'];
+
 // Re-export types for easier importing
 export type { AWBWithAirline, LSPLevelWithLSP };
-import type { Database } from '$lib/types/supabase.types';
 
 export type Airline = Database['public']['Tables']['airlines']['Row'];
 export type LSP = Database['public']['Tables']['lsps']['Row'];
@@ -67,7 +69,7 @@ export async function getLSPs(): Promise<LSP[]> {
 /**
  * Get AWBs for a specific job
  */
-export async function getJobAWBs(jobnumber: string): Promise<AWBWithAirline[]> {
+export async function getJobAWBs(jobno: string): Promise<AWBWithAirline[]> {
 	try {
 		const { data, error } = await supabase
 			.from('awb')
@@ -81,7 +83,7 @@ export async function getJobAWBs(jobnumber: string): Promise<AWBWithAirline[]> {
 					phone
 				)
 			`)
-			.eq('jobnumber', jobnumber)
+			.eq('jobno', jobno)
 			.order('created_at', { ascending: false });
 
 		if (error) {
@@ -99,9 +101,9 @@ export async function getJobAWBs(jobnumber: string): Promise<AWBWithAirline[]> {
 /**
  * Get LSP assignments for a specific job
  */
-export async function getJobLSPs(jobnumber: string): Promise<LSPLevelWithLSP[]> {
+export async function getJobLSPs(jobno: string): Promise<LSPLevelWithLSP[]> {
 	try {
-		console.log('getJobLSPs called for jobnumber:', jobnumber);
+		console.log('getJobLSPs called for jobno:', jobno);
 		
 		// First, let's check what's actually in the lsp_level table
 		const { data: allLSPs, error: allError } = await supabase
@@ -127,7 +129,7 @@ export async function getJobLSPs(jobnumber: string): Promise<LSPLevelWithLSP[]> 
 			.order('assigned_date', { ascending: false });
 
 		console.log('getJobLSPs query details:', {
-			searchingFor: jobnumber,
+			searchingFor: jobno,
 			queryResult: data,
 			error: error,
 			totalRecordsInTable: allLSPs?.length || 0
@@ -149,11 +151,11 @@ export async function getJobLSPs(jobnumber: string): Promise<LSPLevelWithLSP[]> 
 /**
  * Create a new AWB
  */
-export async function createAWB(jobnumber: string, awbData: AWBFormData): Promise<{ success: boolean; awb?: AWB; error?: string }> {
+export async function createAWB(jobno: string, awbData: AWBFormData): Promise<{ success: boolean; awb?: AWB; error?: string }> {
 	try {
 		const insertData: AWBInsert = {
 			...awbData,
-			jobnumber,
+			jobno,
 			status: 'dispatch',
 			created_by: (await supabase.auth.getUser()).data.user?.id || null
 		};

@@ -27,7 +27,7 @@
 		contact_email: '',
 		phone: '',
 		address1: '',
-		address2: '',
+
 		city: '',
 		state: '',
 		zip: '',
@@ -74,7 +74,7 @@
 				contact_email: customer.contact_email || '',
 				phone: customer.phone || '',
 				address1: customer.address1 || '',
-				address2: customer.address2 || '',
+
 				city: customer.city || '',
 				state: customer.state || '',
 				zip: customer.zip || '',
@@ -125,7 +125,7 @@
 					contact_email: editData.contact_email.trim(),
 					phone: editData.phone.trim() || null,
 					address1: editData.address1.trim() || null,
-					address2: editData.address2.trim() || null,
+
 					city: editData.city.trim() || null,
 					state: editData.state.trim() || null,
 					zip: editData.zip.trim() || null,
@@ -170,7 +170,7 @@
 			contact_email: customer.contact_email || '',
 			phone: customer.phone || '',
 			address1: customer.address1 || '',
-			address2: customer.address2 || '',
+
 			city: customer.city || '',
 			state: customer.state || '',
 			zip: customer.zip || '',
@@ -300,12 +300,7 @@
 										<input type="text" bind:value={editData.address1} class="form-input" />
 									</div>
 								</div>
-								<div class="form-row full-width">
-									<div class="form-group">
-										<label>Address Line 2</label>
-										<input type="text" bind:value={editData.address2} class="form-input" />
-									</div>
-								</div>
+
 								<div class="form-row">
 									<div class="form-group">
 										<label>City</label>
@@ -424,7 +419,7 @@
 												<span class="info-label">Address:</span>
 												<span class="info-value">
 													{customer.address1}
-													{#if customer.address2}<br />{customer.address2}{/if}
+
 												</span>
 											</div>
 										{/if}

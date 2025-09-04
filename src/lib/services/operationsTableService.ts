@@ -105,18 +105,18 @@ export async function getActiveJobsWithTimeline(): Promise<JobWithTimeline[]> {
 		const { data: timelines, error: timelinesError } = await supabase
 			.from('timetable')
 			.select('*')
-			.in('jobnumber', jobNumbers);
+			.in('jobno', jobNumbers);
 
 		if (timelinesError) {
 			console.error('Error fetching timelines:', timelinesError);
 			// Continue without timeline data
 		}
 
-		// Create a map of jobnumber to timeline for easy lookup
+		// Create a map of jobno to timeline for easy lookup
 		const timelineMap = new Map<string, TimetableRow>();
 		if (timelines) {
 			timelines.forEach(timeline => {
-				timelineMap.set(timeline.jobnumber, timeline);
+				timelineMap.set(timeline.jobno, timeline);
 			});
 		}
 

@@ -9,6 +9,8 @@
 	import { customerJobSchema, type CustomerJobFormData } from '$lib/validation/schemas';
 	import type { Customer } from '$lib/services/customerService';
 	import { validateAddress, buildAddressString, findNearestAirportWithRoute, findMultipleAirportsWithRoutes, type ValidatedAddress, type AirportRouteInfo } from '$lib/services/googleMapsService';
+	import { searchFlightsForJobCreation, computeRecommendedFlightAndETA, filterOutRegionalAircraft, type FlightRecommendation } from '$lib/flightalgo/flightSelection';
+	import { saveFlightEstimatesToTimetable } from '$lib/services/timetableService';
 	import AddressMap from '$lib/components/AddressMap.svelte';
 	import { computeNetjetsQuote, buildNetjetsInputFromJobForm, type NetjetsQuoteBreakdown } from '$lib/Quoting/netjets';
 	
@@ -30,6 +32,7 @@
 	// Flight search state
 	let searchingFlights = $state(false);
 	let flightResults = $state<any>(null);
+	let flightRecommendation = $state<FlightRecommendation | null>(null);
 	let flightSearchError = $state('');
 	let originAirport = $state(''); // Shipper's nearest airport
 	let destinationAirport = $state(''); // Consignee's nearest airport
@@ -179,7 +182,8 @@
 				selectedFlightData,
 				originAirport,
 				destinationAirport,
-				netjetsQuote
+				netjetsQuote,
+				flightRecommendation
 			);
 			
 			if (result.success) {
@@ -266,100 +270,11 @@
 		return dates;
 	}
 
-	function filterOutRegionalAircraft(flights: any[]): any[] {
-		return flights.filter((flight: any) => {
-			const aircraft = flight.enhanced?.aircraft;
-			if (!aircraft) return true;
-			const aircraftList = aircraft.split(', ');
-			return !aircraftList.some((plane: string) => {
-				const cleanPlane = plane.trim().toUpperCase();
-				return (
-					cleanPlane.startsWith('E') ||
-					cleanPlane.startsWith('CR') ||
-					cleanPlane.includes('DE HAVILLAND') ||
-					cleanPlane.includes('DASH') ||
-					cleanPlane.startsWith('DH')
-				);
-			});
-		});
-	}
+	// Removed: filterOutRegionalAircraft - now using centralized version from flightSelection.ts
 
-	async function searchFlightsForDates(origin: string, destination: string, baseDate: string, earliestISO: string | null) {
-		const dates = nextNDates(baseDate, 2); // base day + next day
-		const earliest = earliestISO ? new Date(earliestISO) : null;
+	// Removed: searchFlightsForDates - now using centralized version from flightSelection.ts
 
-		const fetches = dates.map((d, idx) => {
-			const params = new URLSearchParams({
-				origin,
-				destination,
-				departureDate: d,
-				adults: '1',
-				children: '0',
-				infants: '0',
-				nonStop: 'false',
-				currency: 'USD',
-				max: '50'
-			});
-			if (idx === 0 && earliest) {
-				params.set('departureTime', getHHmm(earliest));
-			}
-			return fetch(`/api/flights/search?${params.toString()}`).then(async (r) => {
-				const data = await r.json();
-				return { ok: r.ok, data };
-			});
-		});
-
-		const results = await Promise.all(fetches);
-
-		const merged = {
-			summary: { totalOffers: 0, directFlights: 0, connectingFlights: 0 },
-			flights: { direct: [], connecting: [], all: [] } as any,
-			byDate: [] as any[]
-		};
-
-		for (const { ok, data } of results) {
-			if (!ok || !data?.flights) continue;
-			data.flights.direct = filterOutRegionalAircraft(data.flights.direct || []);
-			data.flights.connecting = filterOutRegionalAircraft(data.flights.connecting || []);
-			data.flights.all = filterOutRegionalAircraft(data.flights.all || []);
-
-			merged.flights.direct = [...merged.flights.direct, ...data.flights.direct];
-			merged.flights.connecting = [...merged.flights.connecting, ...data.flights.connecting];
-			merged.flights.all = [...merged.flights.all, ...data.flights.all];
-			merged.summary.totalOffers += data.flights.all.length;
-			merged.summary.directFlights += data.flights.direct.length;
-			merged.summary.connectingFlights += data.flights.connecting.length;
-			merged.byDate.push({ date: data.searchCriteria?.departureDate, flights: data.flights });
-		}
-
-		merged.flights.all.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
-		merged.flights.direct.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
-		merged.flights.connecting.sort((a: any, b: any) => new Date(a.enhanced?.departureTime || 0).getTime() - new Date(b.enhanced?.departureTime || 0).getTime());
-
-		return merged;
-	}
-
-	function computeRecommendedFlightAndETA(mergedFlights: any, earliestISO: string, destDriveMins: number) {
-		const earliest = new Date(earliestISO);
-		const all = (mergedFlights?.flights?.all || []).filter((f: any) => {
-			// Only consider flights on or after the ready date (same day or later)
-			if (!f?.enhanced?.departureTime) return false;
-			const dep = new Date(f.enhanced.departureTime);
-			const readyDay = new Date(earliest);
-			readyDay.setHours(0,0,0,0);
-			const depDay = new Date(dep);
-			depDay.setHours(0,0,0,0);
-			return depDay.getTime() >= readyDay.getTime();
-		});
-		const candidate = all.find((f: any) => {
-			if (!f?.enhanced?.departureTime) return false;
-			return new Date(f.enhanced.departureTime) >= earliest;
-		});
-		if (!candidate) return { flightId: null, etaISO: null };
-		const arrival = new Date(candidate.enhanced.arrivalTime);
-		const eta = addMinutes(addMinutes(arrival, 90), destDriveMins || 0);
-		return { flightId: candidate.id || null, etaISO: formatISO(eta) };
-	}
+	// Removed: computeRecommendedFlightAndETA - now using centralized version from flightSelection.ts
 
 	// --- Netjets Quote calculation ---
 	function poundsFromForm(): number {
@@ -527,27 +442,32 @@
 
 			// Multi-day search (base day + next day), enforce earliest time on day 0
 			console.log(`🛫 Searching flights (2 days): ${originAirport} → ${destinationAirport}`);
-			const merged = await searchFlightsForDates(originAirport, destinationAirport, departureDate, earliestReadyToFlyISO);
-			flightResults = {
-				...merged,
-				summary: {
-					...merged.summary,
-					searchTime: new Date().toISOString()
-				}
-			};
+			const merged = await searchFlightsForJobCreation(originAirport, destinationAirport, departureDate, earliestReadyToFlyISO);
+			flightResults = merged;
 
 			console.log(`✅ Found ${flightResults.summary?.totalOffers || 0} flights over 2 days (after filtering)`);
 
-			// Pick recommended flight and compute ETA at consignee
+			// Pick recommended flight and compute ETA at consignee using advanced algorithm
 			const destDriveMins = consigneeAirportRoute?.duration_minutes || 0;
-			const { flightId, etaISO } = computeRecommendedFlightAndETA(flightResults, earliestReadyToFlyISO, destDriveMins);
-			recommendedFlightId = flightId;
-			estimatedDeliveryISO = etaISO;
+			const readyDateTime = new Date(earliestReadyToFlyISO);
+			
+			// Use the advanced flight selection algorithm
+			const { selectOptimalFlight } = await import('$lib/flightalgo/flightSelection');
+			flightRecommendation = selectOptimalFlight(flightResults, readyDateTime, destDriveMins);
+			
+			// Extract data for backward compatibility
+			recommendedFlightId = flightRecommendation.flightId;
+			estimatedDeliveryISO = flightRecommendation.etaISO;
 
 			// Store the selected flight data for AWB creation
-			if (flightId && flightResults?.flights?.all) {
-				selectedFlightData = flightResults.flights.all.find((f: any) => f.id === flightId) || flightResults.flights.all[0] || null;
+			if (flightRecommendation.flight) {
+				selectedFlightData = flightRecommendation.flight;
 				console.log('🛫 Customer selected flight data for AWB:', selectedFlightData);
+				console.log('🎯 Flight recommendation details:', {
+					reasonCode: flightRecommendation.reasonCode,
+					explanation: flightRecommendation.explanation,
+					flightDetails: flightRecommendation.flightDetails
+				});
 			}
 
 			// If still no flights, try alternative airports
@@ -615,29 +535,10 @@
 						const altData = await response.json();
 
 						if (response.ok && altData.flights) {
-							// Filter out flights with small regional aircraft
-							const filterFlights = (flights: any[]) => {
-								return flights.filter((flight: any) => {
-									const aircraft = flight.enhanced?.aircraft;
-									if (!aircraft) return true;
-									
-									const aircraftList = aircraft.split(', ');
-									return !aircraftList.some((plane: string) => {
-										const cleanPlane = plane.trim().toUpperCase();
-										return (
-											cleanPlane.startsWith('E') ||      // Embraer (ERJ, E170, E190, etc.)
-											cleanPlane.startsWith('CR') ||     // Bombardier CRJ series
-											cleanPlane.includes('DE HAVILLAND') || // De Havilland aircraft
-											cleanPlane.includes('DASH') ||     // Dash 8, etc.
-											cleanPlane.startsWith('DH')        // De Havilland codes (DH4, etc.)
-										);
-									});
-								});
-							};
-
-							altData.flights.direct = filterFlights(altData.flights.direct || []);
-							altData.flights.connecting = filterFlights(altData.flights.connecting || []);
-							altData.flights.all = filterFlights(altData.flights.all || []);
+							// Use the centralized filtering from flightSelection.ts
+							altData.flights.direct = filterOutRegionalAircraft(altData.flights.direct || []);
+							altData.flights.connecting = filterOutRegionalAircraft(altData.flights.connecting || []);
+							altData.flights.all = filterOutRegionalAircraft(altData.flights.all || []);
 							
 							altData.summary.directFlights = altData.flights.direct.length;
 							altData.summary.connectingFlights = altData.flights.connecting.length;

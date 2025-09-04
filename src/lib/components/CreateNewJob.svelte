@@ -288,7 +288,8 @@
 			// Create AWB automatically if we have flight data
 			try {
 				const jobDataForAWB: JobDataForAWB = {
-					jobnumber: jobData.jobnumber,
+					jobno: jobData.jobno,
+					jobnumber: jobData.jobnumber, // Keep for backward compatibility
 					pieces: parseInt(jobData.pieces.toString()),
 					weight: parseFloat(jobData.weight.toString()),
 					weight_unit: 'lbs', // Default for CreateNewJob component
