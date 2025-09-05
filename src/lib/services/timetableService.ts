@@ -59,7 +59,7 @@ export async function saveFlightEstimatesToTimetable(
 				.select();
 		} else {
 			// Insert new timetable entry with timing estimates
-			// The jobcreated field should be populated by database trigger
+			// The created_at field should be populated by database trigger
 			result = await supabase
 				.from('timetable')
 				.insert(timingData)

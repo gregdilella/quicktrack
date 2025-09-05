@@ -14,7 +14,7 @@ export interface JobWithTimeline {
 // Define the stages grouped into 4 rows
 export const TIMELINE_STAGES_GROUPED = {
 	dispatch: [
-		{ key: 'jobcreated', label: 'Job Created', field: 'jobcreated' },
+		{ key: 'created_at', label: 'Job Created', field: 'created_at' },
 		{ key: 'ready', label: 'Ready Date', field: 'ready_date' }
 	],
 	pickup: [
@@ -54,7 +54,7 @@ function getCurrentStage(job: JobsFileRow, timeline: TimetableRow | null): strin
 			// Special case for ready date - check the jobsfile table
 			if (job.ready_date) {
 				// If we have a ready date but no further progress, this is the current stage
-				if (!timeline || !timeline.jobcreated) {
+				if (!timeline || !timeline.created_at) {
 					return stage.key;
 				}
 			}

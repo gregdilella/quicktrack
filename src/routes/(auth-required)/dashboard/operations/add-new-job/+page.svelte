@@ -1033,8 +1033,6 @@
 								<option value="call">Call</option>
 								<option value="email">Email</option>
 								<option value="web">Web</option>
-								<option value="placement">Placement</option>
-								<option value="return">Return</option>
 							</select>
 						</div>
 						</div>

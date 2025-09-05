@@ -22,7 +22,7 @@ export const jobSchema = z.object({
   pieces: z.coerce.number().int('Pieces must be a whole number').min(1, 'Pieces must be at least 1'),
   weight: z.coerce.number().min(0.1, 'Weight must be greater than 0'),
   service_type: z.enum(['NFO', 'NDO', 'OBC', 'CHAR']),
-  job_type: z.enum(['web', 'email', 'placement', 'return', 'call']),
+  job_type: z.enum(['web', 'email', 'call']),
   
   // Shipper information
   shipper_name: nonEmptyString.max(100, 'Shipper name must be less than 100 characters'),
@@ -90,7 +90,7 @@ export const customerJobSchema = z.object({
 	
 	// Service Information
 	service_type: z.enum(["NFO", "NDO", "OBC", "CHAR"], { message: "Service type is required" }),
-	job_type: z.enum(["web", "email", "placement", "return", "call"], { message: "Job type is required" }),
+	job_type: z.enum(["web", "email", "call"], { message: "Job type is required" }),
 	transport_mode: z.enum(["Air", "Ground", "Ocean", "Multi-Modal"], { message: "Transport mode is required" }),
 	equipment_type: z.string().optional(),
 	

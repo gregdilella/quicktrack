@@ -131,7 +131,7 @@ import JobFiles from '$lib/components/JobFiles.svelte'
 			return 'Pickup in Progress'
 		} else if (timeline.pdriver_dispatched) {
 			return 'Pickup Process'
-		} else if (timeline.jobcreated) {
+		} else if (timeline.created_at) {
 			return 'Job Created'
 		} else {
 			return 'Basic Scheduling'

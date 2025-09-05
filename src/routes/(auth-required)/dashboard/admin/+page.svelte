@@ -60,27 +60,9 @@
 			<span class="blue-text">CERTUS FREIGHT - ADMIN CONTROL PANEL</span>
 		</div>
 
-		<!-- User Information -->
-		{#if user && userProfile}
-			<div class="user-info">
-				<p class="blue-text">Status: <span class="green-text">ADMINISTRATOR ACCESS</span></p>
-				<p class="blue-text">Email: {user.email?.toUpperCase()}</p>
-				<p class="blue-text">Role: {userProfile.role}</p>
-			</div>
-		{/if}
+		<!-- User information removed as it's redundant on admin dashboard -->
 
-		<!-- Admin Dashboard Content -->
-		<div class="dashboard-section">
-			<h3 class="blue-text">--- ADMINISTRATIVE CONTROLS ---</h3>
-			<div class="dashboard-menu">
-				<div class="menu-item admin-item">► USER MANAGEMENT</div>
-				<div class="menu-item admin-item">► SYSTEM CONFIGURATION</div>
-				<div class="menu-item admin-item">► SECURITY SETTINGS</div>
-				<div class="menu-item admin-item">► AUDIT LOGS</div>
-				<div class="menu-item admin-item">► DATABASE MANAGEMENT</div>
-				<div class="menu-item admin-item">► BACKUP & RESTORE</div>
-			</div>
-		</div>
+
 
 		<!-- Dashboard Access Section -->
 		<div class="dashboard-access-section">

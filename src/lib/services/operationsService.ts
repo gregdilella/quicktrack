@@ -125,7 +125,7 @@ export async function getJobLSPs(jobno: string): Promise<LSPLevelWithLSP[]> {
 					address
 				)
 			`)
-			.eq('jobnumber', jobnumber)
+			.eq('jobnumber', jobno)
 			.order('assigned_date', { ascending: false });
 
 		console.log('getJobLSPs query details:', {

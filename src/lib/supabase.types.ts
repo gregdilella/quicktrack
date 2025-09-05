@@ -226,7 +226,7 @@ export type Database = {
           flight_recovered: string | null
           flight_tenured: string | null
           id: number
-          jobcreated: string | null
+          created_at: string | null
           jobnumber: string
           pdriver_arrived: string | null
           pdriver_dispatched: string | null
@@ -243,7 +243,7 @@ export type Database = {
           flight_recovered?: string | null
           flight_tenured?: string | null
           id?: number
-          jobcreated?: string | null
+          created_at?: string | null
           jobnumber: string
           pdriver_arrived?: string | null
           pdriver_dispatched?: string | null
@@ -260,7 +260,7 @@ export type Database = {
           flight_recovered?: string | null
           flight_tenured?: string | null
           id?: number
-          jobcreated?: string | null
+          created_at?: string | null
           jobnumber?: string
           pdriver_arrived?: string | null
           pdriver_dispatched?: string | null

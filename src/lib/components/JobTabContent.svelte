@@ -131,15 +131,7 @@
 	}
 
 	// Job creation handlers (placeholder functions for now)
-	function handleCreatePlacementJob() {
-		console.log('Create Placement Job clicked for job:', jobData.jobno || jobData.jobnumber)
-		// TODO: Implement placement job creation logic
-	}
-
-	function handleCreateReturnJob() {
-		console.log('Create Return Job clicked for job:', jobData.jobno || jobData.jobnumber)
-		// TODO: Implement return job creation logic
-	}
+	// Placement and return job creation functions removed as these job types are no longer supported
 
 	// Salesman (derived from customer.salesman_id)
 	let whoSalesman: { salesman_id: string; name: string; fin_cono?: string | null } | null = null
@@ -463,7 +455,7 @@
 				.eq('jobno', jobIdentifier)
 				.single()
 			
-			// Prepare the timeline data (excluding jobcreated which should not be updated)
+			// Prepare the timeline data (excluding created_at which should not be updated)
 			const timelineData = {
 				jobno: jobIdentifier,
 				pdriver_dispatched: jobData.pdriver_dispatched ? new Date(jobData.pdriver_dispatched).toISOString() : null,
@@ -566,7 +558,7 @@
 			if (data) {
 				jobData = {
 					...jobData,
-					jobcreated: data.jobcreated ? new Date(data.jobcreated).toISOString().slice(0, 16) : '',
+					created_at: data.created_at ? new Date(data.created_at).toISOString().slice(0, 16) : '',
 					pdriver_dispatched: data.pdriver_dispatched ? new Date(data.pdriver_dispatched).toISOString().slice(0, 16) : '',
 					pdriver_arrived: data.pdriver_arrived ? new Date(data.pdriver_arrived).toISOString().slice(0, 16) : '',
 					pdriver_pickup: data.pdriver_pickup ? new Date(data.pdriver_pickup).toISOString().slice(0, 16) : '',
@@ -993,7 +985,7 @@
 			const { data: lspLevelRows, error: lspLevelError } = await supabase
 				.from('lsp_level')
 				.select('*')
-				.eq('jobno', jobId);
+				.eq('jobnumber', jobId);
 			
 			console.log('LSP Level rows:', { lspLevelRows, lspLevelError, jobId });
 			
@@ -1950,20 +1942,7 @@
 				<div class="flex-1 min-w-[300px]">
 					<div class="form-group">
 						<label class="blue-text">CREATE RELATED JOBS</label>
-						<div class="flex gap-3 flex-wrap">
-							<button 
-								class="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-lg border border-orange-500 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 text-sm"
-								onclick={handleCreatePlacementJob}
-							>
-								📦 Create a Placement Job
-							</button>
-							<button 
-								class="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-lg border border-orange-500 shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 text-sm"
-								onclick={handleCreateReturnJob}
-							>
-								↩️ Create a Return Job
-							</button>
-						</div>
+						<!-- Placement and return job creation buttons removed as these job types are no longer supported -->
 					</div>
 				</div>
 			</div>

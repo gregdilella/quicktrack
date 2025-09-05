@@ -19,7 +19,7 @@ export type Database = {
           airline_code: string
           airline_name: string
           contact_email: string | null
-          created_at: string | null
+          jobcreated: string | null
           iata_prefix: string | null
           id: number
           phone: string | null
@@ -29,7 +29,7 @@ export type Database = {
           airline_code: string
           airline_name: string
           contact_email?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           iata_prefix?: string | null
           id?: number
           phone?: string | null
@@ -39,7 +39,7 @@ export type Database = {
           airline_code?: string
           airline_name?: string
           contact_email?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           iata_prefix?: string | null
           id?: number
           phone?: string | null
@@ -52,7 +52,7 @@ export type Database = {
           airline_id: number
           awb_number: string
           cost: number | null
-          created_at: string | null
+          jobcreated: string | null
           created_by: string | null
           currency: string | null
           destination_airport: string | null
@@ -79,7 +79,7 @@ export type Database = {
           airline_id: number
           awb_number: string
           cost?: number | null
-          created_at?: string | null
+          jobcreated?: string | null
           created_by?: string | null
           currency?: string | null
           destination_airport?: string | null
@@ -106,7 +106,7 @@ export type Database = {
           airline_id?: number
           awb_number?: string
           cost?: number | null
-          created_at?: string | null
+          jobcreated?: string | null
           created_by?: string | null
           currency?: string | null
           destination_airport?: string | null
@@ -157,21 +157,21 @@ export type Database = {
         Row: {
           charge: number | null
           chargecode: string | null
-          created_at: string | null
+          jobcreated: string | null
           id: number
           jobnumber: string
         }
         Insert: {
           charge?: number | null
           chargecode?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           id?: number
           jobnumber: string
         }
         Update: {
           charge?: number | null
           chargecode?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           id?: number
           jobnumber?: string
         }
@@ -192,7 +192,7 @@ export type Database = {
           billing_contact: string | null
           city: string | null
           contact_email: string | null
-          created_at: string | null
+          jobcreated: string | null
           id: string
           name: string
           notes: string | null
@@ -208,7 +208,7 @@ export type Database = {
           billing_contact?: string | null
           city?: string | null
           contact_email?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           id?: string
           name: string
           notes?: string | null
@@ -224,7 +224,7 @@ export type Database = {
           billing_contact?: string | null
           city?: string | null
           contact_email?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           id?: string
           name?: string
           notes?: string | null
@@ -247,7 +247,7 @@ export type Database = {
       file_uploads: {
         Row: {
           content_type: string | null
-          created_at: string
+          jobcreated: string
           description: string | null
           file_name: string | null
           id: string
@@ -257,7 +257,7 @@ export type Database = {
         }
         Insert: {
           content_type?: string | null
-          created_at?: string
+          jobcreated?: string
           description?: string | null
           file_name?: string | null
           id?: string
@@ -267,7 +267,7 @@ export type Database = {
         }
         Update: {
           content_type?: string | null
-          created_at?: string
+          jobcreated?: string
           description?: string | null
           file_name?: string | null
           id?: string
@@ -300,7 +300,7 @@ export type Database = {
           consignee_phone: string | null
           consignee_state: string | null
           consignee_zip: string | null
-          created_at: string | null
+          jobcreated: string | null
           created_by: string | null
           customer_account: string | null
           customer_contact: string | null
@@ -356,7 +356,7 @@ export type Database = {
           consignee_phone?: string | null
           consignee_state?: string | null
           consignee_zip?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           created_by?: string | null
           customer_account?: string | null
           customer_contact?: string | null
@@ -412,7 +412,7 @@ export type Database = {
           consignee_phone?: string | null
           consignee_state?: string | null
           consignee_zip?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           created_by?: string | null
           customer_account?: string | null
           customer_contact?: string | null
@@ -488,7 +488,7 @@ export type Database = {
       lsp_costs: {
         Row: {
           cost: number
-          created_at: string | null
+          jobcreated: string | null
           description: string | null
           id: string
           jobnumber: string | null
@@ -498,7 +498,7 @@ export type Database = {
         }
         Insert: {
           cost: number
-          created_at?: string | null
+          jobcreated?: string | null
           description?: string | null
           id?: string
           jobnumber?: string | null
@@ -508,7 +508,7 @@ export type Database = {
         }
         Update: {
           cost?: number
-          created_at?: string | null
+          jobcreated?: string | null
           description?: string | null
           id?: string
           jobnumber?: string | null
@@ -543,7 +543,7 @@ export type Database = {
       lsp_level: {
         Row: {
           assigned_date: string | null
-          created_at: string | null
+          jobcreated: string | null
           function: string | null
           id: string
           jobnumber: string | null
@@ -556,7 +556,7 @@ export type Database = {
         }
         Insert: {
           assigned_date?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           function?: string | null
           id?: string
           jobnumber?: string | null
@@ -569,7 +569,7 @@ export type Database = {
         }
         Update: {
           assigned_date?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           function?: string | null
           id?: string
           jobnumber?: string | null
@@ -608,7 +608,7 @@ export type Database = {
         Row: {
           address: string | null
           contact_email: string | null
-          created_at: string | null
+          jobcreated: string | null
           currency_code: string | null
           id: string
           mobile: string | null
@@ -619,7 +619,7 @@ export type Database = {
         Insert: {
           address?: string | null
           contact_email?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           currency_code?: string | null
           id?: string
           mobile?: string | null
@@ -630,7 +630,7 @@ export type Database = {
         Update: {
           address?: string | null
           contact_email?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           currency_code?: string | null
           id?: string
           mobile?: string | null
@@ -642,7 +642,7 @@ export type Database = {
       }
       packaging: {
         Row: {
-          created_at: string | null
+          jobcreated: string | null
           id: string
           name: string
           temperature: string | null
@@ -650,7 +650,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          created_at?: string | null
+          jobcreated?: string | null
           id?: string
           name: string
           temperature?: string | null
@@ -658,7 +658,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          created_at?: string | null
+          jobcreated?: string | null
           id?: string
           name?: string
           temperature?: string | null
@@ -671,21 +671,21 @@ export type Database = {
         Row: {
           charge: number | null
           chargecode: string | null
-          created_at: string | null
+          jobcreated: string | null
           id: number
           jobnumber: string
         }
         Insert: {
           charge?: number | null
           chargecode?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           id?: number
           jobnumber: string
         }
         Update: {
           charge?: number | null
           chargecode?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           id?: number
           jobnumber?: string
         }
@@ -723,7 +723,7 @@ export type Database = {
       timetable: {
         Row: {
           airport_dropoff: string | null
-          created_at: string | null
+          jobcreated: string | null
           ddriver_delivery: string | null
           ddriver_dispatched: string | null
           ddriver_recovered: string | null
@@ -745,7 +745,7 @@ export type Database = {
         }
         Insert: {
           airport_dropoff?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           ddriver_delivery?: string | null
           ddriver_dispatched?: string | null
           ddriver_recovered?: string | null
@@ -767,7 +767,7 @@ export type Database = {
         }
         Update: {
           airport_dropoff?: string | null
-          created_at?: string | null
+          jobcreated?: string | null
           ddriver_delivery?: string | null
           ddriver_dispatched?: string | null
           ddriver_recovered?: string | null
@@ -799,7 +799,7 @@ export type Database = {
       }
       user_table: {
         Row: {
-          created_at: string | null
+          jobcreated: string | null
           customer_id: string | null
           email: string
           id: string
@@ -810,7 +810,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          created_at?: string | null
+          jobcreated?: string | null
           customer_id?: string | null
           email: string
           id?: string
@@ -821,7 +821,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          created_at?: string | null
+          jobcreated?: string | null
           customer_id?: string | null
           email?: string
           id?: string
@@ -874,7 +874,7 @@ export type Database = {
       }
     }
     Enums: {
-      job_type_enum: "web" | "email" | "placement" | "return" | "call"
+      job_type_enum: "web" | "email" | "call"
       service_type_enum: "NFO" | "NDO" | "OBC" | "CHAR"
       status_enum:
         | "dispatch"
@@ -1018,7 +1018,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      job_type_enum: ["web", "email", "placement", "return", "call"],
+      job_type_enum: ["web", "email", "call"],
       service_type_enum: ["NFO", "NDO", "OBC", "CHAR"],
       status_enum: [
         "dispatch",
