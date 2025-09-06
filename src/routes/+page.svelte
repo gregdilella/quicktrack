@@ -3,6 +3,8 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import LandingSection from '$lib/components/LandingSection.svelte';
+	import ScrollReveal from '$lib/components/ScrollReveal.svelte';
+	import DotPattern from '$lib/components/ui/DotPattern.svelte';
 
 	let videoElement: HTMLVideoElement;
 	let isVideoLoaded = false;
@@ -25,6 +27,7 @@
 	}
 </script>
 
+
 <div class="landing-container">
 	<!-- Video Background -->
 	<div class="video-background">
@@ -45,6 +48,15 @@
 		<div class="video-overlay"></div>
 	</div>
 
+	<!-- Full Page Dot Pattern Background -->
+	<DotPattern 
+		class="fixed inset-0 opacity-20 pointer-events-none"
+		fillColor="rgb(255 255 255 / 0.3)"
+		width={32}
+		height={32}
+		cr={2}
+	/>
+	
 	<!-- Content -->
 	<div class="landing-content">
 		<!-- Header -->
@@ -120,62 +132,83 @@
 
 {#snippet servicesText()}
 	<div class="services-full-layout">
+		<!-- Dot Pattern Background -->
+		<DotPattern 
+			class="absolute inset-0 opacity-25 -z-10"
+			fillColor="rgb(52 84 122 / 0.4)"
+			width={24}
+			height={24}
+			cr={2}
+		/>
+		
 		<!-- Header Section -->
-		<div class="services-header">
-			<h2 class="services-title">Our Services</h2>
-			<p class="services-tagline">Comprehensive logistics solutions for time-critical shipments worldwide</p>
-			<p class="services-subtitle">Our services are designed to meet the most demanding delivery requirements with precision and reliability.</p>
-		</div>
+		<ScrollReveal direction="up" delay={0} duration={800}>
+			<div class="services-header">
+				<h2 class="services-title">Our Services</h2>
+				<p class="services-tagline">Comprehensive logistics solutions for time-critical shipments worldwide</p>
+				<p class="services-subtitle">Our services are designed to meet the most demanding delivery requirements with precision and reliability.</p>
+			</div>
+		</ScrollReveal>
 		
 		<!-- First Row - 3 Services -->
 		<div class="services-row-first">
-			<div class="service-card-new nfo">
-				<div class="service-header">
-					<div class="service-badge-new">NFO</div>
-					<h3>Next Flight Out</h3>
+			<ScrollReveal direction="scale" delay={100} duration={600}>
+				<div class="service-card-new nfo">
+					<div class="service-header">
+						<div class="service-badge-new">NFO</div>
+						<h3>Next Flight Out</h3>
+					</div>
+					<p>Speed and reliability at substantial cost savings. Get your time-critical shipment on the next flight out – to anywhere, from anywhere, any day of the week.</p>
+					<div class="service-icon-new">✈️</div>
 				</div>
-				<p>Speed and reliability at substantial cost savings. Get your time-critical shipment on the next flight out – to anywhere, from anywhere, any day of the week.</p>
-				<div class="service-icon-new">✈️</div>
-			</div>
+			</ScrollReveal>
 			
-			<div class="service-card-new obc">
-				<div class="service-header">
-					<div class="service-badge-new">OBC</div>
-					<h3>On-Board Courier</h3>
+			<ScrollReveal direction="scale" delay={200} duration={600}>
+				<div class="service-card-new obc">
+					<div class="service-header">
+						<div class="service-badge-new">OBC</div>
+						<h3>On-Board Courier</h3>
+					</div>
+					<p>Professional hand carry service where experienced couriers accompany your urgent shipment to ensure it arrives fast and in pristine condition.</p>
+					<div class="service-icon-new">👤</div>
 				</div>
-				<p>Professional hand carry service where experienced couriers accompany your urgent shipment to ensure it arrives fast and in pristine condition.</p>
-				<div class="service-icon-new">👤</div>
-			</div>
+			</ScrollReveal>
 			
-			<div class="service-card-new acf">
-				<div class="service-header">
-					<div class="service-badge-new">ACF</div>
-					<h3>Air Charter Flight</h3>
+			<ScrollReveal direction="scale" delay={300} duration={600}>
+				<div class="service-card-new acf">
+					<div class="service-header">
+						<div class="service-badge-new">ACF</div>
+						<h3>Air Charter Flight</h3>
+					</div>
+					<p>For special cases, our team can charter a private plane to fly your shipment point to point without any interruption or time wasted.</p>
+					<div class="service-icon-new">🛩️</div>
 				</div>
-				<p>For special cases, our team can charter a private plane to fly your shipment point to point without any interruption or time wasted.</p>
-				<div class="service-icon-new">🛩️</div>
-			</div>
+			</ScrollReveal>
 		</div>
 		
 		<!-- Second Row - 2 Services (Centered) -->
 		<div class="services-row-second">
-			<div class="service-card-new drive">
-				<div class="service-header">
-					<div class="service-badge-new">DD</div>
-					<h3>Dedicated Drive</h3>
+			<ScrollReveal direction="scale" delay={400} duration={600}>
+				<div class="service-card-new drive">
+					<div class="service-header">
+						<div class="service-badge-new">DD</div>
+						<h3>Dedicated Drive</h3>
+					</div>
+					<p>Regional and domestic urgent deliveries with direct, secure transportation and real-time tracking.</p>
+					<div class="service-icon-new">🚛</div>
 				</div>
-				<p>Regional and domestic urgent deliveries with direct, secure transportation and real-time tracking.</p>
-				<div class="service-icon-new">🚛</div>
-			</div>
+			</ScrollReveal>
 			
-			<div class="service-card-new temp">
-				<div class="service-header">
-					<div class="service-badge-new">TC</div>
-					<h3>Temperature Control</h3>
+			<ScrollReveal direction="scale" delay={500} duration={600}>
+				<div class="service-card-new temp">
+					<div class="service-header">
+						<div class="service-badge-new">TC</div>
+						<h3>Temperature Control</h3>
+					</div>
+					<p>Specialized transport for pharmaceuticals and biologics with continuous monitoring and compliance documentation.</p>
+					<div class="service-icon-new">🌡️</div>
 				</div>
-				<p>Specialized transport for pharmaceuticals and biologics with continuous monitoring and compliance documentation.</p>
-				<div class="service-icon-new">🌡️</div>
-			</div>
+			</ScrollReveal>
 		</div>
 	</div>
 {/snippet}
@@ -185,12 +218,19 @@
 
 {#snippet missionContent()}
 	<div class="mission-visual">
+		<!-- Dot Pattern Background - Behind the entire mission visual -->
+		<DotPattern 
+			class="absolute inset-0 opacity-30 -z-10"
+			fillColor="rgb(52 84 122 / 0.5)"
+			width={24}
+			height={24}
+			cr={2}
+		/>
+		
 		<!-- Mission content with login button -->
 		<div class="mission-placeholder">
 			<div class="mission-icon">
-				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-					<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-				</svg>
+				<img src="/Certus Logo.png" alt="Certus Freight" class="mission-logo" />
 			</div>
 			<p>Delivering excellence through innovation and reliability</p>
 			
@@ -230,6 +270,14 @@
 		height: 100vh;
 		overflow: hidden;
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	}
+
+	@media (max-width: 768px) {
+		.landing-container {
+			height: auto;
+			min-height: 100vh;
+			overflow: visible;
+		}
 	}
 
 	/* Video Background */
@@ -483,9 +531,10 @@
 			padding: 1rem;
 			justify-content: flex-start;
 			padding-top: 1.5rem;
-			padding-bottom: 2rem;
+			padding-bottom: 3rem;
 			min-height: 100vh;
 			height: auto;
+			overflow-y: auto;
 		}
 
 		.header-section {
@@ -532,9 +581,10 @@
 		.landing-content {
 			padding: 0.75rem;
 			padding-top: 1rem;
-			padding-bottom: 2rem;
+			padding-bottom: 3rem;
 			height: auto;
 			min-height: 100vh;
+			overflow-y: auto;
 		}
 
 		.header-section {
@@ -585,6 +635,8 @@
 	/* Services Full Layout Styles */
 	:global(.services-full-layout) {
 		width: 100%;
+		position: relative;
+		overflow: hidden;
 	}
 
 	:global(.services-header) {
@@ -744,17 +796,19 @@
 		align-items: center;
 		width: 100%;
 		height: 100%;
+		position: relative;
+		overflow: hidden;
 	}
 
 	:global(.mission-placeholder) {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 1.5rem;
+		gap: 1.25rem;
 		text-align: center;
 		background: rgba(255, 255, 255, 0.95);
 		backdrop-filter: blur(10px);
-		padding: 3rem 2rem;
+		padding: 2rem 1.5rem;
 		border-radius: 16px;
 		border: 2px solid #e2e8f0;
 		box-shadow: 0 4px 12px rgba(52, 84, 122, 0.08);
@@ -762,14 +816,25 @@
 	}
 
 	:global(.mission-icon) {
-		width: 64px;
-		height: 64px;
+		width: clamp(200px, 25vw, 320px);
+		height: clamp(200px, 25vw, 320px);
 		color: #34547a;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		margin-bottom: 1rem;
 	}
 
 	:global(.mission-icon svg) {
 		width: 100%;
 		height: 100%;
+	}
+
+	:global(.mission-logo) {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		filter: drop-shadow(0 4px 8px rgba(52, 84, 122, 0.1));
 	}
 
 	:global(.mission-placeholder p) {
@@ -824,12 +889,52 @@
 		}
 
 		:global(.mission-icon) {
-			width: 48px;
-			height: 48px;
+			width: clamp(180px, 22vw, 240px); /* Larger for tablet */
+			height: clamp(180px, 22vw, 240px);
 		}
 
 		:global(.mission-placeholder p) {
 			font-size: 1rem;
+		}
+		
+		/* Ensure proper mobile stacking order for mission section */
+		:global(.landing-section .content-wrapper.reverse) {
+			display: flex;
+			flex-direction: column;
+		}
+		
+		:global(.landing-section .content-wrapper.reverse .text-content) {
+			order: 1;
+		}
+		
+		:global(.landing-section .content-wrapper.reverse .image-content) {
+			order: 2;
+		}
+	}
+
+	@media (max-width: 480px) {
+		:global(.mission-icon) {
+			width: clamp(140px, 20vw, 180px); /* Larger for mobile */
+			height: clamp(140px, 20vw, 180px);
+		}
+		
+		:global(.mission-placeholder) {
+			padding: 1.5rem 1rem;
+			gap: 1rem;
+		}
+		
+		/* Ensure proper mobile stacking order for mission section on small screens */
+		:global(.landing-section .content-wrapper.reverse) {
+			display: flex;
+			flex-direction: column;
+		}
+		
+		:global(.landing-section .content-wrapper.reverse .text-content) {
+			order: 1;
+		}
+		
+		:global(.landing-section .content-wrapper.reverse .image-content) {
+			order: 2;
 		}
 	}
 
@@ -932,7 +1037,24 @@
 	:global(body) {
 		margin: 0;
 		padding: 0;
-		background-color: #000;
+		background-color: #f8fafc;
 		overflow-x: hidden;
+		position: relative;
+	}
+
+	/* Ensure proper z-index stacking */
+	.landing-container {
+		position: relative;
+		z-index: 1;
+	}
+
+	:global(.landing-section) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* Full page dot pattern styling */
+	:global(.fixed.inset-0.opacity-20) {
+		z-index: 2;
 	}
 </style>
