@@ -2,6 +2,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import LandingSection from '$lib/components/LandingSection.svelte';
 
 	let videoElement: HTMLVideoElement;
 	let isVideoLoaded = false;
@@ -34,7 +35,7 @@
 			muted
 			loop
 			playsinline
-			on:loadeddata={handleVideoLoad}
+			onloadeddata={handleVideoLoad}
 		>
 			<source src="/5696874-hd_1920_1080_30fps.mp4" type="video/mp4">
 			Your browser does not support the video tag.
@@ -59,7 +60,7 @@
 				<div class="glow-effect"></div>
 				<button 
 					class="signin-btn" 
-					on:click={navigateToSignIn}
+					onclick={navigateToSignIn}
 				>
 					Get Started
 					<svg class="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,11 +69,6 @@
 				</button>
 			</div>
 			
-			<div class="text-blur-container">
-				<p class="subtitle">Fast, reliable, and secure courier services worldwide</p>
-				<p class="cta-text">AI Powered Logistics Startup</p>
-				<p class="cta-text">We Pass Savings On to You. Full GP Transparency</p>
-			</div>
 		</div>
 
 		<!-- Features Grid -->
@@ -117,6 +113,115 @@
 		</div>
 	{/if}
 </div>
+
+{#snippet servicesContent()}
+	<!-- This will be empty since we're moving everything to the text side -->
+{/snippet}
+
+{#snippet servicesText()}
+	<div class="services-full-layout">
+		<!-- Header Section -->
+		<div class="services-header">
+			<h2 class="services-title">Our Services</h2>
+			<p class="services-tagline">Comprehensive logistics solutions for time-critical shipments worldwide</p>
+			<p class="services-subtitle">Our services are designed to meet the most demanding delivery requirements with precision and reliability.</p>
+		</div>
+		
+		<!-- First Row - 3 Services -->
+		<div class="services-row-first">
+			<div class="service-card-new nfo">
+				<div class="service-header">
+					<div class="service-badge-new">NFO</div>
+					<h3>Next Flight Out</h3>
+				</div>
+				<p>Speed and reliability at substantial cost savings. Get your time-critical shipment on the next flight out – to anywhere, from anywhere, any day of the week.</p>
+				<div class="service-icon-new">✈️</div>
+			</div>
+			
+			<div class="service-card-new obc">
+				<div class="service-header">
+					<div class="service-badge-new">OBC</div>
+					<h3>On-Board Courier</h3>
+				</div>
+				<p>Professional hand carry service where experienced couriers accompany your urgent shipment to ensure it arrives fast and in pristine condition.</p>
+				<div class="service-icon-new">👤</div>
+			</div>
+			
+			<div class="service-card-new acf">
+				<div class="service-header">
+					<div class="service-badge-new">ACF</div>
+					<h3>Air Charter Flight</h3>
+				</div>
+				<p>For special cases, our team can charter a private plane to fly your shipment point to point without any interruption or time wasted.</p>
+				<div class="service-icon-new">🛩️</div>
+			</div>
+		</div>
+		
+		<!-- Second Row - 2 Services (Centered) -->
+		<div class="services-row-second">
+			<div class="service-card-new drive">
+				<div class="service-header">
+					<div class="service-badge-new">DD</div>
+					<h3>Dedicated Drive</h3>
+				</div>
+				<p>Regional and domestic urgent deliveries with direct, secure transportation and real-time tracking.</p>
+				<div class="service-icon-new">🚛</div>
+			</div>
+			
+			<div class="service-card-new temp">
+				<div class="service-header">
+					<div class="service-badge-new">TC</div>
+					<h3>Temperature Control</h3>
+				</div>
+				<p>Specialized transport for pharmaceuticals and biologics with continuous monitoring and compliance documentation.</p>
+				<div class="service-icon-new">🌡️</div>
+			</div>
+		</div>
+	</div>
+{/snippet}
+
+<!-- Services Section -->
+<LandingSection title="Our Services" id="services" singleColumn={true} children={servicesText} />
+
+{#snippet missionContent()}
+	<div class="mission-visual">
+		<!-- Mission content with login button -->
+		<div class="mission-placeholder">
+			<div class="mission-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+				</svg>
+			</div>
+			<p>Delivering excellence through innovation and reliability</p>
+			
+			<!-- Login Button -->
+			<div class="mission-login-container">
+				<div class="glow-button-container">
+					<div class="glow-effect"></div>
+					<button 
+						class="login-btn" 
+						onclick={() => goto('/signin')}
+					>
+						Login
+						<svg class="arrow-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+						</svg>
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+{/snippet}
+
+{#snippet missionText()}
+	<p><strong>Whatever the challenge, we deliver solutions.</strong></p>
+	<p>We provide <strong>fast, reliable, and secure transport services worldwide</strong> — more than just an international courier, we are your trusted logistics partner.  Our team combines global expertise with advanced AI-driven tools to anticipate obstacles, optimize routes, and ensure every urgent shipment arrives on time.</p>
+	<p>From customs delays to overbooked flights or the tightest deadlines, we leverage innovation and real-time data to overcome barriers that others cannot. <strong>We pass savings on to you with full GP transparency and minimum operational overhead</strong> — every step of the process is supported by clear communication and complete job-level pricing transparency, so you always know exactly what to expect.</p>
+	<p>Where conventional couriers see restrictions, we see opportunities — delivering with precision, accountability, and technology at the core of our service.</p>
+{/snippet}
+
+<!-- Mission Section -->
+<LandingSection title="Our Mission" reverse imageSlot={missionContent} children={missionText} />
 
 <style>
 	.landing-container {
@@ -182,11 +287,11 @@
 		background: rgba(255, 255, 255, 0.08);
 		backdrop-filter: blur(20px);
 		border: 1px solid rgba(255, 255, 255, 0.15);
-		border-radius: 16px;
-		padding: 0.75rem;
+		border-radius: 20px;
+		padding: 1.5rem;
 		margin: 0 auto;
 		max-width: fit-content;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
 		transition: all 0.3s ease;
 	}
 
@@ -198,7 +303,7 @@
 	}
 
 	.main-logo {
-		max-width: 220px;
+		max-width: 350px;
 		width: 100%;
 		height: auto;
 		margin: 0;
@@ -206,43 +311,12 @@
 		transition: all 0.3s ease;
 	}
 
-	.text-blur-container {
-		background: rgba(255, 255, 255, 0.1);
-		backdrop-filter: blur(15px);
-		border: 1px solid rgba(255, 255, 255, 0.2);
-		border-radius: 16px;
-		padding: 1.25rem;
-		margin: 0 auto;
-		max-width: 600px;
-		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-	}
-
-	.subtitle {
-		font-size: 1.5rem;
-		margin: 0 0 1.5rem 0;
-		opacity: 0.95;
-		font-weight: 400;
-		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-		line-height: 1.4;
-	}
 
 	/* Call to Action */
 	.cta-section {
 		margin-bottom: 2rem;
 	}
 
-	.cta-text {
-		font-size: 1.1rem;
-		opacity: 0.9;
-		margin: 0 0 0.5rem 0;
-		text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-		font-weight: 500;
-		line-height: 1.4;
-	}
-
-	.cta-text:last-child {
-		margin-bottom: 0;
-	}
 
 	.glow-button-container {
 		position: relative;
@@ -420,11 +494,11 @@
 		}
 
 		.logo-blur-container {
-			padding: 0.5rem;
+			padding: 1rem;
 		}
 
 		.main-logo {
-			max-width: 180px;
+			max-width: 280px;
 		}
 
 		.cta-section {
@@ -436,21 +510,6 @@
 			margin-bottom: 1rem;
 		}
 
-		.text-blur-container {
-			padding: 1.25rem;
-			margin: 0 auto;
-			max-width: 95%;
-		}
-
-		.subtitle {
-			font-size: 1.1rem;
-			margin-bottom: 1rem;
-		}
-
-		.cta-text {
-			font-size: 0.95rem;
-			margin-bottom: 0.4rem;
-		}
 
 		.signin-btn {
 			padding: 0.875rem 1.75rem;
@@ -483,11 +542,11 @@
 		}
 
 		.logo-blur-container {
-			padding: 0.4rem;
+			padding: 0.75rem;
 		}
 
 		.main-logo {
-			max-width: 140px;
+			max-width: 220px;
 		}
 
 		.cta-section {
@@ -498,21 +557,6 @@
 			margin-bottom: 0.75rem;
 		}
 
-		.text-blur-container {
-			padding: 1rem;
-			margin: 0 auto;
-			max-width: 98%;
-		}
-
-		.subtitle {
-			font-size: 1rem;
-			margin-bottom: 0.75rem;
-		}
-
-		.cta-text {
-			font-size: 0.85rem;
-			margin-bottom: 0.3rem;
-		}
 
 		.signin-btn {
 			padding: 0.75rem 1.5rem;
@@ -538,10 +582,357 @@
 		}
 	}
 
+	/* Services Full Layout Styles */
+	:global(.services-full-layout) {
+		width: 100%;
+	}
+
+	:global(.services-header) {
+		text-align: center;
+		margin-bottom: 3rem;
+	}
+
+	:global(.services-title) {
+		font-size: 2.5rem;
+		font-weight: 700;
+		color: #34547a;
+		margin: 0 0 1.5rem 0;
+		line-height: 1.2;
+	}
+
+	:global(.services-row-first) {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 2rem;
+		margin-bottom: 2rem;
+	}
+
+	:global(.services-row-second) {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 2rem;
+		max-width: 800px;
+		margin: 0 auto;
+	}
+
+	:global(.service-card-new) {
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(10px);
+		border: 2px solid rgba(52, 84, 122, 0.1);
+		border-radius: 20px;
+		padding: 2rem;
+		position: relative;
+		transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.1);
+		overflow: hidden;
+	}
+
+	:global(.service-card-new::before) {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: 4px;
+		background: linear-gradient(135deg, #34547a, #5a7fb8);
+		transition: all 0.3s ease;
+	}
+
+	:global(.service-card-new:hover) {
+		transform: translateY(-8px);
+		border-color: rgba(52, 84, 122, 0.2);
+		box-shadow: 0 16px 48px rgba(52, 84, 122, 0.2);
+	}
+
+	:global(.service-card-new:hover::before) {
+		height: 6px;
+	}
+
+	:global(.service-header) {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	:global(.service-badge-new) {
+		background: linear-gradient(135deg, #34547a, #5a7fb8);
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 25px;
+		font-weight: 700;
+		font-size: 0.75rem;
+		letter-spacing: 1px;
+		box-shadow: 0 4px 12px rgba(52, 84, 122, 0.3);
+		flex-shrink: 0;
+	}
+
+	:global(.service-card-new.nfo .service-badge-new) {
+		background: linear-gradient(135deg, #1e40af, #3b82f6);
+	}
+
+	:global(.service-card-new.obc .service-badge-new) {
+		background: linear-gradient(135deg, #dc2626, #ef4444);
+	}
+
+	:global(.service-card-new.acf .service-badge-new) {
+		background: linear-gradient(135deg, #059669, #10b981);
+	}
+
+	:global(.service-card-new.drive .service-badge-new) {
+		background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+	}
+
+	:global(.service-card-new.temp .service-badge-new) {
+		background: linear-gradient(135deg, #ea580c, #f97316);
+	}
+
+	:global(.service-card-new h3) {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: #34547a;
+		margin: 0;
+		line-height: 1.3;
+	}
+
+	:global(.service-card-new p) {
+		font-size: 0.95rem;
+		line-height: 1.6;
+		color: #64748b;
+		margin: 0 0 1.5rem 0;
+	}
+
+	:global(.service-icon-new) {
+		position: absolute;
+		bottom: 1.5rem;
+		right: 1.5rem;
+		font-size: 2rem;
+		opacity: 0.3;
+		transition: all 0.3s ease;
+	}
+
+	:global(.service-card-new:hover .service-icon-new) {
+		opacity: 0.6;
+		transform: scale(1.1);
+	}
+
+	/* Services Intro Styles */
+	:global(.services-intro) {
+		text-align: center;
+		margin-bottom: 2rem;
+	}
+
+	:global(.services-tagline) {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #34547a;
+		margin: 0 0 1rem 0;
+		line-height: 1.4;
+	}
+
+	:global(.services-subtitle) {
+		font-size: 1.125rem;
+		line-height: 1.6;
+		color: #64748b;
+		margin: 0;
+	}
+
+	/* Mission Visual Styles */
+	:global(.mission-visual) {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		width: 100%;
+		height: 100%;
+	}
+
+	:global(.mission-placeholder) {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1.5rem;
+		text-align: center;
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(10px);
+		padding: 3rem 2rem;
+		border-radius: 16px;
+		border: 2px solid #e2e8f0;
+		box-shadow: 0 4px 12px rgba(52, 84, 122, 0.08);
+		position: relative;
+	}
+
+	:global(.mission-icon) {
+		width: 64px;
+		height: 64px;
+		color: #34547a;
+	}
+
+	:global(.mission-icon svg) {
+		width: 100%;
+		height: 100%;
+	}
+
+	:global(.mission-placeholder p) {
+		font-size: 1.125rem;
+		font-weight: 500;
+		color: #64748b;
+		margin: 0 0 2rem 0;
+		line-height: 1.5;
+	}
+
+	:global(.mission-login-container) {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	:global(.mission-login-container .glow-button-container) {
+		position: relative;
+		display: inline-block;
+	}
+
+	/* Responsive adjustments for new sections */
+	@media (max-width: 768px) {
+		:global(.services-row-first) {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+
+		:global(.services-row-second) {
+			grid-template-columns: 1fr;
+			gap: 1.5rem;
+		}
+
+		:global(.service-card-new) {
+			padding: 1.5rem;
+		}
+
+		:global(.services-title) {
+			font-size: 2rem;
+		}
+
+		:global(.services-tagline) {
+			font-size: 1.25rem;
+		}
+
+		:global(.services-subtitle) {
+			font-size: 1rem;
+		}
+
+		:global(.mission-placeholder) {
+			padding: 2rem 1.5rem;
+		}
+
+		:global(.mission-icon) {
+			width: 48px;
+			height: 48px;
+		}
+
+		:global(.mission-placeholder p) {
+			font-size: 1rem;
+		}
+	}
+
+	/* Login Button Styles (now in mission section) - matching Get Started button */
+	:global(.mission-login-container .glow-effect) {
+		position: absolute;
+		top: -12px;
+		left: -12px;
+		right: -12px;
+		bottom: -12px;
+		border-radius: 62px;
+		background: linear-gradient(45deg, #ffffff, #34547a, #5a7fb8, #ffffff, #34547a);
+		background-size: 400% 400%;
+		animation: glowShift 3s ease-in-out infinite;
+		filter: blur(16px);
+		opacity: 0.8;
+		z-index: 1;
+	}
+
+	:global(.mission-placeholder .login-btn) {
+		background: rgba(52, 84, 122, 0.9);
+		backdrop-filter: blur(20px);
+		color: white !important;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: 50px;
+		padding: 1.25rem 3rem;
+		font-size: 1.2rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.3s ease;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		position: relative;
+		z-index: 10;
+		box-shadow: 0 8px 32px rgba(52, 84, 122, 0.4);
+	}
+
+	:global(.mission-placeholder .login-btn:hover) {
+		transform: translateY(-3px);
+		background: rgba(52, 84, 122, 1);
+		border-color: rgba(255, 255, 255, 0.5);
+		box-shadow: 0 12px 40px rgba(52, 84, 122, 0.6);
+	}
+
+	:global(.mission-placeholder .login-btn:active) {
+		transform: translateY(-1px);
+	}
+
+	:global(.mission-placeholder .login-btn .arrow-icon) {
+		width: 18px;
+		height: 18px;
+		transition: transform 0.3s ease;
+		color: white;
+	}
+
+	:global(.mission-placeholder .login-btn:hover .arrow-icon) {
+		transform: translateX(3px);
+	}
+
+	/* Ensure the glow animation keyframes are available */
+	@keyframes glowShift {
+		0%, 100% {
+			background-position: 0% 50%;
+		}
+		25% {
+			background-position: 100% 50%;
+		}
+		50% {
+			background-position: 100% 100%;
+		}
+		75% {
+			background-position: 0% 100%;
+		}
+	}
+
+	/* Snap Scroll Container */
+	:global(html) {
+		scroll-snap-type: y mandatory;
+		scroll-behavior: smooth;
+	}
+
+	/* Make each main section snap */
+	.landing-container,
+	:global(.landing-section) {
+		scroll-snap-align: start;
+		scroll-snap-stop: always;
+	}
+
+	/* Ensure sections take full viewport height */
+	:global(.landing-section) {
+		min-height: 100vh;
+		display: flex;
+		align-items: center;
+	}
+
 	/* Global Styles */
 	:global(body) {
 		margin: 0;
 		padding: 0;
 		background-color: #000;
+		overflow-x: hidden;
 	}
 </style>
